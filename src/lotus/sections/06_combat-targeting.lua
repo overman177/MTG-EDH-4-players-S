@@ -79,6 +79,7 @@ function Combat.render()
     end
     -- Only Lotus' own vector lines are replaced, never Global/table drawings.
     self.setVectorLines(lines)
+    Combat.syncButtons()
 end
 
 function Combat.loop(generation)
@@ -177,5 +178,341 @@ function Combat.load()
     Combat.loopActive = false
     Combat.loopGeneration = 0
     addHotkey(Combat.HOTKEY, Combat.hotkey, true)
+    Combat.buttonPositions = {}
+    Combat.reportPanelsInstalled = false
 end
 
+
+-- =============================================================
+-- FIGHT BUTTONS + READ-ONLY COMBAT ESTIMATE
+-- Built entirely into Lotus; existing Encoder modules remain untouched.
+-- =============================================================
+
+Combat.BUTTON_PREFIX = "MTG_COMBAT_FIGHT:"
+Combat.FIGHT_PROP_ID = "_MTG_Simplified_UNIFIED"
+Combat.REPORT_PREFIX = "MTG_Combat_Fight_Result_"
+
+local function combatButtonName(guid)
+    return "combatFight_" .. tostring(guid):gsub("[^%w_]", "_")
+end
+
+-- A combat button belongs to the Lotus object, but is positioned at the
+-- arrow midpoint in world space. Scan by an owned tooltip prefix instead of
+-- keeping hardcoded button indices (other Lotus modules also create buttons).
+function Combat.syncButtons()
+    if not self.getButtons or not self.createButton then return end
+    local owned = {}
+    local buttons = self.getButtons() or {}
+    for _, button in ipairs(buttons) do
+        local tooltip = button.tooltip
+        if type(tooltip) == "string"
+            and tooltip:sub(1, #Combat.BUTTON_PREFIX) == Combat.BUTTON_PREFIX then
+            local guid = tooltip:sub(#Combat.BUTTON_PREFIX + 1)
+            owned[guid] = button
+        end
+    end
+
+    local needed = {}
+    for attackerGUID, link in pairs(Combat.links) do
+        local attacker = getObjectFromGUID(attackerGUID)
+        local defender = getObjectFromGUID(link.target)
+        if combatCard(attacker) and combatCard(defender) then
+            local a, d = attacker.getPosition(), defender.getPosition()
+            local dx, dz = d.x - a.x, d.z - a.z
+            if dx * dx + dz * dz > 0.14 then
+                local worldMid = {
+                    x = (a.x + d.x) * 0.5,
+                    y = math.max(a.y, d.y) + 0.57,
+                    z = (a.z + d.z) * 0.5
+                }
+                local localPos = self.positionToLocal(worldMid)
+                local point = {localPos.x, localPos.y, localPos.z}
+                needed[attackerGUID] = true
+                local fn = combatButtonName(attackerGUID)
+                -- Give every attack its own valid TTS click callback.
+                local capturedGuid = attackerGUID
+                _G[fn] = function(buttonObj, color, altClick)
+                    Combat.fightClick(capturedGuid, color)
+                end
+                local existing = owned[attackerGUID]
+                if existing then
+                    local last = Combat.buttonPositions[attackerGUID]
+                    if last == nil
+                        or math.abs(last[1] - point[1]) > 0.04
+                        or math.abs(last[2] - point[2]) > 0.04
+                        or math.abs(last[3] - point[3]) > 0.04 then
+                        self.editButton({index = existing.index, position = point})
+                    end
+                else
+                    self.createButton({
+                        click_function = fn,
+                        function_owner = self,
+                        label = "FIGHT",
+                        position = point,
+                        rotation = {0, 0, 0},
+                        width = 480, height = 200, font_size = 135,
+                        scale = {0.65, 0.65, 0.65},
+                        color = {0.13, 0.17, 0.23, 0.94},
+                        font_color = {1, 0.91, 0.75, 1},
+                        hover_color = {0.24, 0.36, 0.49, 1},
+                        tooltip = Combat.BUTTON_PREFIX .. attackerGUID
+                    })
+                end
+                Combat.buttonPositions[attackerGUID] = point
+            end
+        end
+    end
+
+    -- Remove only our marker buttons, descending by current actual index.
+    local removals = {}
+    for guid, button in pairs(owned) do
+        if not needed[guid] then
+            removals[#removals + 1] = {index = button.index, guid = guid}
+        end
+    end
+    table.sort(removals, function(a, b) return a.index > b.index end)
+    for _, row in ipairs(removals) do
+        self.removeButton(row.index)
+        Combat.buttonPositions[row.guid] = nil
+        _G[combatButtonName(row.guid)] = nil
+    end
+end
+
+-- Encoder and TyrantNomad's module expose actual recorded values. Button
+-- labels are merely presentation and must never be parsed as game state.
+local function combatNumber(value)
+    local n = tonumber(value)
+    if n == nil or n ~= n or n == math.huge or n == -math.huge then return nil end
+    return n
+end
+
+local function combatName(card)
+    local name = tostring(card.getName() or ""):match("^[^\r\n]*") or "Card"
+    name = name:gsub("%[.-%]", ""):gsub("[<>]", "")
+    if #name > 34 then name = name:sub(1, 31) .. "..." end
+    return name
+end
+
+local function combatReadKeywords(encoder, card)
+    local ok, values = pcall(function()
+        return encoder.call("APIobjGetPropData", {obj = card, propID = "πKeywords"})
+    end)
+    if not ok or type(values) ~= "table" then return {} end
+    local list = {}
+    if type(values.activeIcons) == "table" then
+        for _, key in pairs(values.activeIcons) do
+            if type(key) == "string" then list[#list + 1] = key end
+        end
+    end
+    return list
+end
+
+function Combat.readStats(card)
+    local result = {
+        name = combatName(card), known = false, keywords = {},
+        error = "Encoder statistics are unavailable for this card."
+    }
+    local encoder = Global.getVar("Encoder")
+    if encoder == nil then
+        result.error = "Encoder not found."
+        return result
+    end
+    local ok, props = pcall(function()
+        return encoder.call("APIobjGetPropData", {
+            obj = card, propID = Combat.FIGHT_PROP_ID
+        })
+    end)
+    if not ok or type(props) ~= "table"
+        or type(props.tyrantUnified) ~= "table" then
+        return result
+    end
+
+    local data = props.tyrantUnified
+    local face = type(data.cardFaces) == "table"
+        and data.cardFaces[tonumber(data.activeFace) or 1]
+    if type(face) ~= "table" then
+        result.error = "No active card face statistics."
+        return result
+    end
+    local baseP = combatNumber(face.basePower)
+    local baseT = combatNumber(face.baseToughness)
+    if baseP == nil or baseT == nil then
+        result.error = "Variable or nonnumeric power/toughness needs manual input."
+        return result
+    end
+    local modP = combatNumber(data.power or 0)
+    local modT = combatNumber(data.toughness or 0)
+    local counters = combatNumber(data.plusOneCounters or 0)
+    if modP == nil or modT == nil or counters == nil then
+        result.error = "Invalid modifier/counter value."
+        return result
+    end
+
+    result.known = true
+    result.basePower, result.baseToughness = baseP, baseT
+    result.powerModifier, result.toughnessModifier = modP, modT
+    result.plusOneCounters = counters
+    result.power = baseP + modP + counters
+    result.toughness = baseT + modT + counters
+    result.keywords = combatReadKeywords(encoder, card)
+    result.error = nil
+    return result
+end
+
+local function combatStatText(s)
+    if not s.known then return "?/?" end
+    return tostring(s.power) .. "/" .. tostring(s.toughness)
+end
+
+function Combat.evaluate(attacker, defender)
+    local a, d = Combat.readStats(attacker), Combat.readStats(defender)
+    local result = {
+        attacker = a, defender = d, known = a.known and d.known,
+        notes = {}, attackerDamage = nil, defenderDamage = nil
+    }
+    if result.known then
+        -- One attacker and one blocker, simultaneous regular combat damage.
+        result.attackerDamage = math.max(0, a.power)
+        result.defenderDamage = math.max(0, d.power)
+        result.attackerLethal = result.defenderDamage >= a.toughness
+        result.defenderLethal = result.attackerDamage >= d.toughness
+    end
+    local flagged = {
+        mtg_deathtouchcounter = true,
+        mtg_firststrikecounter = true,
+        mtg_doublestrikecounter = true,
+        mtg_indestructiblecounter = true,
+        mtg_tramplecounter = true,
+        mtg_lifelinkcounter = true,
+        mtg_protectioncounter = true,
+        mtg_stuncounter = true
+    }
+    for _, s in ipairs({a, d}) do
+        for _, keyword in ipairs(s.keywords) do
+            if flagged[keyword] then
+                result.notes[#result.notes + 1] =
+                    s.name .. ": " .. keyword:gsub("^mtg_", ""):gsub("counter$", "")
+            end
+        end
+    end
+    if not a.known then
+        result.notes[#result.notes + 1] = "Attacker: " .. a.error
+    end
+    if not d.known then
+        result.notes[#result.notes + 1] = "Defender: " .. d.error
+    end
+
+    local lines = {
+        "ATTACKER: " .. a.name .. "  [" .. combatStatText(a) .. "]",
+        "DEFENDER: " .. d.name .. "  [" .. combatStatText(d) .. "]"
+    }
+    if result.known then
+        lines[#lines + 1] = "Attacker deals " .. result.attackerDamage ..
+            "  |  Defender deals " .. result.defenderDamage
+        lines[#lines + 1] = "Attacker: " ..
+            (result.attackerLethal and "lethal damage" or "not lethal") ..
+            "  |  Defender: " ..
+            (result.defenderLethal and "lethal damage" or "not lethal")
+    else
+        lines[#lines + 1] = "Cannot calculate a numeric damage exchange."
+    end
+    if #result.notes > 0 then
+        lines[#lines + 1] = "Check: " .. table.concat(result.notes, "; ")
+    end
+    lines[#lines + 1] = "Estimate only. No damage is applied."
+    lines[#lines + 1] = "Assumes 1 attacker / 1 blocker, simultaneous normal damage."
+    lines[#lines + 1] = "Check existing damage, abilities and other effects."
+    result.text = table.concat(lines, "\n")
+    return result
+end
+
+local function combatReportPanel(color)
+    local id = Combat.REPORT_PREFIX .. color
+    return {tag = "Panel", attributes = {
+        id = id, rectAlignment = "UpperRight", offsetXY = "-18 -80",
+        width = "512", height = "278", color = "rgba(0.11,0.12,0.15,0.98)",
+        outline = "#607487", outlineSize = "1 -1",
+        visibility = color, active = "false",
+        raycastTarget = "true"
+    }, children = {
+        {tag = "Text", attributes = {
+            rectAlignment = "UpperLeft", offsetXY = "15 -10",
+            width = "455", height = "30", text = "COMBAT ESTIMATE",
+            fontSize = "19", fontStyle = "Bold", color = "#8AB9E8",
+            alignment = "MiddleLeft"
+        }},
+        {tag = "Button", attributes = {
+            rectAlignment = "UpperRight", offsetXY = "-9 -8",
+            width = "28", height = "28", text = "X",
+            fontSize = "16", color = "#8B2929", textColor = "#FFFFFF",
+            onClick = self.getGUID() .. "/combatCloseEstimate"
+        }},
+        {tag = "Text", attributes = {
+            id = id .. "_body", rectAlignment = "UpperLeft",
+            offsetXY = "15 -49", width = "484", height = "215",
+            fontSize = "15", color = "#EDF2F7",
+            alignment = "UpperLeft", text = "",
+            horizontalOverflow = "Wrap", verticalOverflow = "Truncate",
+            raycastTarget = "false"
+        }}
+    }}
+end
+
+function Combat.ensureResultPanels()
+    if Combat.reportPanelsInstalled then return true end
+    local xml = UI.getXmlTable() or {}
+    local found = {}
+    for _, node in ipairs(xml) do
+        if type(node.attributes) == "table" then
+            for color in pairs(Combat.OWNERS) do
+                if node.attributes.id == Combat.REPORT_PREFIX .. color then
+                    found[color] = true
+                end
+            end
+        end
+    end
+    local changed = false
+    for _, color in ipairs({"White", "Red", "Yellow", "Blue"}) do
+        if not found[color] then
+            xml[#xml + 1] = combatReportPanel(color)
+            changed = true
+        end
+    end
+    if changed then UI.setXmlTable(xml) end
+    Combat.reportPanelsInstalled = true
+    return true
+end
+
+function Combat.showResult(color, text)
+    local ok = pcall(function()
+        Combat.ensureResultPanels()
+        local id = Combat.REPORT_PREFIX .. color
+        UI.setAttribute(id .. "_body", "text", text)
+        UI.setAttribute(id, "active", "true")
+    end)
+    if not ok then
+        -- Readable fallback if a mod replaces Global UI unexpectedly.
+        printToColor("COMBAT ESTIMATE\n" .. text, color, {0.75, 0.88, 1})
+    end
+end
+
+function Combat.closeEstimate(player)
+    local color = Settings.playerColor(player)
+    if not Combat.OWNERS[color] then return end
+    UI.setAttribute(Combat.REPORT_PREFIX .. color, "active", "false")
+end
+
+function Combat.fightClick(attackerGUID, playerColor)
+    if not Combat.OWNERS[playerColor] then return end
+    local link = Combat.links[attackerGUID]
+    if link == nil then return end
+    local attacker = getObjectFromGUID(attackerGUID)
+    local defender = getObjectFromGUID(link.target)
+    if not combatCard(attacker) or not combatCard(defender) then
+        Combat.links[attackerGUID] = nil
+        Combat.updated()
+        return
+    end
+    local outcome = Combat.evaluate(attacker, defender)
+    Combat.showResult(playerColor, outcome.text)
+end

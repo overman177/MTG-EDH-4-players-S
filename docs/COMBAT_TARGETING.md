@@ -35,3 +35,25 @@ If C already has a TTS action on a player's client, the two actions can both run
 `src/ui/sections/08_lotus-settings.xml` owns the checked-in Global XML copy of the General tab.
 
 Build with `py tools/build.py --check` and use a **copy** of the TTS table for the first Save & Play test. Check that the existing General, Counters and Card Preview tabs still function, that two players can declare simultaneously and that unrelated drawn lines are unaffected.
+
+## FIGHT calculation button (new)
+Each active attacker-to-defender arrow gets a small **FIGHT** 3D button at its midpoint. It follows the arrow as cards move. The button belongs to the Lotus Helper's own scripted buttons, using distinct callbacks for each attacker, so it does not modify either card or its own script.
+
+Click **FIGHT** to display a **private per-player read-only COMBAT ESTIMATE** panel in the upper-right corner. Its close button only hides that player's report. Several players may examine different fights without overwriting each other's panels. TTS may require a reload to pick up the modified helper script.
+
+### Stats source
+The calculator reads Encoder `APIobjGetPropData` with the existing TyrantNomad prop ID `_MTG_Simplified_UNIFIED`. For each card, it gets `cardFaces[activeFace].basePower/baseToughness`, `power`, `toughness`, and `plusOneCounters` and calculates:
+```text
+power = basePower + powerModifier + plusOneCounters
+toughness = baseToughness + toughnessModifier + plusOneCounters
+```
+This avoids scraping the on-card UI's labels and includes saved manual adjustments. If either base stat is nonnumeric (e.g. `*`) or the module isn't present, the calculator **refuses to guess** and displays unknown stats instead.
+
+It also inspects the `πKeywords` Encoder property for tracked combat-relevant keyword markers and warns when any are present, but those effects are **not resolved automatically**.
+
+### Results, boundaries and safety
+For two creatures with numerical P/T, the panel reports regular combat damage under the **one attacker / one blocking creature, simultaneous normal damage** assumption. It marks whether that damage would be lethal in this simplified scenario. The result is an **estimate only**: no damage is marked, no counters are modified, no cards are destroyed, and no rules decisions are made.
+
+The estimate does not currently handle: already-marked damage, damage prevention/replacement, first/double strike sequencing, deathtouch, indestructibility, protection, trample assignment, damage multipliers, static anthems that aren't reflected in Encoder, equipment/effect layering, multi-blocker assignment, power/toughness defined by abilities, or other Magic rules interactions. A tracked keyword triggers a visible warning; unknown or untracked effects always remain a possible source of inaccuracy.
+
+The center button is removed when its arrow is cleared. Other Lotus buttons are preserved using tooltip-based ownership rather than hardcoded button indexes.

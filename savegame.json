@@ -1,7 +1,7 @@
 {
   "SaveName": "MtG EDH 4-player(S)",
-  "EpochTime": 1793635100,
-  "Date": "11/2/2026 4:58:20 PM",
+  "EpochTime": 1793636909,
+  "Date": "11/2/2026 5:28:29 PM",
   "VersionNumber": "v14.2.2",
   "GameMode": "MtG EDH 4-player(S)",
   "GameType": "Game",
@@ -13900,10 +13900,10 @@
       "Name": "Custom_Model",
       "Transform": {
         "posX": -49.585,
-        "posY": 2.00984573,
+        "posY": 1.96295071,
         "posZ": 19.17,
-        "rotX": 0.00238966825,
-        "rotY": 321.0607,
+        "rotX": 0.00238966872,
+        "rotY": 297.560669,
         "rotZ": 359.9867,
         "scaleX": 0.6000007,
         "scaleY": 0.6000007,

@@ -24,7 +24,7 @@ function addHotkey() end
 function getObjectFromGUID(guid) return cards[guid] end
 function printToColor(msg) error("Unexpected fallback: "..msg) end
 function spawnObject(opts)
-  assert(opts.type=="ScriptingTrigger","must use world-space invisible anchor")
+  assert(opts.type=="BlockSquare","must use small ordinary world-space button host")
   unique=unique+1
   local o={guid="zone"..unique,point=opts.position,buttons={},destroyed=false,
            tag="Scripting",tags={}}
@@ -32,6 +32,7 @@ function spawnObject(opts)
   o.setPosition=function(pos) o.point=pos end
   o.setName=function(name) o.name=name end
   o.addTag=function(tag) o.tags[tag]=true end
+  o.setColorTint=function(tint) o.tint=tint end
   o.lock=function() o.locked=true end
   o.createButton=function(params) o.buttons[#o.buttons+1]=params end
   o.destruct=function() o.destroyed=true end
@@ -78,6 +79,8 @@ Combat.render()
 assert(#anchors==1 and #anchors[1].buttons==1,"anchor created exactly once")
 assert(anchors[1].buttons[1].label=="AUTOFIGHT","button renamed AUTOFIGHT")
 assert(anchors[1].buttons[1].function_owner==self,"callback owned by Lotus")
+assert(anchors[1].tint.a==0 and anchors[1].locked,"invisible locked anchor")
+assert(anchors[1].buttons[1].scale[1]>1,"button size compensated for anchor scale")
 assert(anchors[1].point.x==2,"world midpoint")
 assert(#vectorLines==2,"single arrow")
 assert(#lotusButtons==1,"no distant Lotus object buttons")

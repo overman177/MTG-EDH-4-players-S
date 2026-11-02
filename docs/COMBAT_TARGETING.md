@@ -68,7 +68,7 @@ The center button is removed when its arrow is cleared. Other Lotus buttons are 
 - Each attacker may have **multiple defenders**. Each defender gets its own arrow, pointing from the attacker to that defender.
 - Repeat the gesture with the *same defender and attacker* to remove **only that arrow**. Tap the key on the attacker itself to clear **all of its defenders**.
 - A world-space **AUTOFIGHT** button is shown at the arrow midpoint **only when an attacker has exactly one defender**. With two or more defenders, the arrows remain but the button disappears.
-- The button is hosted on a temporary, invisible and non-colliding scripting zone at the midpoint, rather than being placed far from the Lotus Helper object's center. It follows the cards and is removed when no longer needed.
+- The button is hosted on a temporary, tiny translucent/transparent locked object at the midpoint, rather than being placed far from Lotus. It follows the cards and is removed when no longer needed. The anchor's tiny physical collider is kept away from the cards; TTS does not expose a fully reliable no-collider button host.
 - AUTOFIGHT opens the **existing read-only, simplified one-on-one combat estimate**. It does not deal damage, resolve multi-blocker combat, modify stats, or destroy objects.
-- Runtime anchors are temporary; the script removes stale tagged anchors when loaded and cleans up markers as combat links change. In-game visibility on the new world-space anchor must be verified with TTS.
+- Runtime anchors are temporary; the script removes stale tagged anchors when loaded and cleans up markers as combat links change. In-game visibility on the world-space anchor must be verified with TTS.
 

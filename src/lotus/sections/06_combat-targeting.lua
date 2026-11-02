@@ -250,9 +250,10 @@ local function combatButtonName(guid)
 end
 
 -- The previous implementation put 3D buttons on the Lotus Helper,
--- thousands of pixels from the object center; TTS did not render them in play.
--- AUTOFIGHT is now attached to an *invisible world-space scripting zone*
--- placed at the actual midpoint of one attacker and its sole defender.
+-- far from its center; TTS did not render them in play.
+-- AUTOFIGHT now uses a tiny near-invisible, locked physical anchor at the
+-- arrow's real-world midpoint. Unlike scripting zones, ordinary objects
+-- reliably host TTS classic 3D buttons.
 -- No button is shown for zero or multiple defenders.
 function Combat.dropAnchor(attackerGUID)
     local anchor = Combat.anchors[attackerGUID]
@@ -288,10 +289,10 @@ function Combat.syncButtons()
                         local capturedGUID, capturedDefender = attackerGUID, defenderGUID
                         Combat.anchors[attackerGUID] = false -- spawn in flight
                         spawnObject({
-                            type = "ScriptingTrigger",
+                            type = "BlockSquare",
                             position = at,
                             rotation = {0, 0, 0},
-                            scale = {1, 1, 1},
+                            scale = {0.14, 0.14, 0.14},
                             sound = false,
                             snap_to_grid = false,
                             callback_function = function(obj)
@@ -302,6 +303,7 @@ function Combat.syncButtons()
                                 end
                                 obj.setName("Lotus AUTOFIGHT [temporary]")
                                 obj.addTag(Combat.ANCHOR_TAG)
+                                obj.setColorTint({r = 0.1, g = 0.1, b = 0.1, a = 0})
                                 obj.interactable = false
                                 obj.tooltip = false
                                 obj.lock()
@@ -313,10 +315,11 @@ function Combat.syncButtons()
                                     click_function = fn,
                                     function_owner = self,
                                     label = "AUTOFIGHT",
-                                    position = {0, 0.12, 0},
+                                    position = {0, 0.28, 0},
                                     rotation = {0, 0, 0},
                                     width = 750, height = 230, font_size = 130,
-                                    scale = {0.72, 0.72, 0.72},
+                                    -- Compensate for the tiny anchor object's scale.
+                                    scale = {4.4, 4.4, 4.4},
                                     color = {0.13, 0.19, 0.25, 0.96},
                                     font_color = {1, 0.94, 0.77, 1},
                                     hover_color = {0.29, 0.41, 0.53, 1},

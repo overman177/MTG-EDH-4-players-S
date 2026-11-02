@@ -430,7 +430,7 @@
             <Toggle id="lotus_enable_combat" rectAlignment="UpperLeft" offsetXY="16 -112" width="465" height="33" fontSize="17" textColor="#EDEEF2" isOn="True" onValueChanged="777766/settingsGeneralToggle">Enable combat targeting for me</Toggle>
             <Button id="lotus_combat_bind" rectAlignment="UpperLeft" offsetXY="16 -160" width="260" height="33" fontSize="14" textColor="#FFFFFF" colors="#315A87|#4274AC|#234363|#234363" onClick="777766/settingsCombatKeyConfig" text="Configure key (C suggested)" />
             <Button id="lotus_combat_clear" rectAlignment="UpperRight" offsetXY="-16 -160" width="188" height="33" fontSize="14" textColor="#FFFFFF" colors="#403A43|#57515B|#2B272E|#2B272E" onClick="777766/settingsCombatClear" text="Clear my arrows" />
-            <Text rectAlignment="UpperLeft" offsetXY="16 -207" width="465" height="24" fontSize="13" color="#9BA4B0" alignment="MiddleLeft" text="Hold bound key on a card; release it over another card." />
+            <Text rectAlignment="UpperLeft" offsetXY="16 -207" width="465" height="24" fontSize="13" color="#9BA4B0" alignment="MiddleLeft" text="Hold key to target; tap on attacker to remove arrow." />
         </Panel>
     </Panel>
     <Panel id="MTG_Settings_Tab_Notes" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="460" color="clear" active="true">

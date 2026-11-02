@@ -2014,7 +2014,7 @@ function Settings.generalTab()
                 rectAlignment = "UpperLeft", offsetXY = "16 -207",
                 width = "465", height = "24", fontSize = "13",
                 color = "#9BA4B0", alignment = "MiddleLeft",
-                text = "Hold bound key on a card; release it over another card."
+                text = "Hold key to target; tap on attacker to remove arrow."
             }}
         }}
     }}
@@ -3926,12 +3926,30 @@ function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     if not Combat.enabled(color) or not attackerGUID then return end
     local attacker = getObjectFromGUID(attackerGUID)
     if not combatCard(attacker) then return end
-    if not combatCard(hovered) or hovered.getGUID() == attackerGUID then
-        printToColor("Combat: release the key over another card.", color,
-            {0.9, 0.72, 0.35})
+    if not combatCard(hovered) then
+        printToColor("Combat: release over a target card, or tap on the attacker to remove its arrow.",
+            color, {0.9, 0.72, 0.35})
         return
     end
-    Combat.links[attackerGUID] = {target = hovered.getGUID(), by = color}
+    local targetGUID = hovered.getGUID()
+    local current = Combat.links[attackerGUID]
+
+    -- Tap the bound key on an attacker to remove its existing arrow.
+    if targetGUID == attackerGUID then
+        if current ~= nil then
+            Combat.links[attackerGUID] = nil
+            Combat.updated()
+        end
+        return
+    end
+
+    -- Repeating the same attacker -> target declaration toggles it off.
+    -- Selecting a different target replaces the previous arrow.
+    if current ~= nil and current.target == targetGUID then
+        Combat.links[attackerGUID] = nil
+    else
+        Combat.links[attackerGUID] = {target = targetGUID, by = color}
+    end
     Combat.updated()
 end
 

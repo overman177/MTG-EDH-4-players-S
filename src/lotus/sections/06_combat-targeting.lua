@@ -8,7 +8,7 @@
 -- Arrows are session-only; each player can clear their own arrows.
 -- =============================================================
 
-local Combat = {
+Combat = {
     HOTKEY = "MTG: Declare Combat Target",
     OWNERS = {White = true, Red = true, Yellow = true, Blue = true},
     COLOR = {

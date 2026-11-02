@@ -48,6 +48,7 @@ end
 
 local Settings
 local RevealTop
+local Combat
 
 local Preview = {
     DISPLAY_TIME = 7,
@@ -3794,7 +3795,7 @@ end
 -- Arrows are session-only; each player can clear their own arrows.
 -- =============================================================
 
-local Combat = {
+Combat = {
     HOTKEY = "MTG: Declare Combat Target",
     OWNERS = {White = true, Red = true, Yellow = true, Blue = true},
     COLOR = {

@@ -20,8 +20,8 @@ Combat = {
     pending = {}, -- initiator color -> defender GUID while key held
     links = {},   -- attacker GUID -> {defenders = { [defenderGUID] = true }, by = color}
     baseLines = {},
-    anchors = {}, -- 3D world-space AUTOFIGHT controllers (one per single-defender attacker)
-    ANCHOR_TAG = "MTG_Lotus_AutoFightAnchor",
+    -- Used only to remove AUTOFIGHT objects from older table saves.
+    LEGACY_ANCHOR_TAG = "MTG_Lotus_AutoFightAnchor",
     loopActive = false,
     loopGeneration = 0,
     REFRESH_SECONDS = 0.30
@@ -125,7 +125,6 @@ function Combat.render()
         end
     end
     self.setVectorLines(lines)
-    Combat.syncButtons()
 end
 
 function Combat.loop(generation)
@@ -163,15 +162,6 @@ end
 function Combat.onDestroy(obj)
     if obj == nil then return end
     local guid = obj.getGUID()
-    -- TTS also fires this event for our invisible anchor zones. Their cleanup
-    -- must not remove the underlying attacker/defender combat links.
-    for attackerGUID, anchor in pairs(Combat.anchors) do
-        if anchor == obj then
-            Combat.anchors[attackerGUID] = nil
-            if Combat.links[attackerGUID] then Combat.updated() end
-            return
-        end
-    end
     local dirty = Combat.links[guid] ~= nil
     Combat.links[guid] = nil
     for attackerGUID, link in pairs(Combat.links) do
@@ -215,375 +205,56 @@ function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     Combat.toggleDefender(attackerGUID, defenderGUID, color)
 end
 
+-- Remove obsolete AUTOFIGHT world objects and old Lotus-mounted FIGHT
+-- buttons left behind by an earlier saved version. All other table buttons,
+-- objects and vector lines are preserved.
+function Combat.cleanupLegacyFight()
+    if type(getObjectsWithTag) == "function" then
+        for _, obj in ipairs(getObjectsWithTag(Combat.LEGACY_ANCHOR_TAG) or {}) do
+            obj.destruct()
+        end
+    end
+    if self.getButtons and self.removeButton then
+        local indices = {}
+        for _, button in ipairs(self.getButtons() or {}) do
+            if type(button.tooltip) == "string"
+                and button.tooltip:sub(1, 17) == "MTG_COMBAT_FIGHT:"
+                and type(button.index) == "number" then
+                indices[#indices + 1] = button.index
+            end
+        end
+        table.sort(indices, function(a, b) return a > b end)
+        for _, index in ipairs(indices) do self.removeButton(index) end
+    end
+    -- Earlier versions added private combat estimate panels to the Global UI.
+    -- Remove only these obsolete top-level panels, leaving all other UI alone.
+    if UI and UI.getXmlTable and UI.setXmlTable then
+        local ok, xml = pcall(UI.getXmlTable)
+        if ok and type(xml) == "table" then
+            local changed = false
+            for i = #xml, 1, -1 do
+                local id = type(xml[i]) == "table"
+                    and type(xml[i].attributes) == "table"
+                    and xml[i].attributes.id
+                if type(id) == "string"
+                    and id:sub(1, 24) == "MTG_Combat_Fight_Result_" then
+                    table.remove(xml, i)
+                    changed = true
+                end
+            end
+            if changed then UI.setXmlTable(xml) end
+        end
+    end
+end
+
 function Combat.load()
     Combat.pending = {}
     Combat.links = {}
-    Combat.anchors = {}
-    -- Runtime marker zones may survive a TTS save/reload; remove old ones.
-    if type(getObjectsWithTag) == "function" then
-        Wait.frames(function()
-            for _, anchor in ipairs(getObjectsWithTag(Combat.ANCHOR_TAG) or {}) do
-                anchor.destruct()
-            end
-        end, 4)
-    end
     Combat.baseLines = self.getVectorLines() or {}
     Combat.loopActive = false
     Combat.loopGeneration = 0
     addHotkey(Combat.HOTKEY, Combat.hotkey, true)
-    Combat.buttonPositions = {}
-    Combat.reportPanelsInstalled = false
-end
-
-
--- =============================================================
--- FIGHT BUTTONS + READ-ONLY COMBAT ESTIMATE
--- Built entirely into Lotus; existing Encoder modules remain untouched.
--- =============================================================
-
-Combat.BUTTON_PREFIX = "MTG_COMBAT_FIGHT:"
-Combat.FIGHT_PROP_ID = "_MTG_Simplified_UNIFIED"
-Combat.REPORT_PREFIX = "MTG_Combat_Fight_Result_"
-
-local function combatButtonName(guid)
-    return "combatFight_" .. tostring(guid):gsub("[^%w_]", "_")
-end
-
--- The previous implementation put 3D buttons on the Lotus Helper,
--- far from its center; TTS did not render them in play.
--- AUTOFIGHT now uses a tiny near-invisible, locked physical anchor at the
--- arrow's real-world midpoint. Unlike scripting zones, ordinary objects
--- reliably host TTS classic 3D buttons.
--- No button is shown for zero or multiple defenders.
-function Combat.dropAnchor(attackerGUID)
-    local anchor = Combat.anchors[attackerGUID]
-    Combat.anchors[attackerGUID] = nil
-    _G[combatButtonName(attackerGUID)] = nil
-    if anchor and anchor ~= false then
-        anchor.destruct()
-    end
-end
-
-function Combat.syncButtons()
-    if type(spawnObject) ~= "function" then return end
-    local wanted = {}
-    for attackerGUID, link in pairs(Combat.links) do
-        local count, defenderGUID = Combat.countDefenders(link)
-        if count == 1 then
-            local attacker = getObjectFromGUID(attackerGUID)
-            local defender = getObjectFromGUID(defenderGUID)
-            if combatCard(attacker) and combatCard(defender) then
-                local a, d = attacker.getPosition(), defender.getPosition()
-                local dx, dz = d.x - a.x, d.z - a.z
-                if dx * dx + dz * dz > 0.14 then
-                    wanted[attackerGUID] = true
-                    local at = {
-                        x = (a.x + d.x) * 0.5,
-                        y = math.max(a.y, d.y) + 0.60,
-                        z = (a.z + d.z) * 0.5
-                    }
-                    local anchor = Combat.anchors[attackerGUID]
-                    if anchor and anchor ~= false then
-                        anchor.setPosition(at)
-                    elseif not anchor then
-                        local capturedGUID, capturedDefender = attackerGUID, defenderGUID
-                        Combat.anchors[attackerGUID] = false -- spawn in flight
-                        spawnObject({
-                            type = "BlockSquare",
-                            position = at,
-                            rotation = {0, 0, 0},
-                            scale = {0.14, 0.14, 0.14},
-                            sound = false,
-                            snap_to_grid = false,
-                            callback_function = function(obj)
-                                if Combat.anchors[capturedGUID] ~= false
-                                  or Combat.singleDefender(capturedGUID) ~= capturedDefender then
-                                    obj.destruct()
-                                    return
-                                end
-                                obj.setName("Lotus AUTOFIGHT [temporary]")
-                                obj.addTag(Combat.ANCHOR_TAG)
-                                obj.setColorTint({r = 0.1, g = 0.1, b = 0.1, a = 0})
-                                obj.interactable = false
-                                obj.tooltip = false
-                                obj.lock()
-                                local fn = combatButtonName(capturedGUID)
-                                _G[fn] = function(buttonObj, playerColor)
-                                    Combat.fightClick(capturedGUID, playerColor)
-                                end
-                                obj.createButton({
-                                    click_function = fn,
-                                    function_owner = self,
-                                    label = "AUTOFIGHT",
-                                    position = {0, 0.28, 0},
-                                    rotation = {0, 0, 0},
-                                    width = 750, height = 230, font_size = 130,
-                                    -- Compensate for the tiny anchor object's scale.
-                                    scale = {4.4, 4.4, 4.4},
-                                    color = {0.13, 0.19, 0.25, 0.96},
-                                    font_color = {1, 0.94, 0.77, 1},
-                                    hover_color = {0.29, 0.41, 0.53, 1},
-                                    tooltip = "AUTOFIGHT: estimate one-on-one combat damage"
-                                })
-                                Combat.anchors[capturedGUID] = obj
-                            end
-                        })
-                    end
-                end
-            end
-        end
-    end
-    local stale = {}
-    for guid in pairs(Combat.anchors) do
-        if not wanted[guid] then stale[#stale + 1] = guid end
-    end
-    for _, guid in ipairs(stale) do Combat.dropAnchor(guid) end
-end
-
--- Encoder and TyrantNomad's module expose actual recorded values. Button
--- labels are merely presentation and must never be parsed as game state.
-local function combatNumber(value)
-    local n = tonumber(value)
-    if n == nil or n ~= n or n == math.huge or n == -math.huge then return nil end
-    return n
-end
-
-local function combatName(card)
-    local name = tostring(card.getName() or ""):match("^[^\r\n]*") or "Card"
-    name = name:gsub("%[.-%]", ""):gsub("[<>]", "")
-    if #name > 34 then name = name:sub(1, 31) .. "..." end
-    return name
-end
-
-local function combatReadKeywords(encoder, card)
-    local ok, values = pcall(function()
-        return encoder.call("APIobjGetPropData", {obj = card, propID = "πKeywords"})
-    end)
-    if not ok or type(values) ~= "table" then return {} end
-    local list = {}
-    if type(values.activeIcons) == "table" then
-        for _, key in pairs(values.activeIcons) do
-            if type(key) == "string" then list[#list + 1] = key end
-        end
-    end
-    return list
-end
-
-function Combat.readStats(card)
-    local result = {
-        name = combatName(card), known = false, keywords = {},
-        error = "Encoder statistics are unavailable for this card."
-    }
-    local encoder = Global.getVar("Encoder")
-    if encoder == nil then
-        result.error = "Encoder not found."
-        return result
-    end
-    local ok, props = pcall(function()
-        return encoder.call("APIobjGetPropData", {
-            obj = card, propID = Combat.FIGHT_PROP_ID
-        })
-    end)
-    if not ok or type(props) ~= "table"
-        or type(props.tyrantUnified) ~= "table" then
-        return result
-    end
-
-    local data = props.tyrantUnified
-    local face = type(data.cardFaces) == "table"
-        and data.cardFaces[tonumber(data.activeFace) or 1]
-    if type(face) ~= "table" then
-        result.error = "No active card face statistics."
-        return result
-    end
-    local baseP = combatNumber(face.basePower)
-    local baseT = combatNumber(face.baseToughness)
-    if baseP == nil or baseT == nil then
-        result.error = "Variable or nonnumeric power/toughness needs manual input."
-        return result
-    end
-    local modP = combatNumber(data.power or 0)
-    local modT = combatNumber(data.toughness or 0)
-    local counters = combatNumber(data.plusOneCounters or 0)
-    if modP == nil or modT == nil or counters == nil then
-        result.error = "Invalid modifier/counter value."
-        return result
-    end
-
-    result.known = true
-    result.basePower, result.baseToughness = baseP, baseT
-    result.powerModifier, result.toughnessModifier = modP, modT
-    result.plusOneCounters = counters
-    result.power = baseP + modP + counters
-    result.toughness = baseT + modT + counters
-    result.keywords = combatReadKeywords(encoder, card)
-    result.error = nil
-    return result
-end
-
-local function combatStatText(s)
-    if not s.known then return "?/?" end
-    return tostring(s.power) .. "/" .. tostring(s.toughness)
-end
-
-function Combat.evaluate(attacker, defender)
-    local a, d = Combat.readStats(attacker), Combat.readStats(defender)
-    local result = {
-        attacker = a, defender = d, known = a.known and d.known,
-        notes = {}, attackerDamage = nil, defenderDamage = nil
-    }
-    if result.known then
-        -- One attacker and one blocker, simultaneous regular combat damage.
-        result.attackerDamage = math.max(0, a.power)
-        result.defenderDamage = math.max(0, d.power)
-        result.attackerLethal = result.defenderDamage >= a.toughness
-        result.defenderLethal = result.attackerDamage >= d.toughness
-    end
-    local flagged = {
-        mtg_deathtouchcounter = true,
-        mtg_firststrikecounter = true,
-        mtg_doublestrikecounter = true,
-        mtg_indestructiblecounter = true,
-        mtg_tramplecounter = true,
-        mtg_lifelinkcounter = true,
-        mtg_protectioncounter = true,
-        mtg_stuncounter = true
-    }
-    for _, s in ipairs({a, d}) do
-        for _, keyword in ipairs(s.keywords) do
-            if flagged[keyword] then
-                result.notes[#result.notes + 1] =
-                    s.name .. ": " .. keyword:gsub("^mtg_", ""):gsub("counter$", "")
-            end
-        end
-    end
-    if not a.known then
-        result.notes[#result.notes + 1] = "Attacker: " .. a.error
-    end
-    if not d.known then
-        result.notes[#result.notes + 1] = "Defender: " .. d.error
-    end
-
-    local lines = {
-        "ATTACKER: " .. a.name .. "  [" .. combatStatText(a) .. "]",
-        "DEFENDER: " .. d.name .. "  [" .. combatStatText(d) .. "]"
-    }
-    if result.known then
-        lines[#lines + 1] = "Attacker deals " .. result.attackerDamage ..
-            "  |  Defender deals " .. result.defenderDamage
-        lines[#lines + 1] = "Attacker: " ..
-            (result.attackerLethal and "lethal damage" or "not lethal") ..
-            "  |  Defender: " ..
-            (result.defenderLethal and "lethal damage" or "not lethal")
-    else
-        lines[#lines + 1] = "Cannot calculate a numeric damage exchange."
-    end
-    if #result.notes > 0 then
-        lines[#lines + 1] = "Check: " .. table.concat(result.notes, "; ")
-    end
-    lines[#lines + 1] = "Estimate only. No damage is applied."
-    lines[#lines + 1] = "Assumes 1 attacker / 1 blocker, simultaneous normal damage."
-    lines[#lines + 1] = "Check existing damage, abilities and other effects."
-    result.text = table.concat(lines, "\n")
-    return result
-end
-
-local function combatReportPanel(color)
-    local id = Combat.REPORT_PREFIX .. color
-    return {tag = "Panel", attributes = {
-        id = id, rectAlignment = "UpperRight", offsetXY = "-18 -80",
-        width = "512", height = "278", color = "rgba(0.11,0.12,0.15,0.98)",
-        outline = "#607487", outlineSize = "1 -1",
-        visibility = color, active = "false",
-        raycastTarget = "true"
-    }, children = {
-        {tag = "Text", attributes = {
-            rectAlignment = "UpperLeft", offsetXY = "15 -10",
-            width = "455", height = "30", text = "COMBAT ESTIMATE",
-            fontSize = "19", fontStyle = "Bold", color = "#8AB9E8",
-            alignment = "MiddleLeft"
-        }},
-        {tag = "Button", attributes = {
-            rectAlignment = "UpperRight", offsetXY = "-9 -8",
-            width = "28", height = "28", text = "X",
-            fontSize = "16", color = "#8B2929", textColor = "#FFFFFF",
-            onClick = self.getGUID() .. "/combatCloseEstimate"
-        }},
-        {tag = "Text", attributes = {
-            id = id .. "_body", rectAlignment = "UpperLeft",
-            offsetXY = "15 -49", width = "484", height = "215",
-            fontSize = "15", color = "#EDF2F7",
-            alignment = "UpperLeft", text = "",
-            horizontalOverflow = "Wrap", verticalOverflow = "Truncate",
-            raycastTarget = "false"
-        }}
-    }}
-end
-
-function Combat.ensureResultPanels()
-    if Combat.reportPanelsInstalled then return false end
-    local xml = UI.getXmlTable() or {}
-    local found = {}
-    for _, node in ipairs(xml) do
-        if type(node.attributes) == "table" then
-            for color in pairs(Combat.OWNERS) do
-                if node.attributes.id == Combat.REPORT_PREFIX .. color then
-                    found[color] = true
-                end
-            end
-        end
-    end
-    local changed = false
-    for _, color in ipairs({"White", "Red", "Yellow", "Blue"}) do
-        if not found[color] then
-            xml[#xml + 1] = combatReportPanel(color)
-            changed = true
-        end
-    end
-    if changed then UI.setXmlTable(xml) end
-    Combat.reportPanelsInstalled = true
-    return changed
-end
-
-function Combat.showResult(color, text)
-    local function display()
-        local ok = pcall(function()
-            local id = Combat.REPORT_PREFIX .. color
-            UI.setAttribute(id .. "_body", "text", text)
-            UI.setAttribute(id, "active", "true")
-        end)
-        if not ok then
-            -- Readable fallback if a mod replaces Global UI unexpectedly.
-            printToColor("COMBAT ESTIMATE\n" .. text, color, {0.75, 0.88, 1})
-        end
-    end
-    local ok, newlyInstalled = pcall(Combat.ensureResultPanels)
-    if not ok then
-        printToColor("COMBAT ESTIMATE\n" .. text, color, {0.75, 0.88, 1})
-    elseif newlyInstalled then
-        -- setXmlTable recreates UI asynchronously; wait for the new elements.
-        Wait.frames(display, 4)
-    else
-        display()
-    end
-end
-
-function Combat.closeEstimate(player)
-    local color = Settings.playerColor(player)
-    if not Combat.OWNERS[color] then return end
-    UI.setAttribute(Combat.REPORT_PREFIX .. color, "active", "false")
-end
-
-function Combat.fightClick(attackerGUID, playerColor)
-    if not Combat.OWNERS[playerColor] then return end
-    local defenderGUID = Combat.singleDefender(attackerGUID)
-    if not defenderGUID then return end -- never calculate a multi-defender attack
-    local attacker = getObjectFromGUID(attackerGUID)
-    local defender = getObjectFromGUID(defenderGUID)
-    if not combatCard(attacker) or not combatCard(defender) then
-        Combat.updated()
-        return
-    end
-    local outcome = Combat.evaluate(attacker, defender)
-    Combat.showResult(playerColor, outcome.text)
+    -- TTS may restore old spawned anchors when loading a saved table.
+    -- Clean them after all objects have spawned.
+    Wait.frames(Combat.cleanupLegacyFight, 30)
 end

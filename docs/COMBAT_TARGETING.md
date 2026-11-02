@@ -1,74 +1,33 @@
-# Combat targeting (Lotus Helper)
+# Lotus combat arrows
 
-## What it does
-Hold **MTG: Declare Combat Target** with the cursor over the **DEFENDER** first, move to the **ATTACKER** and release. Lotus draws a colored attacker-to-target arrow for all players, following the two cards as they move.
+Combat targeting is a **visual-only** feature inside the existing Lotus Helper. No combat damage calculation, FIGHT/AUTOFIGHT button, or damage-result UI is installed.
 
-This is a **visual declaration only**, not a Magic rules engine: it does not tap cards, assign blockers, check legal attacks, manage combat phases, or apply damage.
+## Controls
+In **Table Settings → General**, players can:
+- Enable or disable combat targeting for their seat (enabled by default).
+- Open **Configure key (C suggested)** to assign the **MTG: Declare Combat Target** game hotkey in TTS. A physical default key cannot be set by Lua; each client must assign its own binding.
+- Use **Clear my arrows** to remove their own declarations without changing another player's arrows.
 
-## Configure the key
-Table Settings > General > **Configure key (C suggested)** opens the built-in TTS Game Keys dialog. Find **MTG: Declare Combat Target**, click its binding field and press **C** (or another free key). TTS's `addHotkey` API does **not** allow a script to assign the physical key; player binding is required once, then TTS retains it under the same label on subsequent loads.
+### Defender-first gesture
+1. Hover a **defending card** and **hold** the combat hotkey.
+2. Move the pointer to the **attacking card**.
+3. **Release** the hotkey: Lotus draws an arrow from that attacker to that defender.
+4. Repeat this exact defender → attacker gesture to remove **that single arrow**.
+5. Start on a different defender and end on the same attacker to **add another defender**, keeping the existing arrows.
+6. Press and release the hotkey while hovering the **attacker itself** to remove **all defenders for that attacker**.
 
-If C already has a TTS action on a player's client, the two actions can both run; the player should change the conflicting binding in TTS Controls. Each player independently configures their own key.
+Each attacker can point at multiple defenders. A defender can also be targeted by more than one attacker. The arrows are session-only, follow cards when moved, and are removed when the referenced card is destroyed. TTS cards are not tapped, moved, or modified by this feature.
 
-## General tab controls
-- **Enable combat targeting for me**: per-seat setting, on by default, saved with Lotus's existing settings and playmat data.
-- **Configure key (C suggested)**: opens TTS Options > Game Keys.
-- **Clear my arrows**: removes only target declarations made by that player. Disabling combat targeting also clears that player's arrows.
+## Implementation boundaries
+- Source: `src/lotus/sections/06_combat-targeting.lua` assembled into the original Lotus GUID script.
+- Hotkey registration and TTS event dispatch: `src/lotus/sections/07_shared-event-dispatcher.lua`.
+- Settings and preferences: `src/lotus/sections/03_edh-settings.lua` and `src/ui/sections/08_lotus-settings.xml`.
+- Tracking: `Combat.links[attackerGUID] = {defenders = {[defenderGUID] = true, ...}, by = playerColor}`.
+- Drawing: Lotus vector lines, not extra world-space buttons or spawned objects. Existing Lotus vector lines are preserved.
+- Updates: once every 0.30 seconds while arrows are present, plus immediately on changes.
 
-## Previous gesture notes (superseded by multiple-defender behavior below)
+## Removed legacy FIGHT artifacts
+An older version spawned transparent, temporary world-space AUTOFIGHT anchors, added dynamic private combat report panels, and potentially attached FIGHT buttons to the Lotus object. They are no longer created. On load the new script removes only the tagged **`MTG_Lotus_AutoFightAnchor`** objects, any Lotus buttons with the `MTG_COMBAT_FIGHT:` tooltip prefix, and top-level XML panels with the `MTG_Combat_Fight_Result_` ID prefix. It does not remove unrelated user objects, buttons, XML, or drawing lines.
 
-The next section overrides the previous single-target descriptions.
-
-## Gesture and limits
-- Only physical TTS **Card** objects are valid sources and targets.
-- **Start on defender**, release over an **attacker**. The arrow is drawn from attacker toward defender.
-- **Remove a single arrow:** tap the combat key while hovering the attacker (press and release on the same card).
-- **Toggle off by repeating:** start on the same defender and release on the same attacker again.
-- Start on a different defender and release on an attacker that already has an arrow to retarget it.
-- **Remove every arrow you declared:** Table Settings > General > Clear my arrows.
-- Each attacking card has one active defender target (a visual shortcut, not a complete multi-blocker combat model).
-- Arrows use the Lotus Helper's vector-line layer, not Global/table lines.
-- Declarations are session-only and disappear on script reload; saved playmats and settings are unaffected.
-- Arrows update every 0.3 seconds while active. Destroyed cards clear related declarations.
-- Do not use the native Tab ruler for this; the TTS Lua API does not expose native ruler drag start/end.
-
-## Developer ownership
-`src/lotus/sections/06_combat-targeting.lua` is the source; 
-`src/lotus/sections/07_shared-event-dispatcher.lua` registers the hotkey and object-destroy cleanup.
-`src/lotus/sections/03_edh-settings.lua` owns the General tab and settings persistence.
-`src/ui/sections/08_lotus-settings.xml` owns the checked-in Global XML copy of the General tab.
-
-Build with `py tools/build.py --check` and use a **copy** of the TTS table for the first Save & Play test. Check that the existing General, Counters and Card Preview tabs still function, that two players can declare simultaneously and that unrelated drawn lines are unaffected.
-
-## FIGHT calculation button (new)
-Each active attacker-to-defender arrow gets a small **FIGHT** 3D button at its midpoint. It follows the arrow as cards move. The button belongs to the Lotus Helper's own scripted buttons, using distinct callbacks for each attacker, so it does not modify either card or its own script.
-
-Click **FIGHT** to display a **private per-player read-only COMBAT ESTIMATE** panel in the upper-right corner. Its close button only hides that player's report. Several players may examine different fights without overwriting each other's panels. TTS may require a reload to pick up the modified helper script.
-
-### Stats source
-The calculator reads Encoder `APIobjGetPropData` with the existing TyrantNomad prop ID `_MTG_Simplified_UNIFIED`. For each card, it gets `cardFaces[activeFace].basePower/baseToughness`, `power`, `toughness`, and `plusOneCounters` and calculates:
-```text
-power = basePower + powerModifier + plusOneCounters
-toughness = baseToughness + toughnessModifier + plusOneCounters
-```
-This avoids scraping the on-card UI's labels and includes saved manual adjustments. If either base stat is nonnumeric (e.g. `*`) or the module isn't present, the calculator **refuses to guess** and displays unknown stats instead.
-
-It also inspects the `πKeywords` Encoder property for tracked combat-relevant keyword markers and warns when any are present, but those effects are **not resolved automatically**.
-
-### Results, boundaries and safety
-For two creatures with numerical P/T, the panel reports regular combat damage under the **one attacker / one blocking creature, simultaneous normal damage** assumption. It marks whether that damage would be lethal in this simplified scenario. The result is an **estimate only**: no damage is marked, no counters are modified, no cards are destroyed, and no rules decisions are made.
-
-The estimate does not currently handle: already-marked damage, damage prevention/replacement, first/double strike sequencing, deathtouch, indestructibility, protection, trample assignment, damage multipliers, static anthems that aren't reflected in Encoder, equipment/effect layering, multi-blocker assignment, power/toughness defined by abilities, or other Magic rules interactions. A tracked keyword triggers a visible warning; unknown or untracked effects always remain a possible source of inaccuracy.
-
-The center button is removed when its arrow is cleared. Other Lotus buttons are preserved using tooltip-based ownership rather than hardcoded button indexes.
-
-## Multiple defenders and AUTOFIGHT (latest)
-
-- **Gesture:** Hold the configured combat key while hovering a **defender**, then release it over the **attacker**.
-- Each attacker may have **multiple defenders**. Each defender gets its own arrow, pointing from the attacker to that defender.
-- Repeat the gesture with the *same defender and attacker* to remove **only that arrow**. Tap the key on the attacker itself to clear **all of its defenders**.
-- A world-space **AUTOFIGHT** button is shown at the arrow midpoint **only when an attacker has exactly one defender**. With two or more defenders, the arrows remain but the button disappears.
-- The button is hosted on a temporary, tiny translucent/transparent locked object at the midpoint, rather than being placed far from Lotus. It follows the cards and is removed when no longer needed. The anchor's tiny physical collider is kept away from the cards; TTS does not expose a fully reliable no-collider button host.
-- AUTOFIGHT opens the **existing read-only, simplified one-on-one combat estimate**. It does not deal damage, resolve multi-blocker combat, modify stats, or destroy objects.
-- Runtime anchors are temporary; the script removes stale tagged anchors when loaded and cleans up markers as combat links change. In-game visibility on the world-space anchor must be verified with TTS.
-
+## Validation
+Run `python tools/build.py --check`, `lua5.2 tests/combat_hotkey_test.lua`, and `lua5.2 tests/combat_arrows_test.lua`. These test the Lua source and fake TTS objects. In-game verification is still required for actual vector-line rendering and cursor events.

@@ -60,10 +60,12 @@
         "src/lotus/sections/02_draw-random.lua",
         "src/lotus/sections/03_edh-settings.lua",
         "src/lotus/sections/04_original-moon-mtg-equipment-encoder-based.lua",
-        "src/lotus/sections/05_always-reveal-top-non-colliding-visual-clone.lua"
+        "src/lotus/sections/05_always-reveal-top-non-colliding-visual-clone.lua",
+        "src/lotus/sections/06_combat-targeting.lua",
+        "src/lotus/sections/07_shared-event-dispatcher.lua"
       ],
       "source_git_blob": "03a74e10015c87f920278ab8cce407d03c96a7a8",
-      "section_count": 6
+      "section_count": 8
     },
     {
       "id": "ui",

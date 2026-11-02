@@ -19,6 +19,12 @@ The table's imported object scripts have been organized from `New/` into functio
 | `docs/` | Architecture and migration/feature guidance |
 | `.build/` | Generated non-GUID build outputs (ignored by Git) |
 
+## Combat targeting (Lotus Helper)
+
+Table Settings > General now includes **Enable combat targeting for me**, **Configure key (C suggested)**, and **Clear my arrows**. Hold the configured key over one card and release over another to draw a player-colored targeting arrow. It is visual only, with no automatic rules or damage changes.
+
+**Important:** TTS cannot assign a default physical key from Lua. Use the Configure button to bind **MTG: Declare Combat Target** to **C** (or another preferred key) once per client. Details: [Combat targeting](docs/COMBAT_TARGETING.md).
+
 ## Everyday workflow
 
 1. Open **this repository root** in VS Code and set the Smart Import v3 TTS workdir to the **same root**.

@@ -1117,6 +1117,7 @@ Settings = {
     previewFirstCommanderOwn = {},
     previewFirstCommanderOpponents = {},
     showShortcutsByColor = {}, -- personal HUD visibility, keyed by TTS seat color
+    combatEnabledByColor = {}, -- per-seat combat targeting preference
     menuOpen = false,
     menuOwner = nil,
     uiSyncing = false,
@@ -1164,6 +1165,9 @@ function Settings.normalize()
         if Settings.showShortcutsByColor[color] == nil then
             Settings.showShortcutsByColor[color] = true
         end
+        if Settings.combatEnabledByColor[color] == nil then
+            Settings.combatEnabledByColor[color] = true
+        end
     end
 end
 
@@ -1190,7 +1194,8 @@ function Settings.import(data)
         and type(data.previewHideLands) ~= "table"
         and type(data.previewShareEnabled) ~= "table"
         and type(data.previewHideOwnLandsForOthers) ~= "table"
-        and type(data.showShortcutsByColor) ~= "table" then
+        and type(data.showShortcutsByColor) ~= "table"
+        and type(data.combatEnabledByColor) ~= "table" then
         return false
     end
     if type(data.state) == "table" then Settings.state = data.state end
@@ -1223,6 +1228,9 @@ function Settings.import(data)
     if type(data.showShortcutsByColor) == "table" then
         Settings.showShortcutsByColor = data.showShortcutsByColor
     end
+    if type(data.combatEnabledByColor) == "table" then
+        Settings.combatEnabledByColor = data.combatEnabledByColor
+    end
     Settings.hasSavedState = true
     Settings.normalize()
     return true
@@ -1237,6 +1245,7 @@ function Settings.load(savedData)
     Settings.previewFirstCommanderOwn = {}
     Settings.previewFirstCommanderOpponents = {}
     Settings.showShortcutsByColor = {}
+    Settings.combatEnabledByColor = {}
     Settings.menuOpen = false
     Settings.menuOwner = nil
     Settings.uiSyncing = false
@@ -1283,7 +1292,8 @@ function Settings.export()
         previewHideOpponentsLands = Settings.previewHideOpponentsLands,
         previewFirstCommanderOwn = Settings.previewFirstCommanderOwn,
         previewFirstCommanderOpponents = Settings.previewFirstCommanderOpponents,
-        showShortcutsByColor = Settings.showShortcutsByColor
+        showShortcutsByColor = Settings.showShortcutsByColor,
+        combatEnabledByColor = Settings.combatEnabledByColor
     }
 end
 
@@ -1404,6 +1414,8 @@ function Settings.syncUI()
         Settings.previewFirstCommanderOpponents[color] ~= false)
     Settings.setToggle("lotus_show_shortcuts",
         Settings.showShortcutsByColor[color] ~= false)
+    Settings.setToggle("lotus_enable_combat",
+        Settings.combatEnabledByColor[color] ~= false)
     Settings.uiSyncing = false
 end
 
@@ -1419,8 +1431,8 @@ Settings.TAB_IDS = {
 function Settings.applyTab()
     local height = "465"
     if Settings.activeTab == "notes" then height = "605"
-    elseif Settings.activeTab == "general" or Settings.activeTab == "preview" then
-        height = "365"
+    elseif Settings.activeTab == "general" then height = "465"
+    elseif Settings.activeTab == "preview" then height = "365"
     end
     UI.setAttribute("CounterVisibilityPanel", "height", height)
     for tab, ids in pairs(Settings.TAB_IDS) do
@@ -1708,14 +1720,24 @@ function Settings.applyShortcutsVisibility()
 end
 
 function Settings.toggleGeneral(player, value, id)
-    if Settings.uiSyncing or id ~= "lotus_show_shortcuts" then return end
+    if Settings.uiSyncing then return end
     local color = Settings.playerColor(player)
     if color == nil or color ~= Settings.menuOwner or not Settings.validColor(color) then
         return
     end
-    Settings.showShortcutsByColor[color] = Settings.toBool(value)
+    if id == "lotus_show_shortcuts" then
+        Settings.showShortcutsByColor[color] = Settings.toBool(value)
+        Settings.applyShortcutsVisibility()
+    elseif id == "lotus_enable_combat" then
+        Settings.combatEnabledByColor[color] = Settings.toBool(value)
+        if not Settings.combatEnabledByColor[color] then
+            Combat.pending[color] = nil
+            Combat.clear(color)
+        end
+    else
+        return
+    end
     Settings.persist()
-    Settings.applyShortcutsVisibility()
 end
 
 -- Keep every unrelated button attached to the Lotus intact.
@@ -1932,7 +1954,7 @@ end
 function Settings.generalTab()
     return {tag = "Panel", attributes = {
         id = "MTG_Settings_Tab_General", rectAlignment = "UpperCenter",
-        offsetXY = "0 -124", width = "516", height = "205",
+        offsetXY = "0 -124", width = "516", height = "290",
         color = "clear", active = "false"
     }, children = {
         {tag = "Text", attributes = {
@@ -1941,22 +1963,57 @@ function Settings.generalTab()
             alignment = "MiddleLeft", color = "#6fa0d8", text = "GENERAL"
         }},
         {tag = "Panel", attributes = {
-            id = "MTG_Settings_GeneralContent_v142",
+            id = "MTG_Settings_GeneralContent_v150",
             rectAlignment = "UpperCenter", offsetXY = "0 -36",
-            width = "500", height = "125", color = "#28272B"
+            width = "500", height = "242", color = "#28272B"
         }, children = {
             {tag = "Toggle", attributes = {
                 id = "lotus_show_shortcuts", isOn = "True",
                 onValueChanged = self.getGUID() .. "/settingsGeneralToggle",
-                rectAlignment = "UpperLeft", offsetXY = "16 -16",
-                width = "460", height = "35", fontSize = "18",
+                rectAlignment = "UpperLeft", offsetXY = "16 -13",
+                width = "460", height = "35", fontSize = "17",
                 textColor = "#EDEEF2"
             }, value = "Show numpad shortcuts on my screen"},
             {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -61",
-                width = "465", height = "50", fontSize = "14",
-                color = "#9BA4B0", alignment = "UpperLeft",
-                text = "Only affects your view. Other players keep their own settings.\nKeys are configured in TTS Configuration > Controls."
+                rectAlignment = "UpperLeft", offsetXY = "16 -53",
+                width = "465", height = "20", fontSize = "13",
+                color = "#9BA4B0", alignment = "MiddleLeft",
+                text = "Numpad keys: TTS Configuration > Controls."
+            }},
+            {tag = "Text", attributes = {
+                rectAlignment = "UpperLeft", offsetXY = "16 -87",
+                width = "465", height = "22", fontSize = "14",
+                fontStyle = "Bold", color = "#6fa0d8",
+                text = "COMBAT TARGETING"
+            }},
+            {tag = "Toggle", attributes = {
+                id = "lotus_enable_combat", isOn = "True",
+                onValueChanged = self.getGUID() .. "/settingsGeneralToggle",
+                rectAlignment = "UpperLeft", offsetXY = "16 -112",
+                width = "465", height = "33", fontSize = "17",
+                textColor = "#EDEEF2"
+            }, value = "Enable combat targeting for me"},
+            {tag = "Button", attributes = {
+                id = "lotus_combat_bind",
+                onClick = self.getGUID() .. "/settingsCombatKeyConfig",
+                rectAlignment = "UpperLeft", offsetXY = "16 -160",
+                width = "260", height = "33", fontSize = "14",
+                textColor = "#FFFFFF", colors = "#315A87|#4274AC|#234363|#234363",
+                text = "Configure key (C suggested)"
+            }},
+            {tag = "Button", attributes = {
+                id = "lotus_combat_clear",
+                onClick = self.getGUID() .. "/settingsCombatClear",
+                rectAlignment = "UpperRight", offsetXY = "-16 -160",
+                width = "188", height = "33", fontSize = "14",
+                textColor = "#FFFFFF", colors = "#403A43|#57515B|#2B272E|#2B272E",
+                text = "Clear my arrows"
+            }},
+            {tag = "Text", attributes = {
+                rectAlignment = "UpperLeft", offsetXY = "16 -207",
+                width = "465", height = "24", fontSize = "13",
+                color = "#9BA4B0", alignment = "MiddleLeft",
+                text = "Hold bound key on a card; release it over another card."
             }}
         }}
     }}
@@ -2053,6 +2110,19 @@ function Settings.ensureGeneralTab(panel)
         local id = child.attributes and child.attributes.id
         if id == "MTG_Settings_Tab_General" then
             hasGeneralPanel = true
+            -- Replace only Lotus' own obsolete General tab. Never touch other UI.
+            local current = false
+            for _, node in ipairs(child.children or {}) do
+                if node.attributes
+                    and node.attributes.id == "MTG_Settings_GeneralContent_v150" then
+                    current = true
+                    break
+                end
+            end
+            if not current then
+                panel.children[i] = Settings.generalTab()
+                changed = true
+            end
         elseif id == "MTG_Settings_Tab_Shortcuts" then
             table.remove(panel.children, i)
             changed = true
@@ -2548,7 +2618,9 @@ function Settings.installUI()
         previewToggle = true,
         settingsSelectTab = true,
         settingsNotesNavigate = true,
-        settingsGeneralToggle = true
+        settingsGeneralToggle = true,
+        settingsCombatKeyConfig = true,
+        settingsCombatClear = true
     }
 
     local function hasTabs(node)
@@ -3713,6 +3785,165 @@ function RevealTop.onDestroy(obj)
 end
 
 -- =============================================================
+-- MODULE 7: COMBAT TARGETING (CUSTOM GAME KEY, NOT NATIVE TAB)
+--
+-- TTS does not let Lua assign C (or any default key) programmatically.
+-- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
+-- Holding the bound key on a card and releasing on another card creates
+-- a persistent, purely visual arrow. No MTG rules are enforced.
+-- Arrows are session-only; each player can clear their own arrows.
+-- =============================================================
+
+local Combat = {
+    HOTKEY = "MTG: Declare Combat Target",
+    OWNERS = {White = true, Red = true, Yellow = true, Blue = true},
+    COLOR = {
+        White = {0.95, 0.94, 0.83},
+        Red = {0.96, 0.33, 0.27},
+        Yellow = {1.0, 0.83, 0.19},
+        Blue = {0.30, 0.64, 1.0}
+    },
+    pending = {}, -- initiator color -> attacker GUID while key held
+    links = {},   -- attacker GUID -> {target = GUID, by = playerColor}
+    baseLines = {},
+    loopActive = false,
+    loopGeneration = 0,
+    REFRESH_SECONDS = 0.30
+}
+
+local function combatCard(obj)
+    return obj ~= nil and obj.tag == "Card"
+        and not obj.isDestroyed() and type(obj.getGUID) == "function"
+end
+
+function Combat.enabled(color)
+    return Combat.OWNERS[color] == true
+        and Settings.combatEnabledByColor[color] ~= false
+end
+
+local function combatLocal(world)
+    local v = self.positionToLocal(world)
+    return {v.x, v.y, v.z}
+end
+
+function Combat.render()
+    local lines = {}
+    for _, existing in ipairs(Combat.baseLines) do
+        lines[#lines + 1] = existing
+    end
+    for attackerGUID, link in pairs(Combat.links) do
+        local attacker = getObjectFromGUID(attackerGUID)
+        local defender = getObjectFromGUID(link.target)
+        if not combatCard(attacker) or not combatCard(defender) then
+            Combat.links[attackerGUID] = nil
+        else
+            local a, b = attacker.getPosition(), defender.getPosition()
+            local dx, dz = b.x - a.x, b.z - a.z
+            local distance = math.sqrt(dx * dx + dz * dz)
+            if distance > 0.35 then
+                local ux, uz = dx / distance, dz / distance
+                local lift = math.max(a.y, b.y) + 0.45
+                local start = {a.x + ux * 0.33, lift, a.z + uz * 0.33}
+                local finish = {b.x - ux * 0.35, lift, b.z - uz * 0.35}
+                local wing = 0.32
+                local left = {finish[1] - ux * 0.57 - uz * wing,
+                              lift, finish[3] - uz * 0.57 + ux * wing}
+                local right = {finish[1] - ux * 0.57 + uz * wing,
+                               lift, finish[3] - uz * 0.57 - ux * wing}
+                local tint = Combat.COLOR[link.by] or {1, 1, 1}
+                lines[#lines + 1] = {
+                    points = {combatLocal(start), combatLocal(finish)},
+                    color = tint, thickness = 0.10
+                }
+                lines[#lines + 1] = {
+                    points = {combatLocal(left), combatLocal(finish),
+                              combatLocal(right)},
+                    color = tint, thickness = 0.10
+                }
+            end
+        end
+    end
+    -- Only Lotus' own vector lines are replaced, never Global/table drawings.
+    self.setVectorLines(lines)
+end
+
+function Combat.loop(generation)
+    if generation ~= Combat.loopGeneration then return end
+    Combat.render()
+    if next(Combat.links) then
+        Wait.time(function() Combat.loop(generation) end, Combat.REFRESH_SECONDS)
+    else
+        Combat.loopActive = false
+    end
+end
+
+function Combat.updated()
+    Combat.render()
+    if next(Combat.links) and not Combat.loopActive then
+        Combat.loopActive = true
+        Combat.loopGeneration = Combat.loopGeneration + 1
+        local gen = Combat.loopGeneration
+        Wait.time(function() Combat.loop(gen) end, Combat.REFRESH_SECONDS)
+    elseif not next(Combat.links) then
+        Combat.loopGeneration = Combat.loopGeneration + 1
+        Combat.loopActive = false
+    end
+end
+
+function Combat.clear(color)
+    if not Combat.OWNERS[color] then return end
+    Combat.pending[color] = nil
+    for attackerGUID, link in pairs(Combat.links) do
+        if link.by == color then Combat.links[attackerGUID] = nil end
+    end
+    Combat.updated()
+end
+
+function Combat.onDestroy(obj)
+    if obj == nil then return end
+    local guid = obj.getGUID()
+    local dirty = Combat.links[guid] ~= nil
+    Combat.links[guid] = nil
+    for attackerGUID, link in pairs(Combat.links) do
+        if link.target == guid then
+            Combat.links[attackerGUID] = nil
+            dirty = true
+        end
+    end
+    if dirty then Combat.updated() end
+end
+
+function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
+    if not Combat.OWNERS[color] then return end
+    if not isKeyUp then
+        Combat.pending[color] = Combat.enabled(color)
+            and combatCard(hovered) and hovered.getGUID() or nil
+        return
+    end
+    local attackerGUID = Combat.pending[color]
+    Combat.pending[color] = nil
+    if not Combat.enabled(color) or not attackerGUID then return end
+    local attacker = getObjectFromGUID(attackerGUID)
+    if not combatCard(attacker) then return end
+    if not combatCard(hovered) or hovered.getGUID() == attackerGUID then
+        printToColor("Combat: release the key over another card.", color,
+            {0.9, 0.72, 0.35})
+        return
+    end
+    Combat.links[attackerGUID] = {target = hovered.getGUID(), by = color}
+    Combat.updated()
+end
+
+function Combat.load()
+    Combat.pending = {}
+    Combat.links = {}
+    Combat.baseLines = self.getVectorLines() or {}
+    Combat.loopActive = false
+    Combat.loopGeneration = 0
+    addHotkey(Combat.HOTKEY, Combat.hotkey, true)
+end
+
+-- =============================================================
 -- SHARED EVENT DISPATCHER (6 MODULES)
 -- =============================================================
 
@@ -3723,6 +3954,7 @@ function onLoad(savedData)
     DrawRandom.load()
     Equipment.load()
     RevealTop.load(savedData)
+    Combat.load()
     -- Deferred until Global and the other script objects have loaded.
     Wait.frames(Settings.ready, 20)
     print("MTG Portable Helper: Playmat module ready.")
@@ -3756,6 +3988,7 @@ end
 function onObjectDestroy(obj)
     DrawRandom.onDestroy(obj)
     RevealTop.onDestroy(obj)
+    Combat.onDestroy(obj)
 end
 
 function onObjectHover(playerColor, obj)
@@ -3823,6 +4056,18 @@ end
 -- Personal on-screen shortcut overlay switch in General Settings.
 function settingsGeneralToggle(player, value, id)
     Settings.toggleGeneral(player, value, id)
+end
+
+-- Binding must be selected by the player in TTS; Lua cannot write the key.
+function settingsCombatKeyConfig(player, value, id)
+    if Settings.playerColor(player) ~= Settings.menuOwner then return end
+    showHotkeyConfig()
+end
+
+function settingsCombatClear(player, value, id)
+    local color = Settings.playerColor(player)
+    if color == nil or color ~= Settings.menuOwner then return end
+    Combat.clear(color)
 end
 
 -- Global XML: navigate read-only patch notes release pages.

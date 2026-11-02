@@ -421,11 +421,16 @@
         <Button id="MTG_Settings_Button_Counters" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#C9D1DF" colors="#29292E|#3D3D45|#222229|#222229" onClick="777766/settingsSelectTab" text="Counters" />
         <Button id="MTG_Settings_Button_Preview" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#C9D1DF" colors="#29292E|#3D3D45|#222229|#222229" onClick="777766/settingsSelectTab" text="Card Preview" />
     </HorizontalLayout>
-    <Panel id="MTG_Settings_Tab_General" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="205" color="clear" active="false">
+    <Panel id="MTG_Settings_Tab_General" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="290" color="clear" active="false">
         <Text rectAlignment="UpperLeft" offsetXY="11 -3" width="470" height="24" fontSize="14" fontStyle="Bold" alignment="MiddleLeft" color="#6fa0d8" text="GENERAL" />
-        <Panel id="MTG_Settings_GeneralContent_v142" rectAlignment="UpperCenter" offsetXY="0 -36" width="500" height="125" color="#28272B">
-            <Toggle id="lotus_show_shortcuts" rectAlignment="UpperLeft" offsetXY="16 -16" width="460" height="35" fontSize="18" textColor="#EDEEF2" isOn="True" onValueChanged="777766/settingsGeneralToggle">Show numpad shortcuts on my screen</Toggle>
-            <Text rectAlignment="UpperLeft" offsetXY="16 -61" width="465" height="50" fontSize="14" color="#9BA4B0" alignment="UpperLeft" text="Keys are configured in TTS Configuration &gt; Controls." />
+        <Panel id="MTG_Settings_GeneralContent_v150" rectAlignment="UpperCenter" offsetXY="0 -36" width="500" height="242" color="#28272B">
+            <Toggle id="lotus_show_shortcuts" rectAlignment="UpperLeft" offsetXY="16 -13" width="460" height="35" fontSize="17" textColor="#EDEEF2" isOn="True" onValueChanged="777766/settingsGeneralToggle">Show numpad shortcuts on my screen</Toggle>
+            <Text rectAlignment="UpperLeft" offsetXY="16 -53" width="465" height="20" fontSize="13" color="#9BA4B0" alignment="MiddleLeft" text="Numpad keys: TTS Configuration &gt; Controls." />
+            <Text rectAlignment="UpperLeft" offsetXY="16 -87" width="465" height="22" fontSize="14" fontStyle="Bold" color="#6fa0d8" text="COMBAT TARGETING" />
+            <Toggle id="lotus_enable_combat" rectAlignment="UpperLeft" offsetXY="16 -112" width="465" height="33" fontSize="17" textColor="#EDEEF2" isOn="True" onValueChanged="777766/settingsGeneralToggle">Enable combat targeting for me</Toggle>
+            <Button id="lotus_combat_bind" rectAlignment="UpperLeft" offsetXY="16 -160" width="260" height="33" fontSize="14" textColor="#FFFFFF" colors="#315A87|#4274AC|#234363|#234363" onClick="777766/settingsCombatKeyConfig" text="Configure key (C suggested)" />
+            <Button id="lotus_combat_clear" rectAlignment="UpperRight" offsetXY="-16 -160" width="188" height="33" fontSize="14" textColor="#FFFFFF" colors="#403A43|#57515B|#2B272E|#2B272E" onClick="777766/settingsCombatClear" text="Clear my arrows" />
+            <Text rectAlignment="UpperLeft" offsetXY="16 -207" width="465" height="24" fontSize="13" color="#9BA4B0" alignment="MiddleLeft" text="Hold bound key on a card; release it over another card." />
         </Panel>
     </Panel>
     <Panel id="MTG_Settings_Tab_Notes" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="460" color="clear" active="true">

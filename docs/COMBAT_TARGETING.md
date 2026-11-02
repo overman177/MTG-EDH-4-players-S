@@ -17,8 +17,12 @@ If C already has a TTS action on a player's client, the two actions can both run
 
 ## Gesture and limits
 - Only physical TTS **Card** objects are valid sources and targets.
-- Press over attacker, release over another card (not the same card).
-- Each source card has one active target. Assigning it again updates its arrow.
+- Press over attacker, release over a different card to assign its target.
+- **Remove a single arrow:** tap the combat key while hovering the attacker (press and release on the same card).
+- **Toggle off by repeating:** make the same attacker-to-target gesture again to remove that arrow.
+- Drag from an attacker to a different target to retarget its existing arrow.
+- **Remove every arrow you declared:** Table Settings > General > Clear my arrows.
+- Each source card has one active target.
 - Arrows use the Lotus Helper's vector-line layer, not Global/table lines.
 - Declarations are session-only and disappear on script reload; saved playmats and settings are unaffected.
 - Arrows update every 0.3 seconds while active. Destroyed cards clear related declarations.

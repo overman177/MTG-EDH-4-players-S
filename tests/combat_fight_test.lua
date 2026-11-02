@@ -33,7 +33,11 @@ UI = {
     setXmlTable = function(x) uiNodes=x end,
     setAttribute = function(id,k,v) reports[id..":"..k]=v end
 }
-Wait = {time = function() end}
+local deferred = {}
+Wait = {time = function() end, frames = function(fn, n)
+    assert(n == 4, "wait for XML rebuild")
+    deferred[#deferred + 1] = fn
+end}
 function addHotkey() end
 local function card(guid,name,p,t,x,modifierP,modifierT,plus,keywords)
     local result = {tag="Card",guid=guid,name=name,point={x=x,y=1,z=0}}
@@ -87,6 +91,10 @@ local fightName=buttons[2].click_function
 assert(type(_G[fightName])=="function","per-attacker click registered")
 _G[fightName](self,"White",false)
 assert(#uiNodes==4,"one report panel per player")
+assert(#deferred==1,"first result update deferred until UI rebuild")
+assert(reports["MTG_Combat_Fight_Result_White_body:text"]==nil,
+       "no premature XML attribute writes")
+deferred[1]()
 local report=reports["MTG_Combat_Fight_Result_White_body:text"]
 assert(report and report:find("Mother of Runes",1,true),"clicked report correct")
 assert(report:find("Attacker deals 4",1,true),"result displays damage")

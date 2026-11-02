@@ -3,7 +3,7 @@
 --
 -- TTS does not let Lua assign C (or any default key) programmatically.
 -- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
--- Holding the bound key on a card and releasing on another card creates
+-- Holding the bound key on DEFENDER and releasing on ATTACKER creates
 -- a persistent, purely visual arrow. No MTG rules are enforced.
 -- Arrows are session-only; each player can clear their own arrows.
 -- =============================================================
@@ -17,7 +17,7 @@ Combat = {
         Yellow = {1.0, 0.83, 0.19},
         Blue = {0.30, 0.64, 1.0}
     },
-    pending = {}, -- initiator color -> attacker GUID while key held
+    pending = {}, -- initiator color -> defender GUID while key held
     links = {},   -- attacker GUID -> {target = GUID, by = playerColor}
     baseLines = {},
     loopActive = false,
@@ -130,25 +130,29 @@ end
 function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     if not Combat.OWNERS[color] then return end
     if not isKeyUp then
+        -- The cursor starts on the DEFENDER (usually the blocking creature).
         Combat.pending[color] = Combat.enabled(color)
             and combatCard(hovered) and hovered.getGUID() or nil
         return
     end
-    local attackerGUID = Combat.pending[color]
+
+    local defenderGUID = Combat.pending[color]
     Combat.pending[color] = nil
-    if not Combat.enabled(color) or not attackerGUID then return end
-    local attacker = getObjectFromGUID(attackerGUID)
-    if not combatCard(attacker) then return end
+    if not Combat.enabled(color) or not defenderGUID then return end
+    local defender = getObjectFromGUID(defenderGUID)
+    if not combatCard(defender) then return end
+
     if not combatCard(hovered) then
-        printToColor("Combat: release over a target card, or tap on the attacker to remove its arrow.",
+        printToColor("Combat: release over the attacking card (or tap an attacker to clear its arrow).",
             color, {0.9, 0.72, 0.35})
         return
     end
-    local targetGUID = hovered.getGUID()
+
+    local attackerGUID = hovered.getGUID()
     local current = Combat.links[attackerGUID]
 
-    -- Tap the bound key on an attacker to remove its existing arrow.
-    if targetGUID == attackerGUID then
+    -- Press/release on the same attacker: delete its own arrow, if present.
+    if defenderGUID == attackerGUID then
         if current ~= nil then
             Combat.links[attackerGUID] = nil
             Combat.updated()
@@ -156,12 +160,12 @@ function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
         return
     end
 
-    -- Repeating the same attacker -> target declaration toggles it off.
-    -- Selecting a different target replaces the previous arrow.
-    if current ~= nil and current.target == targetGUID then
+    -- Repeating defender -> same attacker toggles off the connection.
+    -- A new defender for this attacker replaces the old connection.
+    if current ~= nil and current.target == defenderGUID then
         Combat.links[attackerGUID] = nil
     else
-        Combat.links[attackerGUID] = {target = targetGUID, by = color}
+        Combat.links[attackerGUID] = {target = defenderGUID, by = color}
     end
     Combat.updated()
 end

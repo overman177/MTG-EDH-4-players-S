@@ -1,7 +1,7 @@
 # Combat targeting (Lotus Helper)
 
 ## What it does
-Hold the configured **MTG: Declare Combat Target** hotkey while pointing at a Card, move the cursor to another Card and release. Lotus draws a colored attacker-to-target arrow for all players, following the two cards as they move.
+Hold **MTG: Declare Combat Target** with the cursor over the **DEFENDER** first, move to the **ATTACKER** and release. Lotus draws a colored attacker-to-target arrow for all players, following the two cards as they move.
 
 This is a **visual declaration only**, not a Magic rules engine: it does not tap cards, assign blockers, check legal attacks, manage combat phases, or apply damage.
 
@@ -17,12 +17,12 @@ If C already has a TTS action on a player's client, the two actions can both run
 
 ## Gesture and limits
 - Only physical TTS **Card** objects are valid sources and targets.
-- Press over attacker, release over a different card to assign its target.
+- **Start on defender**, release over an **attacker**. The arrow is drawn from attacker toward defender.
 - **Remove a single arrow:** tap the combat key while hovering the attacker (press and release on the same card).
-- **Toggle off by repeating:** make the same attacker-to-target gesture again to remove that arrow.
-- Drag from an attacker to a different target to retarget its existing arrow.
+- **Toggle off by repeating:** start on the same defender and release on the same attacker again.
+- Start on a different defender and release on an attacker that already has an arrow to retarget it.
 - **Remove every arrow you declared:** Table Settings > General > Clear my arrows.
-- Each source card has one active target.
+- Each attacking card has one active defender target (a visual shortcut, not a complete multi-blocker combat model).
 - Arrows use the Lotus Helper's vector-line layer, not Global/table lines.
 - Declarations are session-only and disappear on script reload; saved playmats and settings are unaffected.
 - Arrows update every 0.3 seconds while active. Destroyed cards clear related declarations.

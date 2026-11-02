@@ -917,7 +917,7 @@ function Settings.generalTab()
                 rectAlignment = "UpperLeft", offsetXY = "16 -207",
                 width = "465", height = "24", fontSize = "13",
                 color = "#9BA4B0", alignment = "MiddleLeft",
-                text = "Hold key to target; tap on attacker to remove arrow."
+                text = "Start: defender. End: attacker. Tap attacker to clear."
             }}
         }}
     }}

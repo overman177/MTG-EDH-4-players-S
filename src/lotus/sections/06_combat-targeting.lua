@@ -18,8 +18,10 @@ Combat = {
         Blue = {0.30, 0.64, 1.0}
     },
     pending = {}, -- initiator color -> defender GUID while key held
-    links = {},   -- attacker GUID -> {target = GUID, by = playerColor}
+    links = {},   -- attacker GUID -> {defenders = { [defenderGUID] = true }, by = color}
     baseLines = {},
+    anchors = {}, -- 3D world-space AUTOFIGHT controllers (one per single-defender attacker)
+    ANCHOR_TAG = "MTG_Lotus_AutoFightAnchor",
     loopActive = false,
     loopGeneration = 0,
     REFRESH_SECONDS = 0.30
@@ -40,6 +42,43 @@ local function combatLocal(world)
     return {v.x, v.y, v.z}
 end
 
+-- Each attacker can have several defenders, with independent arrows. One
+-- defender may be selected for multiple attacking creatures.
+function Combat.countDefenders(link)
+    local n, only = 0, nil
+    if not link then return 0, nil end
+    for guid in pairs(link.defenders or {}) do
+        n = n + 1
+        only = guid
+    end
+    return n, n == 1 and only or nil
+end
+
+function Combat.singleDefender(attackerGUID)
+    local link = Combat.links[attackerGUID]
+    local count, guid = Combat.countDefenders(link)
+    if count == 1 then return guid end
+    return nil
+end
+
+function Combat.toggleDefender(attackerGUID, defenderGUID, color)
+    local link = Combat.links[attackerGUID]
+    if link == nil then
+        link = {defenders = {}, by = color}
+        Combat.links[attackerGUID] = link
+    end
+    if link.defenders[defenderGUID] then
+        link.defenders[defenderGUID] = nil
+        if next(link.defenders) == nil then
+            Combat.links[attackerGUID] = nil
+        end
+    else
+        link.defenders[defenderGUID] = true
+        link.by = color
+    end
+    Combat.updated()
+end
+
 function Combat.render()
     local lines = {}
     for _, existing in ipairs(Combat.baseLines) do
@@ -47,37 +86,44 @@ function Combat.render()
     end
     for attackerGUID, link in pairs(Combat.links) do
         local attacker = getObjectFromGUID(attackerGUID)
-        local defender = getObjectFromGUID(link.target)
-        if not combatCard(attacker) or not combatCard(defender) then
+        if not combatCard(attacker) then
             Combat.links[attackerGUID] = nil
         else
-            local a, b = attacker.getPosition(), defender.getPosition()
-            local dx, dz = b.x - a.x, b.z - a.z
-            local distance = math.sqrt(dx * dx + dz * dz)
-            if distance > 0.35 then
-                local ux, uz = dx / distance, dz / distance
-                local lift = math.max(a.y, b.y) + 0.45
-                local start = {a.x + ux * 0.33, lift, a.z + uz * 0.33}
-                local finish = {b.x - ux * 0.35, lift, b.z - uz * 0.35}
-                local wing = 0.32
-                local left = {finish[1] - ux * 0.57 - uz * wing,
-                              lift, finish[3] - uz * 0.57 + ux * wing}
-                local right = {finish[1] - ux * 0.57 + uz * wing,
-                               lift, finish[3] - uz * 0.57 - ux * wing}
-                local tint = Combat.COLOR[link.by] or {1, 1, 1}
-                lines[#lines + 1] = {
-                    points = {combatLocal(start), combatLocal(finish)},
-                    color = tint, thickness = 0.10
-                }
-                lines[#lines + 1] = {
-                    points = {combatLocal(left), combatLocal(finish),
-                              combatLocal(right)},
-                    color = tint, thickness = 0.10
-                }
+            local a = attacker.getPosition()
+            for defenderGUID in pairs(link.defenders) do
+                local defender = getObjectFromGUID(defenderGUID)
+                if not combatCard(defender) then
+                    link.defenders[defenderGUID] = nil
+                else
+                    local b = defender.getPosition()
+                    local dx, dz = b.x - a.x, b.z - a.z
+                    local distance = math.sqrt(dx * dx + dz * dz)
+                    if distance > 0.35 then
+                        local ux, uz = dx / distance, dz / distance
+                        local lift = math.max(a.y, b.y) + 0.45
+                        local start = {a.x + ux * 0.33, lift, a.z + uz * 0.33}
+                        local finish = {b.x - ux * 0.35, lift, b.z - uz * 0.35}
+                        local wing = 0.32
+                        local left = {finish[1] - ux * 0.57 - uz * wing,
+                                      lift, finish[3] - uz * 0.57 + ux * wing}
+                        local right = {finish[1] - ux * 0.57 + uz * wing,
+                                       lift, finish[3] - uz * 0.57 - ux * wing}
+                        local tint = Combat.COLOR[link.by] or {1, 1, 1}
+                        lines[#lines + 1] = {
+                            points = {combatLocal(start), combatLocal(finish)},
+                            color = tint, thickness = 0.10
+                        }
+                        lines[#lines + 1] = {
+                            points = {combatLocal(left), combatLocal(finish),
+                                      combatLocal(right)},
+                            color = tint, thickness = 0.10
+                        }
+                    end
+                end
             end
+            if next(link.defenders) == nil then Combat.links[attackerGUID] = nil end
         end
     end
-    -- Only Lotus' own vector lines are replaced, never Global/table drawings.
     self.setVectorLines(lines)
     Combat.syncButtons()
 end
@@ -117,12 +163,24 @@ end
 function Combat.onDestroy(obj)
     if obj == nil then return end
     local guid = obj.getGUID()
+    -- TTS also fires this event for our invisible anchor zones. Their cleanup
+    -- must not remove the underlying attacker/defender combat links.
+    for attackerGUID, anchor in pairs(Combat.anchors) do
+        if anchor == obj then
+            Combat.anchors[attackerGUID] = nil
+            if Combat.links[attackerGUID] then Combat.updated() end
+            return
+        end
+    end
     local dirty = Combat.links[guid] ~= nil
     Combat.links[guid] = nil
     for attackerGUID, link in pairs(Combat.links) do
-        if link.target == guid then
-            Combat.links[attackerGUID] = nil
+        if link.defenders[guid] then
+            link.defenders[guid] = nil
             dirty = true
+            if next(link.defenders) == nil then
+                Combat.links[attackerGUID] = nil
+            end
         end
     end
     if dirty then Combat.updated() end
@@ -131,49 +189,44 @@ end
 function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     if not Combat.OWNERS[color] then return end
     if not isKeyUp then
-        -- The cursor starts on the DEFENDER (usually the blocking creature).
         Combat.pending[color] = Combat.enabled(color)
             and combatCard(hovered) and hovered.getGUID() or nil
         return
     end
-
     local defenderGUID = Combat.pending[color]
     Combat.pending[color] = nil
     if not Combat.enabled(color) or not defenderGUID then return end
-    local defender = getObjectFromGUID(defenderGUID)
-    if not combatCard(defender) then return end
-
+    if not combatCard(getObjectFromGUID(defenderGUID)) then return end
     if not combatCard(hovered) then
-        printToColor("Combat: release over the attacking card (or tap an attacker to clear its arrow).",
-            color, {0.9, 0.72, 0.35})
+        printToColor("Combat: release over an attacking card.", color, {0.9, 0.72, 0.35})
         return
     end
-
     local attackerGUID = hovered.getGUID()
-    local current = Combat.links[attackerGUID]
-
-    -- Press/release on the same attacker: delete its own arrow, if present.
-    if defenderGUID == attackerGUID then
-        if current ~= nil then
+    if attackerGUID == defenderGUID then
+        -- Tap on attacker removes its complete declaration, including multiple blockers.
+        local link = Combat.links[attackerGUID]
+        if link then
             Combat.links[attackerGUID] = nil
             Combat.updated()
         end
         return
     end
-
-    -- Repeating defender -> same attacker toggles off the connection.
-    -- A new defender for this attacker replaces the old connection.
-    if current ~= nil and current.target == defenderGUID then
-        Combat.links[attackerGUID] = nil
-    else
-        Combat.links[attackerGUID] = {target = defenderGUID, by = color}
-    end
-    Combat.updated()
+    -- DEFENDER first, ATTACKER second: add or remove just this defender.
+    Combat.toggleDefender(attackerGUID, defenderGUID, color)
 end
 
 function Combat.load()
     Combat.pending = {}
     Combat.links = {}
+    Combat.anchors = {}
+    -- Runtime marker zones may survive a TTS save/reload; remove old ones.
+    if type(getObjectsWithTag) == "function" then
+        Wait.frames(function()
+            for _, anchor in ipairs(getObjectsWithTag(Combat.ANCHOR_TAG) or {}) do
+                anchor.destruct()
+            end
+        end, 4)
+    end
     Combat.baseLines = self.getVectorLines() or {}
     Combat.loopActive = false
     Combat.loopGeneration = 0
@@ -196,86 +249,92 @@ local function combatButtonName(guid)
     return "combatFight_" .. tostring(guid):gsub("[^%w_]", "_")
 end
 
--- A combat button belongs to the Lotus object, but is positioned at the
--- arrow midpoint in world space. Scan by an owned tooltip prefix instead of
--- keeping hardcoded button indices (other Lotus modules also create buttons).
-function Combat.syncButtons()
-    if not self.getButtons or not self.createButton then return end
-    local owned = {}
-    local buttons = self.getButtons() or {}
-    for _, button in ipairs(buttons) do
-        local tooltip = button.tooltip
-        if type(tooltip) == "string"
-            and tooltip:sub(1, #Combat.BUTTON_PREFIX) == Combat.BUTTON_PREFIX then
-            local guid = tooltip:sub(#Combat.BUTTON_PREFIX + 1)
-            owned[guid] = button
-        end
+-- The previous implementation put 3D buttons on the Lotus Helper,
+-- thousands of pixels from the object center; TTS did not render them in play.
+-- AUTOFIGHT is now attached to an *invisible world-space scripting zone*
+-- placed at the actual midpoint of one attacker and its sole defender.
+-- No button is shown for zero or multiple defenders.
+function Combat.dropAnchor(attackerGUID)
+    local anchor = Combat.anchors[attackerGUID]
+    Combat.anchors[attackerGUID] = nil
+    _G[combatButtonName(attackerGUID)] = nil
+    if anchor and anchor ~= false then
+        anchor.destruct()
     end
+end
 
-    local needed = {}
+function Combat.syncButtons()
+    if type(spawnObject) ~= "function" then return end
+    local wanted = {}
     for attackerGUID, link in pairs(Combat.links) do
-        local attacker = getObjectFromGUID(attackerGUID)
-        local defender = getObjectFromGUID(link.target)
-        if combatCard(attacker) and combatCard(defender) then
-            local a, d = attacker.getPosition(), defender.getPosition()
-            local dx, dz = d.x - a.x, d.z - a.z
-            if dx * dx + dz * dz > 0.14 then
-                local worldMid = {
-                    x = (a.x + d.x) * 0.5,
-                    y = math.max(a.y, d.y) + 0.57,
-                    z = (a.z + d.z) * 0.5
-                }
-                local localPos = self.positionToLocal(worldMid)
-                local point = {localPos.x, localPos.y, localPos.z}
-                needed[attackerGUID] = true
-                local fn = combatButtonName(attackerGUID)
-                -- Give every attack its own valid TTS click callback.
-                local capturedGuid = attackerGUID
-                _G[fn] = function(buttonObj, color, altClick)
-                    Combat.fightClick(capturedGuid, color)
-                end
-                local existing = owned[attackerGUID]
-                if existing then
-                    local last = Combat.buttonPositions[attackerGUID]
-                    if last == nil
-                        or math.abs(last[1] - point[1]) > 0.04
-                        or math.abs(last[2] - point[2]) > 0.04
-                        or math.abs(last[3] - point[3]) > 0.04 then
-                        self.editButton({index = existing.index, position = point})
+        local count, defenderGUID = Combat.countDefenders(link)
+        if count == 1 then
+            local attacker = getObjectFromGUID(attackerGUID)
+            local defender = getObjectFromGUID(defenderGUID)
+            if combatCard(attacker) and combatCard(defender) then
+                local a, d = attacker.getPosition(), defender.getPosition()
+                local dx, dz = d.x - a.x, d.z - a.z
+                if dx * dx + dz * dz > 0.14 then
+                    wanted[attackerGUID] = true
+                    local at = {
+                        x = (a.x + d.x) * 0.5,
+                        y = math.max(a.y, d.y) + 0.60,
+                        z = (a.z + d.z) * 0.5
+                    }
+                    local anchor = Combat.anchors[attackerGUID]
+                    if anchor and anchor ~= false then
+                        anchor.setPosition(at)
+                    elseif not anchor then
+                        local capturedGUID, capturedDefender = attackerGUID, defenderGUID
+                        Combat.anchors[attackerGUID] = false -- spawn in flight
+                        spawnObject({
+                            type = "ScriptingTrigger",
+                            position = at,
+                            rotation = {0, 0, 0},
+                            scale = {1, 1, 1},
+                            sound = false,
+                            snap_to_grid = false,
+                            callback_function = function(obj)
+                                if Combat.anchors[capturedGUID] ~= false
+                                  or Combat.singleDefender(capturedGUID) ~= capturedDefender then
+                                    obj.destruct()
+                                    return
+                                end
+                                obj.setName("Lotus AUTOFIGHT [temporary]")
+                                obj.addTag(Combat.ANCHOR_TAG)
+                                obj.interactable = false
+                                obj.tooltip = false
+                                obj.lock()
+                                local fn = combatButtonName(capturedGUID)
+                                _G[fn] = function(buttonObj, playerColor)
+                                    Combat.fightClick(capturedGUID, playerColor)
+                                end
+                                obj.createButton({
+                                    click_function = fn,
+                                    function_owner = self,
+                                    label = "AUTOFIGHT",
+                                    position = {0, 0.12, 0},
+                                    rotation = {0, 0, 0},
+                                    width = 750, height = 230, font_size = 130,
+                                    scale = {0.72, 0.72, 0.72},
+                                    color = {0.13, 0.19, 0.25, 0.96},
+                                    font_color = {1, 0.94, 0.77, 1},
+                                    hover_color = {0.29, 0.41, 0.53, 1},
+                                    tooltip = "AUTOFIGHT: estimate one-on-one combat damage"
+                                })
+                                Combat.anchors[capturedGUID] = obj
+                            end
+                        })
                     end
-                else
-                    self.createButton({
-                        click_function = fn,
-                        function_owner = self,
-                        label = "FIGHT",
-                        position = point,
-                        rotation = {0, 0, 0},
-                        width = 480, height = 200, font_size = 135,
-                        scale = {0.65, 0.65, 0.65},
-                        color = {0.13, 0.17, 0.23, 0.94},
-                        font_color = {1, 0.91, 0.75, 1},
-                        hover_color = {0.24, 0.36, 0.49, 1},
-                        tooltip = Combat.BUTTON_PREFIX .. attackerGUID
-                    })
                 end
-                Combat.buttonPositions[attackerGUID] = point
             end
         end
     end
-
-    -- Remove only our marker buttons, descending by current actual index.
-    local removals = {}
-    for guid, button in pairs(owned) do
-        if not needed[guid] then
-            removals[#removals + 1] = {index = button.index, guid = guid}
-        end
+    local stale = {}
+    for guid in pairs(Combat.anchors) do
+        if not wanted[guid] then stale[#stale + 1] = guid end
     end
-    table.sort(removals, function(a, b) return a.index > b.index end)
-    for _, row in ipairs(removals) do
-        self.removeButton(row.index)
-        Combat.buttonPositions[row.guid] = nil
-        _G[combatButtonName(row.guid)] = nil
-    end
+    for _, guid in ipairs(stale) do Combat.dropAnchor(guid) end
 end
 
 -- Encoder and TyrantNomad's module expose actual recorded values. Button
@@ -514,12 +573,11 @@ end
 
 function Combat.fightClick(attackerGUID, playerColor)
     if not Combat.OWNERS[playerColor] then return end
-    local link = Combat.links[attackerGUID]
-    if link == nil then return end
+    local defenderGUID = Combat.singleDefender(attackerGUID)
+    if not defenderGUID then return end -- never calculate a multi-defender attack
     local attacker = getObjectFromGUID(attackerGUID)
-    local defender = getObjectFromGUID(link.target)
+    local defender = getObjectFromGUID(defenderGUID)
     if not combatCard(attacker) or not combatCard(defender) then
-        Combat.links[attackerGUID] = nil
         Combat.updated()
         return
     end

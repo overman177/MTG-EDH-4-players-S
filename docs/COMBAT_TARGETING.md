@@ -15,6 +15,10 @@ If C already has a TTS action on a player's client, the two actions can both run
 - **Configure key (C suggested)**: opens TTS Options > Game Keys.
 - **Clear my arrows**: removes only target declarations made by that player. Disabling combat targeting also clears that player's arrows.
 
+## Previous gesture notes (superseded by multiple-defender behavior below)
+
+The next section overrides the previous single-target descriptions.
+
 ## Gesture and limits
 - Only physical TTS **Card** objects are valid sources and targets.
 - **Start on defender**, release over an **attacker**. The arrow is drawn from attacker toward defender.
@@ -57,3 +61,14 @@ For two creatures with numerical P/T, the panel reports regular combat damage un
 The estimate does not currently handle: already-marked damage, damage prevention/replacement, first/double strike sequencing, deathtouch, indestructibility, protection, trample assignment, damage multipliers, static anthems that aren't reflected in Encoder, equipment/effect layering, multi-blocker assignment, power/toughness defined by abilities, or other Magic rules interactions. A tracked keyword triggers a visible warning; unknown or untracked effects always remain a possible source of inaccuracy.
 
 The center button is removed when its arrow is cleared. Other Lotus buttons are preserved using tooltip-based ownership rather than hardcoded button indexes.
+
+## Multiple defenders and AUTOFIGHT (latest)
+
+- **Gesture:** Hold the configured combat key while hovering a **defender**, then release it over the **attacker**.
+- Each attacker may have **multiple defenders**. Each defender gets its own arrow, pointing from the attacker to that defender.
+- Repeat the gesture with the *same defender and attacker* to remove **only that arrow**. Tap the key on the attacker itself to clear **all of its defenders**.
+- A world-space **AUTOFIGHT** button is shown at the arrow midpoint **only when an attacker has exactly one defender**. With two or more defenders, the arrows remain but the button disappears.
+- The button is hosted on a temporary, invisible and non-colliding scripting zone at the midpoint, rather than being placed far from the Lotus Helper object's center. It follows the cards and is removed when no longer needed.
+- AUTOFIGHT opens the **existing read-only, simplified one-on-one combat estimate**. It does not deal damage, resolve multi-blocker combat, modify stats, or destroy objects.
+- Runtime anchors are temporary; the script removes stale tagged anchors when loaded and cleans up markers as combat links change. In-game visibility on the new world-space anchor must be verified with TTS.
+

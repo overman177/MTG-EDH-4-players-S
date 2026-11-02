@@ -23,5 +23,7 @@ jobs:
           luac5.2 -p .build/LotusHelper.lua
       - name: Test combat targeting interactions
         run: lua5.2 tests/combat_hotkey_test.lua
+      - name: Test Lotus keybind menu routing
+        run: lua5.2 tests/lotus_hotkey_config_test.lua
       - name: Test multi-defender arrows, legacy cleanup and no FIGHT UI
         run: lua5.2 tests/combat_arrows_test.lua

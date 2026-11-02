@@ -4232,8 +4232,15 @@ end
 
 -- Binding must be selected by the player in TTS; Lua cannot write the key.
 function settingsCombatKeyConfig(player, value, id)
-    if Settings.playerColor(player) ~= Settings.menuOwner then return end
-    showHotkeyConfig()
+    local color = Settings.playerColor(player)
+    if not Settings.validColor(color) or color ~= Settings.menuOwner then return end
+    -- TTS's networked hotkey dialog requires the requesting player's color.
+    -- Without this argument it may open only for the host (or not at all).
+    local ok = pcall(showHotkeyConfig, color)
+    if not ok then
+        printToColor("Open Options > Game Keys and bind 'MTG: Declare Combat Target' to C (or your preferred key).",
+            color, {0.90, 0.75, 0.45})
+    end
 end
 
 function settingsCombatClear(player, value, id)

@@ -2014,7 +2014,7 @@ function Settings.generalTab()
                 rectAlignment = "UpperLeft", offsetXY = "16 -207",
                 width = "465", height = "24", fontSize = "13",
                 color = "#9BA4B0", alignment = "MiddleLeft",
-                text = "Hold bound key on a card; release it over another card."
+                text = "Hold key to target; tap on attacker to remove arrow."
             }}
         }}
     }}

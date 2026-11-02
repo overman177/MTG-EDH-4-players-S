@@ -1,23 +1,25 @@
-# Integrating the live table without data loss
+# Git, TTS and deployment
 
-1. Preserve a TTS save backup and copy of the current Smart Import v3 working folder.
-2. Run **Get Lua Scripts** on the known-good table. Confirm complete third-party bundled scripts (e.g. importer GUID `222541`) are present.
-3. Check Git status before and after the import. Do not run Save & Play until files and GUIDs reconcile.
-4. Commit the imported scripts in their **current relative paths**, keeping `Name.GUID.lua` and matching XML together. Do not rename GUID suffixes.
-5. Detect duplicate GUIDs; resolve only after examining which object is authoritative.
-6. Capture a baseline for Global, Lotus and UI. Compare their hashes against the known-good TTS save before migrating them into `src/`.
-7. In a separate change, split the verified baseline into ordered source sections and verify byte-identical reconstruction.
-8. Only after the build matches a known-good baseline, test deploy on a cloned TTS save. Check shortcuts, settings, previews, equipment, context menus, patch notes and importer behavior.
-9. Commit tested changes to main; preserve rollback commits.
+## Initial one-time setup
+1. Clone the repository or pull the architecture branch into your current scripts folder.
+2. In VS Code open the repository root and select it as Smart Import v3 workdir.
+3. Keep an independent TTS save backup; this repository holds a saved table JSON snapshot but cannot replace a known-good live save.
+4. Run `python tools/build.py --check` to ensure the source sections reconstruct the corresponding live GUID scripts.
+5. Run `python tools/audit_objects.py .` to check for duplicate GUID-target scripts.
 
-## Git and TTS are separate
+## Editing Global, Lotus and UI
+1. Edit `src/global/sections/`, `src/lotus/sections/` or `src/ui/sections/`.
+2. `python tools/build.py` assembles into `.build/`, using names without GUIDs.
+3. `python tools/deploy.py` previews the changed targets.
+4. `python tools/deploy.py --apply` backs up old live files, then updates existing GUID scripts.
+5. Run Save & Play on a copied TTS save. Review errors and regressions before committing.
+6. Commit both `src/` changes and resulting `live/` changes to GitHub.
 
-Git commit/push backs up versioned code. Smart Import reads or sends scripts to TTS. A git push does not deploy to TTS, and Save & Play does not push to GitHub.
+## Editing other objects
+Edit their GUID-named file directly in `live/objects/`. Third-party bundles should remain untouched unless deliberately repaired.
 
-## Where to keep generated output
+## Get Lua Scripts
+New TTS object GUIDs are imported to `New/`. Move reviewed objects into functional folders. Existing GUIDs update in place through Smart Import. If Global or Lotus was changed inside TTS, reconcile the updated live code with source sections **before redeploying** or the TTS edits may be overwritten.
 
-Keep generated scripts in a separate ignored `.build/` directory. When deploying, overwrite only the existing GUID-matched target files *with backup*, rather than allowing a second `Global.-1.lua` or Lotus GUID script to be scanned by Smart Import.
-
-## Bundled third-party scripts
-
-Treat existing luabundle output as opaque runtime code unless all component modules are available. Never overwrite a complete bundle with a bare `require("import")` entrypoint.
+## Recovery
+Git can restore previous versions of committed code. The deploy utility additionally saves changed live files under `.tts-backups/<timestamp>/`, excluded from commits. Do not force-push or overwrite a working branch to resolve import errors.

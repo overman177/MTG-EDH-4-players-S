@@ -1,11 +1,13 @@
-# Local build outputs and backups
+# Scratch outputs, backups, local dependencies
 .build/
 .tts-backups/
 .tts-smart-backup/
 node_modules/
+__pycache__/
+*.pyc
 *.vsix
 *.log
-__pycache__/
 .DS_Store
 Thumbs.db
-# New/ contains newly imported TTS object scripts: DO NOT ignore it.
+
+# IMPORTANT: Do not ignore New/ (incoming Smart Import v3 objects)

@@ -1,0 +1,27 @@
+<!--DECK IMPORTER-->
+<Panel id="ListPanel" class="WindowBorder" width="385" height="490" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="#666666" visibility="" active="False">
+    <Row id="ListMenuBar" class="MenuBar" width="385">
+        <Text id="ListWindowTitle" class="UIText" text="MTG Deck Importer" color="#FFFFFF" rectAlignment="UpperCenter" alignment="LowerCenter" width="230" height="80" offsetXY="0 55" />
+        <Button id="ListCloseButton" class="topButtons" rectAlignment="UpperRight" color="#990000" textColor="#FFFFFF" text="X" onClick="close" />
+    </Row>
+    <TableLayout id="ListTable" class="SearchTable" height="460" width="385" columnWidths="385">
+        <Row>
+            <Cell>
+                <Text>Add deck list below in standard text format.</Text>
+            </Cell>
+        </Row>
+        <Row preferredHeight="350">
+            <Cell>
+                <InputField id="vDeckList" class="UIInputField" lineType="MultiLineNewLine" text="" onEndEdit="updateText" />
+            </Cell>
+        </Row>
+        <Row>
+            <Cell>
+                <Button id="ListImport" class="FAB" onClick="getDeckList">
+                    <Text>Import</Text>
+                </Button>
+            </Cell>
+        </Row>
+    </TableLayout>
+</Panel>
+

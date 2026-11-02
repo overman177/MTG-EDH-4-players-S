@@ -1,0 +1,2 @@
+# Smart Import v3 puts newly discovered GUID objects in this folder.
+# Sort new objects into live/objects/ after inspection, then commit.

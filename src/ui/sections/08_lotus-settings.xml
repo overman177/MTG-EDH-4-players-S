@@ -1,0 +1,137 @@
+<!-- Lotus Settings -->
+<!-- Menu   display -->
+<Panel id="CounterVisibilityPanel" width="560" height="465" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="false">
+    <Text rectAlignment="UpperCenter" offsetXY="0 -18" width="410" height="34" fontSize="26" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Table Settings" />
+    <Button id="CounterVisibilityClose" rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="777766/closeCounterSettings" />
+    <HorizontalLayout id="MTG_Settings_TabBar" rectAlignment="UpperCenter" offsetXY="0 -70" width="516" height="40" spacing="6" childForceExpandWidth="false" childForceExpandHeight="false">
+        <Button id="MTG_Settings_Button_General" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#FFFFFF" colors="#315A87|#4274AC|#234363|#234363" onClick="777766/settingsSelectTab" text="General" />
+        <Button id="MTG_Settings_Button_Notes" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#C9D1DF" colors="#29292E|#3D3D45|#222229|#222229" onClick="777766/settingsSelectTab" text="Patch Notes" />
+        <Button id="MTG_Settings_Button_Counters" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#C9D1DF" colors="#29292E|#3D3D45|#222229|#222229" onClick="777766/settingsSelectTab" text="Counters" />
+        <Button id="MTG_Settings_Button_Preview" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#C9D1DF" colors="#29292E|#3D3D45|#222229|#222229" onClick="777766/settingsSelectTab" text="Card Preview" />
+    </HorizontalLayout>
+    <Panel id="MTG_Settings_Tab_General" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="205" color="clear" active="false">
+        <Text rectAlignment="UpperLeft" offsetXY="11 -3" width="470" height="24" fontSize="14" fontStyle="Bold" alignment="MiddleLeft" color="#6fa0d8" text="GENERAL" />
+        <Panel id="MTG_Settings_GeneralContent_v142" rectAlignment="UpperCenter" offsetXY="0 -36" width="500" height="125" color="#28272B">
+            <Toggle id="lotus_show_shortcuts" rectAlignment="UpperLeft" offsetXY="16 -16" width="460" height="35" fontSize="18" textColor="#EDEEF2" isOn="True" onValueChanged="777766/settingsGeneralToggle">Show numpad shortcuts on my screen</Toggle>
+            <Text rectAlignment="UpperLeft" offsetXY="16 -61" width="465" height="50" fontSize="14" color="#9BA4B0" alignment="UpperLeft" text="Keys are configured in TTS Configuration &gt; Controls." />
+        </Panel>
+    </Panel>
+    <Panel id="MTG_Settings_Tab_Notes" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="460" color="clear" active="true">
+        <Text rectAlignment="UpperLeft" offsetXY="11 -3" width="400" height="25" fontSize="14" fontStyle="Bold" alignment="MiddleLeft" color="#6fa0d8" text="PATCH NOTES" />
+        <Panel id="MTG_Settings_PatchNotesBox" rectAlignment="UpperCenter" offsetXY="0 -36" width="500" height="394" color="#28272B">
+            <Text id="MTG_Settings_PatchNotesVersion" rectAlignment="UpperLeft" offsetXY="13 -8" width="474" height="32" fontSize="21" fontStyle="Bold" color="#FFFFFF" alignment="MiddleLeft" text="Patch Notes" />
+            <Panel id="MTG_Settings_PatchNotesReader_v120" rectAlignment="UpperCenter" offsetXY="0 -44" width="472" height="2" color="#4B5D71" />
+            <Text id="MTG_Settings_PatchNotesText" rectAlignment="UpperLeft" offsetXY="13 -54" width="474" height="284" fontSize="17" color="#EDEEF2" alignment="UpperLeft" horizontalOverflow="Wrap" verticalOverflow="Truncate" raycastTarget="false" text="No patch notes published yet." resizeTextForBestFit="true" resizeTextMinSize="12" resizeTextMaxSize="17" />
+            <HorizontalLayout rectAlignment="LowerCenter" offsetXY="0 9" width="474" height="34" spacing="10" childAlignment="MiddleCenter" childForceExpandWidth="false" childForceExpandHeight="false">
+                <Button id="MTG_Settings_PatchNotesNewer" preferredWidth="135" preferredHeight="34" fontSize="15" fontStyle="Bold" textColor="#FFFFFF" colors="#315A87|#4274AC|#234363|#234363" onClick="777766/settingsNotesNavigate" text="&lt; NEWER" />
+                <Text id="MTG_Settings_PatchNotesPosition" preferredWidth="164" preferredHeight="34" fontSize="14" color="#AEBAC8" alignment="MiddleCenter" text="1 / 1" />
+                <Button id="MTG_Settings_PatchNotesOlder" preferredWidth="135" preferredHeight="34" fontSize="15" fontStyle="Bold" textColor="#FFFFFF" colors="#315A87|#4274AC|#234363|#234363" onClick="777766/settingsNotesNavigate" text="OLDER &gt;" />
+            </HorizontalLayout>
+        </Panel>
+        <Text id="MTG_Settings_PatchNotesHint" rectAlignment="LowerCenter" offsetXY="0 5" width="495" height="22" fontSize="12" alignment="MiddleLeft" color="#9BA4B0" text="Read-only | Creator edits LOTUS_PATCH_NOTES in the Black Notebook" />
+    </Panel>
+    <Panel id="MTG_Settings_Tab_Counters" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="325" color="clear" active="false">
+        <VerticalLayout rectAlignment="UpperCenter" offsetXY="0 -5" width="500" height="300" spacing="5" childForceExpandHeight="false" childForceExpandWidth="true">
+            <HorizontalLayout preferredHeight="28" minHeight="28" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+                <Text preferredWidth="260" minWidth="260" fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="COUNTER TYPE" />
+                <Text preferredWidth="80" minWidth="80" fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleCenter" text="ME" />
+                <Text preferredWidth="100" minWidth="100" fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleCenter" text="EVERYONE" />
+            </HorizontalLayout>
+            <HorizontalLayout preferredHeight="38" minHeight="38" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+                <Text preferredWidth="260" minWidth="260" fontSize="17" color="rgb(0.9,0.9,0.9)" alignment="MiddleLeft" text="Energy Counters" />
+                <Toggle id="counter_energy_me" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="80" minWidth="80" />
+                <Toggle id="counter_energy_everyone" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="100" minWidth="100" />
+            </HorizontalLayout>
+            <HorizontalLayout preferredHeight="38" minHeight="38" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+                <Text preferredWidth="260" minWidth="260" fontSize="17" color="rgb(0.9,0.9,0.9)" alignment="MiddleLeft" text="Poison Counters" />
+                <Toggle id="counter_poison_me" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="80" minWidth="80" />
+                <Toggle id="counter_poison_everyone" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="100" minWidth="100" />
+            </HorizontalLayout>
+            <HorizontalLayout preferredHeight="38" minHeight="38" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+                <Text preferredWidth="260" minWidth="260" fontSize="17" color="rgb(0.9,0.9,0.9)" alignment="MiddleLeft" text="Experience Counters" />
+                <Toggle id="counter_experience_me" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="80" minWidth="80" />
+                <Toggle id="counter_experience_everyone" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="100" minWidth="100" />
+            </HorizontalLayout>
+            <HorizontalLayout preferredHeight="38" minHeight="38" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+                <Text preferredWidth="260" minWidth="260" fontSize="17" color="rgb(0.9,0.9,0.9)" alignment="MiddleLeft" text="Rad Counters" />
+                <Toggle id="counter_rad_me" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="80" minWidth="80" />
+                <Toggle id="counter_rad_everyone" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="100" minWidth="100" />
+            </HorizontalLayout>
+            <HorizontalLayout preferredHeight="42" minHeight="42" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+                <Text preferredWidth="260" minWidth="260" fontSize="17" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleLeft" text="ALL COUNTERS" />
+                <Toggle id="counter_all_me" isOn="True" onValueChanged="777766/allMeToggle" preferredWidth="80" minWidth="80" />
+                <Toggle id="counter_all_everyone" isOn="True" onValueChanged="777766/allEveryoneToggle" preferredWidth="100" minWidth="100" />
+            </HorizontalLayout>
+        </VerticalLayout>
+    </Panel>
+    <Panel id="MTG_Settings_Tab_Preview" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="230" color="clear" active="false">
+        <HorizontalLayout id="MTG_Settings_PreviewGrid_v120_compact" rectAlignment="UpperCenter" offsetXY="0 -8" width="500" height="28" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+            <Text preferredWidth="220" minWidth="220" fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="PREVIEW OPTION" />
+            <Text preferredWidth="105" minWidth="105" fontSize="13" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="MY CARDS" />
+            <Text preferredWidth="155" minWidth="155" fontSize="12" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="OPPONENTS' CARDS" />
+        </HorizontalLayout>
+        <HorizontalLayout rectAlignment="UpperCenter" offsetXY="0 -50" width="500" height="44" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+            <Text preferredWidth="220" minWidth="220" fontSize="17" color="rgb(0.9,0.9,0.9)" alignment="MiddleLeft" text="Played Card Preview" />
+            <Toggle id="preview_cards_mine" isOn="True" onValueChanged="777766/previewToggle" preferredWidth="105" minWidth="105" />
+            <Toggle id="preview_cards_opponents" isOn="True" onValueChanged="777766/previewToggle" preferredWidth="155" minWidth="155" />
+        </HorizontalLayout>
+        <HorizontalLayout rectAlignment="UpperCenter" offsetXY="0 -102" width="500" height="44" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+            <Text preferredWidth="220" minWidth="220" fontSize="17" color="rgb(0.9,0.9,0.9)" alignment="MiddleLeft" text="Hide Land Previews" />
+            <Toggle id="preview_hide_lands_mine" isOn="False" onValueChanged="777766/previewToggle" preferredWidth="105" minWidth="105" />
+            <Toggle id="preview_hide_lands_opponents" isOn="False" onValueChanged="777766/previewToggle" preferredWidth="155" minWidth="155" />
+        </HorizontalLayout>
+        <HorizontalLayout rectAlignment="UpperCenter" offsetXY="0 -154" width="500" height="44" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+            <Text preferredWidth="220" minWidth="220" fontSize="14" color="rgb(0.9,0.9,0.9)" alignment="MiddleLeft" text="First Commander Entry Preview" />
+            <Toggle id="preview_first_commander_mine" isOn="True" onValueChanged="777766/previewToggle" preferredWidth="105" minWidth="105" />
+            <Toggle id="preview_first_commander_opponents" isOn="True" onValueChanged="777766/previewToggle" preferredWidth="155" minWidth="155" />
+        </HorizontalLayout>
+    </Panel>
+</Panel>
+
+<!-- LOTUS NUMPAD HUD: personal visibility controlled by Settings > General -->
+<Panel id="MTG_ShortcutsOverlay" rectAlignment="MiddleLeft" offsetXY="7 -120" width="252" height="325" color="clear" raycastTarget="false" active="true">
+    <Text rectAlignment="UpperLeft" offsetXY="0 -9" width="230" height="22" fontSize="17" fontStyle="Bold" color="#F0F1F4" raycastTarget="false" text="Shortcuts" />
+    <VerticalLayout rectAlignment="UpperCenter" offsetXY="0 -34" width="228" height="251" spacing="1" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 0" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="Enable / End turn" />
+        </HorizontalLayout>
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 1" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="Untap" />
+        </HorizontalLayout>
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 2" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="Draw" />
+        </HorizontalLayout>
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 3" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="Scry" />
+        </HorizontalLayout>
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 4" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="Mill" />
+        </HorizontalLayout>
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 5" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="Reveal (fan)" />
+        </HorizontalLayout>
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 6" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="Reveal (stack)" />
+        </HorizontalLayout>
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 7" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="To graveyard *" />
+        </HorizontalLayout>
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 8" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="To exile *" />
+        </HorizontalLayout>
+        <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
+            <Text preferredWidth="54" minWidth="54" fontSize="14" fontStyle="Bold" color="#87B9EF" alignment="MiddleLeft" raycastTarget="false" text="Num 9" />
+            <Text preferredWidth="166" minWidth="166" fontSize="14" color="#F0F1F4" alignment="MiddleLeft" raycastTarget="false" text="Library bottom *" />
+        </HorizontalLayout>
+    </VerticalLayout>
+    <Text rectAlignment="LowerLeft" offsetXY="3 8" width="230" height="15" fontSize="11" color="#ACB7C5" raycastTarget="false" text="* Selected cards or hovered card" />
+</Panel>

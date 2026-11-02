@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "description": "Ordered, lossless source sections; concatenation reproduces live TTS files.",
+  "files": [
+    {
+      "id": "global",
+      "target": "live/global/Global.-1.lua",
+      "output": "Global.lua",
+      "parts": [
+        "src/global/sections/00_bootstrap-and-core.lua",
+        "src/global/sections/01_table-buttons.lua",
+        "src/global/sections/02_reveal.lua",
+        "src/global/sections/03_mulligan.lua",
+        "src/global/sections/04_serum-powder.lua",
+        "src/global/sections/05_board-reset.lua",
+        "src/global/sections/06_keep-pregame.lua",
+        "src/global/sections/07_command-zone-commander-buttons.lua",
+        "src/global/sections/08_etali.lua",
+        "src/global/sections/09_ping.lua",
+        "src/global/sections/10_ral.lua",
+        "src/global/sections/11_ral-ultimate.lua",
+        "src/global/sections/12_ral-end-of-turn-resolution.lua",
+        "src/global/sections/13_goblin-stickers.lua",
+        "src/global/sections/14_land-tracker.lua",
+        "src/global/sections/15_turn-logic.lua",
+        "src/global/sections/16_enter-logic.lua",
+        "src/global/sections/17_display.lua",
+        "src/global/sections/18_activated-ability-restrictions.lua",
+        "src/global/sections/19_fetchlands.lua",
+        "src/global/sections/20_double-faced-cards.lua",
+        "src/global/sections/21_keyword-tokens.lua",
+        "src/global/sections/22_untap.lua",
+        "src/global/sections/23_draw.lua",
+        "src/global/sections/24_mill.lua",
+        "src/global/sections/25_scry.lua",
+        "src/global/sections/26_opponent-draw-triggers.lua",
+        "src/global/sections/27_universal.lua",
+        "src/global/sections/28_context-menu.lua",
+        "src/global/sections/29_card-ownership.lua",
+        "src/global/sections/30_chat-commands.lua",
+        "src/global/sections/31_functions-for-scryfall-card-spawner.lua",
+        "src/global/sections/32_patch-notes.lua",
+        "src/global/sections/33_settings.lua",
+        "src/global/sections/34_persistence.lua",
+        "src/global/sections/35_search-filter.lua",
+        "src/global/sections/36_player-panel.lua",
+        "src/global/sections/37_host-panel.lua",
+        "src/global/sections/38_bug-reports.lua"
+      ],
+      "source_git_blob": "5749bcd3751f4f36d6ffaf1771efbf24c868bb82",
+      "section_count": 39
+    },
+    {
+      "id": "lotus",
+      "target": "live/objects/lotus-helper/[FF595E]M[FF924C]T[FFCA3A]G [C5E55E]L[66D17A]o[35C9AF]t[3EBBDF]u[5B9BFF]s [8578EA]H[B879E4]e[DB75C7]l[EE80A4]p[FF595E]e[FF924C]r [C5CDD9]v1.4.5[-].185063.lua",
+      "output": "LotusHelper.lua",
+      "parts": [
+        "src/lotus/sections/00_card-preview.lua",
+        "src/lotus/sections/01_playmats.lua",
+        "src/lotus/sections/02_draw-random.lua",
+        "src/lotus/sections/03_edh-settings.lua",
+        "src/lotus/sections/04_original-moon-mtg-equipment-encoder-based.lua",
+        "src/lotus/sections/05_always-reveal-top-non-colliding-visual-clone.lua"
+      ],
+      "source_git_blob": "03a74e10015c87f920278ab8cce407d03c96a7a8",
+      "section_count": 6
+    },
+    {
+      "id": "ui",
+      "target": "live/global/Global.-1.xml",
+      "output": "Global.xml",
+      "parts": [
+        "src/ui/sections/00_reveal-until-type.xml",
+        "src/ui/sections/01_cascade-value-picker.xml",
+        "src/ui/sections/02_scryfall-search-bar.xml",
+        "src/ui/sections/03_deck-importer.xml",
+        "src/ui/sections/04_patch-notes.xml",
+        "src/ui/sections/05_settings.xml",
+        "src/ui/sections/06_bug-report.xml",
+        "src/ui/sections/07_host-settings.xml",
+        "src/ui/sections/08_lotus-settings.xml"
+      ],
+      "source_git_blob": "d013a559c1842370b37b0532a83ac9b8e9f2501e",
+      "section_count": 9
+    }
+  ]
+}

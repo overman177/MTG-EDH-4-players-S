@@ -1,0 +1,11 @@
+# Local build outputs and backups
+.build/
+.tts-backups/
+.tts-smart-backup/
+node_modules/
+*.vsix
+*.log
+__pycache__/
+.DS_Store
+Thumbs.db
+# New/ contains newly imported TTS object scripts: DO NOT ignore it.

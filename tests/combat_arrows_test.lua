@@ -73,9 +73,11 @@ assert(#dummyButtons==2 and dummyButtons[1].tooltip=="Settings" and
 assert(#xml==2 and xml[1].attributes.id=="MTG_Settings_Tab_General"
        and xml[2].attributes.id=="OtherPanel","old report panels removed only")
 assert(uiResets==1,"UI rebuilt only for removed legacy result panels")
-local function gesture(color,def,atk)
-    config(color,def,nil,false)
-    config(color,atk,nil,true)
+local function gesture(color,def,atk,downAt,upAt)
+    local startPos = downAt or (def and def.pos)
+    local endPos = upAt or (atk and atk.pos)
+    config(color,def,startPos,false)
+    config(color,atk,endPos,true)
 end
 gesture("White",defA,attacker)
 assert(Combat.countDefenders(Combat.links[attacker.guid])==1,"one defender")
@@ -87,6 +89,11 @@ assert(#lines==5,"two arrows from same attacker")
 gesture("White",defC,attacker)
 assert(Combat.countDefenders(Combat.links[attacker.guid])==3,"three defenders")
 assert(#lines==7,"three arrows with independent arrowheads")
+-- Simulate a TTS hover collision: the hotkey reports attacker on both
+-- events, but the pointer moved between cards. Keep all three arrows.
+gesture("White",attacker,attacker, {x=0,z=0}, {x=4,z=0})
+assert(Combat.countDefenders(Combat.links[attacker.guid])==3 and #lines==7,
+       "moved cursor with same hovered attacker preserves all arrows")
 defA.pos.x=9
 Combat.render()
 local moved = false

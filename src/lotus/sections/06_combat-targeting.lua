@@ -459,7 +459,7 @@ local function combatReportPanel(color)
 end
 
 function Combat.ensureResultPanels()
-    if Combat.reportPanelsInstalled then return true end
+    if Combat.reportPanelsInstalled then return false end
     local xml = UI.getXmlTable() or {}
     local found = {}
     for _, node in ipairs(xml) do
@@ -480,19 +480,29 @@ function Combat.ensureResultPanels()
     end
     if changed then UI.setXmlTable(xml) end
     Combat.reportPanelsInstalled = true
-    return true
+    return changed
 end
 
 function Combat.showResult(color, text)
-    local ok = pcall(function()
-        Combat.ensureResultPanels()
-        local id = Combat.REPORT_PREFIX .. color
-        UI.setAttribute(id .. "_body", "text", text)
-        UI.setAttribute(id, "active", "true")
-    end)
+    local function display()
+        local ok = pcall(function()
+            local id = Combat.REPORT_PREFIX .. color
+            UI.setAttribute(id .. "_body", "text", text)
+            UI.setAttribute(id, "active", "true")
+        end)
+        if not ok then
+            -- Readable fallback if a mod replaces Global UI unexpectedly.
+            printToColor("COMBAT ESTIMATE\n" .. text, color, {0.75, 0.88, 1})
+        end
+    end
+    local ok, newlyInstalled = pcall(Combat.ensureResultPanels)
     if not ok then
-        -- Readable fallback if a mod replaces Global UI unexpectedly.
         printToColor("COMBAT ESTIMATE\n" .. text, color, {0.75, 0.88, 1})
+    elseif newlyInstalled then
+        -- setXmlTable recreates UI asynchronously; wait for the new elements.
+        Wait.frames(display, 4)
+    else
+        display()
     end
 end
 

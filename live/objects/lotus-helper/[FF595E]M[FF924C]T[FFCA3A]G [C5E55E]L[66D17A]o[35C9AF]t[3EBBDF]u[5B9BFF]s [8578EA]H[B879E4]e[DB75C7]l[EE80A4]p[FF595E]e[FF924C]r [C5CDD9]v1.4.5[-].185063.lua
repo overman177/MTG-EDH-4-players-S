@@ -3805,7 +3805,7 @@ Combat = {
         Blue = {0.30, 0.64, 1.0}
     },
     pending = {}, -- initiator color -> defender GUID while key held
-    links = {},   -- attacker GUID -> {defenders = { [defenderGUID] = true }, by = color}
+    links = {},   -- attacker GUID -> {defenders = { [defenderGUID] = playerColor }, by = color}
     baseLines = {},
     -- Used only to remove AUTOFIGHT objects from older table saves.
     LEGACY_ANCHOR_TAG = "MTG_Lotus_AutoFightAnchor",
@@ -3848,22 +3848,46 @@ function Combat.singleDefender(attackerGUID)
     return nil
 end
 
-function Combat.toggleDefender(attackerGUID, defenderGUID, color)
+-- Declaring a pairing is idempotent. Repeating it MUST NOT delete an
+-- earlier arrow, including when an input event is received more than once.
+-- Each defender stores the color of the player who added that arrow.
+function Combat.addDefender(attackerGUID, defenderGUID, color)
+    if attackerGUID == defenderGUID or not Combat.OWNERS[color] then return false end
     local link = Combat.links[attackerGUID]
     if link == nil then
         link = {defenders = {}, by = color}
         Combat.links[attackerGUID] = link
     end
-    if link.defenders[defenderGUID] then
-        link.defenders[defenderGUID] = nil
-        if next(link.defenders) == nil then
-            Combat.links[attackerGUID] = nil
-        end
-    else
-        link.defenders[defenderGUID] = true
-        link.by = color
-    end
+    if link.defenders[defenderGUID] ~= nil then return false end
+    link.defenders[defenderGUID] = color
     Combat.updated()
+    return true
+end
+
+-- Tap a defender card to remove only the arrows that this player declared
+-- pointing at that defender. Other defenders and players are unaffected.
+function Combat.removeDefender(defenderGUID, color)
+    local changed = false
+    for attackerGUID, link in pairs(Combat.links) do
+        local owner = link.defenders[defenderGUID]
+        if owner == color or (owner == true and link.by == color) then
+            link.defenders[defenderGUID] = nil
+            changed = true
+            if next(link.defenders) == nil then
+                Combat.links[attackerGUID] = nil
+            end
+        end
+    end
+    if changed then Combat.updated() end
+    return changed
+end
+
+-- Tapping the attacker clears all arrows starting at that attacker.
+function Combat.clearAttacker(attackerGUID)
+    if Combat.links[attackerGUID] == nil then return false end
+    Combat.links[attackerGUID] = nil
+    Combat.updated()
+    return true
 end
 
 function Combat.render()
@@ -3877,7 +3901,7 @@ function Combat.render()
             Combat.links[attackerGUID] = nil
         else
             local a = attacker.getPosition()
-            for defenderGUID in pairs(link.defenders) do
+            for defenderGUID, declaredBy in pairs(link.defenders) do
                 local defender = getObjectFromGUID(defenderGUID)
                 if not combatCard(defender) then
                     link.defenders[defenderGUID] = nil
@@ -3895,7 +3919,7 @@ function Combat.render()
                                       lift, finish[3] - uz * 0.57 + ux * wing}
                         local right = {finish[1] - ux * 0.57 + uz * wing,
                                        lift, finish[3] - uz * 0.57 - ux * wing}
-                        local tint = Combat.COLOR[link.by] or {1, 1, 1}
+                        local tint = Combat.COLOR[declaredBy] or Combat.COLOR[link.by] or {1, 1, 1}
                         lines[#lines + 1] = {
                             points = {combatLocal(start), combatLocal(finish)},
                             color = tint, thickness = 0.10
@@ -3940,10 +3964,19 @@ end
 function Combat.clear(color)
     if not Combat.OWNERS[color] then return end
     Combat.pending[color] = nil
+    local changed = false
     for attackerGUID, link in pairs(Combat.links) do
-        if link.by == color then Combat.links[attackerGUID] = nil end
+        for defenderGUID, owner in pairs(link.defenders) do
+            if owner == color or (owner == true and link.by == color) then
+                link.defenders[defenderGUID] = nil
+                changed = true
+            end
+        end
+        if next(link.defenders) == nil then
+            Combat.links[attackerGUID] = nil
+        end
     end
-    Combat.updated()
+    if changed then Combat.updated() end
 end
 
 function Combat.onDestroy(obj)
@@ -3980,16 +4013,16 @@ function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     end
     local attackerGUID = hovered.getGUID()
     if attackerGUID == defenderGUID then
-        -- Tap on attacker removes its complete declaration, including multiple blockers.
-        local link = Combat.links[attackerGUID]
-        if link then
-            Combat.links[attackerGUID] = nil
-            Combat.updated()
+        -- A same-card tap is an explicit REMOVE gesture, never part of a
+        -- defender-to-attacker declaration. Prioritize attacker cleanup.
+        if not Combat.clearAttacker(attackerGUID) then
+            Combat.removeDefender(defenderGUID, color)
         end
         return
     end
-    -- DEFENDER first, ATTACKER second: add or remove just this defender.
-    Combat.toggleDefender(attackerGUID, defenderGUID, color)
+    -- DEFENDER first, ATTACKER second: ADD ONLY. A repeated declaration
+    -- cannot remove any existing defender. Use a same-card tap to remove.
+    Combat.addDefender(attackerGUID, defenderGUID, color)
 end
 
 -- Remove obsolete AUTOFIGHT world objects and old Lotus-mounted FIGHT

@@ -12,17 +12,19 @@ In **Table Settings → General**, players can:
 1. Hover a **defending card** and **hold** the combat hotkey.
 2. Move the pointer to the **attacking card**.
 3. **Release** the hotkey: Lotus draws an arrow from that attacker to that defender.
-4. Repeat this exact defender → attacker gesture to remove **that single arrow**.
-5. Start on a different defender and end on the same attacker to **add another defender**, keeping the existing arrows.
-6. Press and release the hotkey while hovering the **attacker itself** to remove **all defenders for that attacker**.
+4. Start on another defender and end on the **same attacker** to **add a second, third, or further arrow**. All existing arrows stay visible.
+5. Repeating an already-declared defender → attacker gesture **does nothing**. It never removes or overwrites an existing arrow.
+6. To remove **one defender's arrows**, press and release the key while hovering that **defender** (as long as that card isn't also an attacker with active arrows). This removes only your own arrows pointing at that card.
+7. To remove **every arrow from an attacker**, press and release the key while hovering the **attacker**.
+8. Use **Clear my arrows** in General to remove all combat arrows you declared, without removing another player's arrows.
 
-Each attacker can point at multiple defenders. A defender can also be targeted by more than one attacker. The arrows are session-only, follow cards when moved, and are removed when the referenced card is destroyed. TTS cards are not tapped, moved, or modified by this feature.
+Each attacker can point at multiple defenders. A defender can also be targeted by more than one attacker. Each individual arrow remembers the player who created it, including when different players declare defenders for the same attacker. The arrows are session-only, follow cards when moved, and are removed when the referenced card is destroyed. TTS cards are not tapped, moved, or modified by this feature.
 
 ## Implementation boundaries
 - Source: `src/lotus/sections/06_combat-targeting.lua` assembled into the original Lotus GUID script.
 - Hotkey registration and TTS event dispatch: `src/lotus/sections/07_shared-event-dispatcher.lua`.
 - Settings and preferences: `src/lotus/sections/03_edh-settings.lua` and `src/ui/sections/08_lotus-settings.xml`.
-- Tracking: `Combat.links[attackerGUID] = {defenders = {[defenderGUID] = true, ...}, by = playerColor}`.
+- Tracking: `Combat.links[attackerGUID] = {defenders = {[defenderGUID] = playerColor, ...}, by = originalColor}`.
 - Drawing: Lotus vector lines, not extra world-space buttons or spawned objects. Existing Lotus vector lines are preserved.
 - Updates: once every 0.30 seconds while arrows are present, plus immediately on changes.
 

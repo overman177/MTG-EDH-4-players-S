@@ -1,65 +1,79 @@
--- Combat gesture regression: defender-first, multiple blockers per attacker.
+-- Regression: normal defender -> attacker gesture only ADDS; tapping removes.
 Settings = {combatEnabledByColor = {White=true,Red=true,Yellow=true,Blue=true}}
-local cards, updated, messages = {}, 0, {}
+local cards, updated = {}, 0
 local function card(guid)
-    local o = {tag="Card", guid=guid}
-    function o.getGUID() return guid end
-    function o.isDestroyed() return false end
-    cards[guid] = o
-    return o
+    local obj = {tag="Card", guid=guid}
+    function obj.getGUID() return guid end
+    function obj.isDestroyed() return false end
+    cards[guid] = obj
+    return obj
 end
-local attackerA, attackerB = card("a11111"), card("b22222")
-local defenderA, defenderB, defenderC =
-    card("c33333"), card("d44444"), card("e55555")
+local atkA, atkB = card("a11111"), card("b22222")
+local defA, defB, defC = card("c33333"), card("d44444"), card("e55555")
 function getObjectFromGUID(guid) return cards[guid] end
-function printToColor(msg,color) messages[#messages+1]={msg,color} end
+function printToColor() end
 dofile("src/lotus/sections/06_combat-targeting.lua")
 Combat.updated = function() updated=updated+1 end
-local function gesture(color, defender, attacker)
-    Combat.hotkey(color, defender, nil, false)
-    Combat.hotkey(color, attacker, nil, true)
+local function gesture(color, startObj, endObj)
+    Combat.hotkey(color, startObj, nil, false)
+    Combat.hotkey(color, endObj, nil, true)
 end
 local function count(attacker)
-    return Combat.countDefenders(Combat.links[attacker.getGUID()])
+    return Combat.countDefenders(Combat.links[attacker.guid])
 end
-
-gesture("White", defenderA, attackerA)
-assert(count(attackerA)==1 and Combat.singleDefender(attackerA.getGUID())==defenderA.getGUID(),
-       "single blocker")
-gesture("White", defenderB, attackerA)
-assert(count(attackerA)==2 and Combat.singleDefender(attackerA.getGUID())==nil,
-       "two blockers")
-gesture("White", defenderC, attackerA)
-assert(count(attackerA)==3,"third blocker")
--- Toggle only one defender, preserving the others.
-gesture("White", defenderB, attackerA)
-assert(count(attackerA)==2,"removed only selected blocker")
-assert(Combat.links[attackerA.guid].defenders[defenderA.guid],
-       "first blocker preserved")
-assert(Combat.links[attackerA.guid].defenders[defenderC.guid],
-       "third blocker preserved")
-gesture("White", defenderC, attackerA)
-assert(count(attackerA)==1 and Combat.singleDefender(attackerA.guid)==defenderA.guid,
-       "back to single blocker")
-gesture("White", defenderA, attackerA)
-assert(Combat.links[attackerA.guid]==nil,"toggle last pair off")
--- Other attacker can share a defender.
-gesture("White", defenderA, attackerA)
-gesture("Blue", defenderA, attackerB)
-assert(Combat.links[attackerA.guid] and Combat.links[attackerB.guid],
-       "independent attackers may share defender")
--- Same-card tap clears all defenders for that attacker.
-gesture("White", defenderB, attackerA)
-gesture("White", attackerA, attackerA)
-assert(Combat.links[attackerA.guid]==nil,"tap clears all its blockers")
-assert(Combat.links[attackerB.guid]~=nil,"tap preserves other attacker")
-gesture("Blue", defenderA, nil)
-assert(count(attackerB)==1,"invalid release harmless")
+gesture("White", defA, atkA)
+assert(count(atkA)==1 and Combat.links[atkA.guid].defenders[defA.guid]=="White",
+       "first defender added")
+gesture("White", defB, atkA)
+assert(count(atkA)==2 and Combat.links[atkA.guid].defenders[defA.guid]=="White",
+       "second defender does not remove first")
+gesture("White", defC, atkA)
+assert(count(atkA)==3,"third defender added")
+local previousUpdates=updated
+gesture("White", defA, atkA)
+assert(count(atkA)==3 and updated==previousUpdates,
+       "repeating same pair is a no-op, NEVER a toggle")
+gesture("Blue", defA, atkA)
+assert(count(atkA)==3 and Combat.links[atkA.guid].defenders[defA.guid]=="White",
+       "repeating another player's pair does not steal ownership")
+-- Same-card tap on a non-attacking defender removes only that defender's arrows.
+gesture("White", defB, defB)
+assert(count(atkA)==2 and Combat.links[atkA.guid].defenders[defB.guid]==nil,
+       "tap defender B removes B only")
+assert(Combat.links[atkA.guid].defenders[defA.guid] and
+       Combat.links[atkA.guid].defenders[defC.guid],
+       "other two defender arrows are preserved")
+gesture("White", defC, defC)
+assert(count(atkA)==1 and Combat.singleDefender(atkA.guid)==defA.guid,
+       "removal leaves one blocker")
+gesture("White", defA, defA)
+assert(Combat.links[atkA.guid]==nil,"last defender tap removes attacker link")
+-- A defender may participate in several attacker declarations, independently.
+gesture("White", defA, atkA)
+gesture("Blue", defA, atkB)
+assert(count(atkA)==1 and count(atkB)==1, "shared defender on two attackers")
+gesture("White", defA, defA)
+assert(Combat.links[atkA.guid]==nil and Combat.links[atkB.guid]~=nil,
+       "defender tap only removes that player's own declaration")
+-- Mixed owners on the SAME attacking card must remain independent.
+gesture("White", defB, atkA)
+gesture("Blue", defC, atkA)
+assert(count(atkA)==2,"mixed owner pair")
+Combat.clear("White")
+assert(count(atkA)==1 and Combat.links[atkA.guid].defenders[defC.guid]=="Blue",
+       "Clear my arrows preserves other players' arrows on the same attacker")
+assert(count(atkB)==1,"Clear my arrows preserves other attack")
+-- Explicit tap on attacker removes all its arrows, not only one pair.
+gesture("White", atkA, atkA)
+assert(Combat.links[atkA.guid]==nil and Combat.links[atkB.guid]~=nil,
+       "tap on attacker clears all that attacker's arrows")
+gesture("Blue", defC, nil)
+assert(count(atkB)==1,"invalid release doesn't clear anything")
 Settings.combatEnabledByColor.Blue=false
-gesture("Blue", attackerB, attackerB)
-assert(count(attackerB)==1,"disabled hotkey harmless")
+gesture("Blue", atkB, atkB)
+assert(count(atkB)==1,"disabled hotkey cannot clear arrows")
 Settings.combatEnabledByColor.Blue=true
 Combat.clear("Blue")
-assert(Combat.links[attackerB.guid]==nil,"personal clear")
-assert(updated>=10,"arrow updates triggered")
-print("Multi-defender combat hotkey tests passed.")
+assert(Combat.links[atkB.guid]==nil,"Blue clears own arrows")
+assert(updated>=10,"drawing updates fired")
+print("Additive multi-defender hotkey tests passed.")

@@ -96,8 +96,11 @@ for i=2,#lines do
 end
 assert(moved,"arrow follows moved defender")
 gesture("White",defB,attacker)
-assert(Combat.countDefenders(Combat.links[attacker.guid])==2,
-       "repeated pair removes only its defender")
+assert(Combat.countDefenders(Combat.links[attacker.guid])==3 and #lines==7,
+       "repeated declaration preserves all 3 arrows")
+gesture("White",defB,defB)
+assert(Combat.countDefenders(Combat.links[attacker.guid])==2 and #lines==5,
+       "tap defender removes only its arrow")
 assert(Combat.links[attacker.guid].defenders[defA.guid] and
        Combat.links[attacker.guid].defenders[defC.guid],
        "remaining defender arrows kept")

@@ -129,7 +129,3 @@ end
 function settingsNotesNavigate(player, value, id)
     Settings.navigateNotes(player, value, id)
 end
--- FIGHT result overlay callback (owned by Lotus).
-function combatCloseEstimate(player, value, id)
-    Combat.closeEstimate(player)
-end

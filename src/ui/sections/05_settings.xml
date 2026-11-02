@@ -1,0 +1,76 @@
+<!-- SETTINGS -->
+<!-- always-on gear button; each player opens their own private settings panel -->
+<Button id="settingsGear" onClick="openSettings" text="&#9881;"
+    rectAlignment="LowerRight" offsetXY="-61 6" width="46" height="46" fontSize="28"
+    color="rgba(0.1,0.1,0.1,0.85)" textColor="#FFFFFF"
+    tooltip="Player settings" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
+
+<Panel id="SettingsPanel" width="440" height="560" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
+    <Text rectAlignment="UpperCenter" offsetXY="0 -20" width="360" height="34" fontSize="26" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Player Settings" />
+    <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="closeSettings" />
+    <InputField id="settingsSearchInput" rectAlignment="UpperCenter" offsetXY="0 -62" width="404" height="34" onValueChanged="settingsSearch" placeholder="Search settings..." text="" fontSize="16" textAlignment="MiddleLeft" color="rgb(0.18,0.18,0.18)" textColor="rgb(1,1,1)" caretColor="rgb(1,1,1)" />
+
+    <VerticalScrollView rectAlignment="LowerCenter" offsetXY="0 12" width="416" height="438" horizontal="false" horizontalScrollbarVisibility="None" scrollSensitivity="26" color="rgba(0,0,0,0.15)" scrollbarBackgroundColor="rgba(0,0,0,0.2)">
+        <TableLayout autoCalculateHeight="true" cellSpacing="4" padding="12 8 12 4" columnWidths="372" cellBackgroundColor="rgba(0,0,0,0)">
+            <Row id="hdr_triggers" preferredHeight="26"><Cell><Text fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="TRIGGERS" /></Cell></Row>
+            <Row id="row_oppDrawTriggers" preferredHeight="46"><Cell><VerticalLayout spacing="0" childForceExpandHeight="false">
+                <Toggle id="setOppDrawTriggers" isOn="False" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17" preferredHeight="26" minHeight="26">Opponent-draw trigger alerts</Toggle>
+                <Text color="#e0a030" fontSize="13" alignment="MiddleLeft" preferredHeight="16" minHeight="16" margin="24 0 0 0" text="unfinished, somewhat buggy" />
+            </VerticalLayout></Cell></Row>
+
+            <Row id="hdr_stateBased" preferredHeight="26"><Cell><Text fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="STATE-BASED" /></Cell></Row>
+            <Row id="row_drawSkipReminder" preferredHeight="32"><Cell><Toggle id="setDrawSkipReminder" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17">Draw-step skip reminder</Toggle></Cell></Row>
+            <Row id="row_abilityRestrictions" preferredHeight="46"><Cell><VerticalLayout spacing="0" childForceExpandHeight="false">
+                <Toggle id="setAbilityRestrictions" isOn="False" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17" preferredHeight="26" minHeight="26">Can't-activate-ability reminder</Toggle>
+                <Text color="#e0a030" fontSize="13" alignment="MiddleLeft" preferredHeight="16" minHeight="16" margin="24 0 0 0" text="unfinished, somewhat buggy" />
+            </VerticalLayout></Cell></Row>
+            <Row id="row_searchRestrictions" preferredHeight="46"><Cell><VerticalLayout spacing="0" childForceExpandHeight="false">
+                <Toggle id="setSearchRestrictions" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17" preferredHeight="26" minHeight="26">Tutor/search restriction (blocks fetch)</Toggle>
+                <Text color="#9aa0a8" fontSize="13" alignment="MiddleLeft" preferredHeight="16" minHeight="16" margin="24 0 0 0" text="fetchland to grave, resolve manually" />
+            </VerticalLayout></Cell></Row>
+            <Row id="row_seedbornUntap" preferredHeight="32"><Cell><Toggle id="setSeedbornUntap" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17">Seedborn Muse untap</Toggle></Cell></Row>
+
+            <Row id="hdr_automation" preferredHeight="26"><Cell><Text fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="AUTOMATION" /></Cell></Row>
+            <Row id="row_cmdrDamageAutoLife" preferredHeight="32"><Cell><Toggle id="setCmdrDamageAutoLife" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17">Commander damage adjusts life</Toggle></Cell></Row>
+            <Row id="row_dfcLandFlip" preferredHeight="32"><Cell><Toggle id="setDfcLandFlip" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17">Flip DFC to land face in land zone</Toggle></Cell></Row>
+            <Row id="row_fetchSurveil" preferredHeight="32"><Cell><Toggle id="setFetchSurveil" isOn="False" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17">Fetched-land surveil / scry</Toggle></Cell></Row>
+            <Row id="row_fetchEntersTapped" preferredHeight="32"><Cell><Toggle id="setFetchEntersTapped" isOn="False" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17">Fetched land enters tapped</Toggle></Cell></Row>
+
+            <Row id="hdr_display" preferredHeight="26"><Cell><Text fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="DISPLAY" /></Cell></Row>
+            <Row id="row_landTracker" preferredHeight="32"><Cell><Toggle id="setLandTracker" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17">Land-entered tracker</Toggle></Cell></Row>
+            <Row id="row_fetchPreviews" preferredHeight="32"><Cell><Toggle id="setFetchPreviews" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17">Fetchland previews</Toggle></Cell></Row>
+            <Row id="row_fetchFromClone" preferredHeight="46"><Cell><VerticalLayout spacing="0" childForceExpandHeight="false">
+                <Toggle id="setFetchFromClone" isOn="False" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17" preferredHeight="26" minHeight="26">Show all possible fetchables</Toggle>
+                <Text color="#9aa0a8" fontSize="13" alignment="MiddleLeft" preferredHeight="16" minHeight="16" margin="24 0 0 0" text="reads game-start deck; no hidden-removal leak" />
+            </VerticalLayout></Cell></Row>
+            <Row id="row_ownerHighlight" preferredHeight="46"><Cell><VerticalLayout spacing="0" childForceExpandHeight="false">
+                <Toggle id="setOwnerHighlight" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17" preferredHeight="26" minHeight="26">Highlight others' cards</Toggle>
+                <Text color="#9aa0a8" fontSize="13" alignment="MiddleLeft" preferredHeight="16" minHeight="16" margin="24 0 0 0" text="glow cards on your mat that belong to another player" />
+            </VerticalLayout></Cell></Row>
+
+            <Row id="hdr_commander" preferredHeight="26"><Cell><Text fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="COMMANDER" /></Cell></Row>
+            <Row id="row_commanderQOL" preferredHeight="46"><Cell><VerticalLayout spacing="0" childForceExpandHeight="false">
+                <Toggle id="setCommanderQOL" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17" preferredHeight="26" minHeight="26">Commander QOL buttons</Toggle>
+                <Text color="#9aa0a8" fontSize="13" alignment="MiddleLeft" preferredHeight="16" minHeight="16" margin="24 0 0 0" text="Etali trigger / Ral grid, applied next game" />
+            </VerticalLayout></Cell></Row>
+
+            <Row id="hdr_game" preferredHeight="26"><Cell><Text fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="GAME" /></Cell></Row>
+            <Row id="row_keywordTokens" preferredHeight="46"><Cell><VerticalLayout spacing="0" childForceExpandHeight="false">
+                <Toggle id="setKeywordTokens" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17" preferredHeight="26" minHeight="26">Keyword tokens</Toggle>
+                <Text color="#9aa0a8" fontSize="13" alignment="MiddleLeft" preferredHeight="16" minHeight="16" margin="24 0 0 0" text="drop a keyword token on a card to apply it" />
+            </VerticalLayout></Cell></Row>
+            <Row id="row_goblinStickers" preferredHeight="32"><Cell><Toggle id="setGoblinStickers" isOn="True" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17">Goblin stickers</Toggle></Cell></Row>
+            <Row id="row_keepPregameFlow" preferredHeight="46"><Cell><VerticalLayout spacing="0" childForceExpandHeight="false">
+                <Toggle id="setKeepPregameFlow" isOn="False" onValueChanged="settingsToggle" textColor="rgb(0.9,0.9,0.9)" fontSize="17" preferredHeight="26" minHeight="26">Keep / pregame flow</Toggle>
+                <Text color="#9aa0a8" fontSize="13" alignment="MiddleLeft" preferredHeight="16" minHeight="16" margin="24 0 0 0" text="centre-mat Keep button + pregame announce" />
+            </VerticalLayout></Cell></Row>
+
+            <Row id="hdr_misc" preferredHeight="26"><Cell><Text fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="MISC" /></Cell></Row>
+            <Row id="row_revealResetSecs" preferredHeight="38"><Cell><HorizontalLayout spacing="8" childAlignment="MiddleLeft" childForceExpandWidth="false">
+                <Text fontSize="17" color="rgb(0.9,0.9,0.9)" alignment="MiddleLeft" flexibleWidth="1" minWidth="200" text="Reveal reset (seconds)" />
+                <InputField id="setRevealResetSecs" characterValidation="Integer" onEndEdit="settingsRevealReset" text="30" minWidth="64" preferredWidth="64" flexibleWidth="0" fontSize="17" textAlignment="MiddleCenter" color="rgb(0.25,0.25,0.25)" textColor="rgb(1,1,1)" caretColor="rgb(1,1,1)" />
+            </HorizontalLayout></Cell></Row>
+        </TableLayout>
+    </VerticalScrollView>
+</Panel>
+

@@ -1,0 +1,17 @@
+name: Validate MTG EDH scripts
+on:
+  push:
+    branches: [main, "architecture/**"]
+  pull_request:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate GUID inventory
+        run: python tools/audit_objects.py .
+      - name: Verify lossless source assembly
+        run: python tools/build.py --check

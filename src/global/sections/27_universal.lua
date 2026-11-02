@@ -1,0 +1,406 @@
+----------------------------------- UNIVERSAL ----------------------------------
+
+-- Cards carry a small JSON object in their GMNotes so several systems can annotate
+-- the same card without clobbering each other. Known keys:
+--   owner      -- persistent: the colour whose deck the card came from (ownership.lua)
+--   castPrompt -- transient: the colour allowed to click a cascade / reveal-until-type
+--                 accept/decline prompt (cascade.lua, reveal_type.lua)
+-- A card with no annotations keeps an empty ("") GMNotes. Legacy / externally set
+-- non-JSON GMNotes are treated as empty so we never crash on them.
+function getCardNotes(obj)
+	local raw = obj.getGMNotes()
+	if raw == nil or raw == "" then
+		return {}
+	end
+	local ok, decoded = pcall(JSON.decode, raw)
+	if ok and type(decoded) == "table" then
+		return decoded
+	end
+	return {}
+end
+
+function getCardNote(obj, key)
+	return getCardNotes(obj)[key]
+end
+
+-- set (value ~= nil) or clear (value == nil) one key, preserving the others. When
+-- the last key is removed the GMNotes is reset to "" so untouched cards stay clean.
+function setCardNote(obj, key, value)
+	local t = getCardNotes(obj)
+	t[key] = value
+	if next(t) == nil then
+		obj.setGMNotes("")
+	else
+		obj.setGMNotes(JSON.encode(t))
+	end
+end
+
+-- this should get the highest resting card from the library zones
+-- works if there are extra cards flipped face up on top of the deck
+-- (personally, I play with a bunch of decks that keep the top card of the library revealed)
+-- works if there is just one card remaining in the zone, too
+function getCardFromZone(zone)
+	local card = nil
+	local highY = 0
+	local highObj = nil
+	local objects = mtgZoneObjects(zone)
+	for i, obj in pairs(objects) do
+		if obj.type == "Deck" or (obj.type == "Card" and obj.use_gravity) then
+			if obj.getPosition().y > highY then
+				highY = obj.getPosition().y
+				highObj = obj
+			end
+		end
+	end
+	if highObj ~= nil then
+		if highObj.type == "Deck" then -- pull one card from the top of the deck
+			local deck = highObj
+			local cardPresent, card = pcall(deck.takeObject)
+			if cardPresent and card.type == "Card" then
+				deck.setLock(true)
+				Wait.frames(function()
+					deck.setLock(false)
+				end, 1)
+				card.use_hands = true
+				gravityTrigger(card)
+				return card
+			end
+		elseif highObj.type == "Card" then
+			local card = highObj
+			card.use_hands = true
+			gravityTrigger(card)
+			return card
+		end
+	end
+	return card -- if nil?
+end
+
+function getDeckFromZone(zone)
+	local deck = nil
+	local objects = mtgZoneObjects(zone)
+	for i, obj in pairs(objects) do
+		if obj.type == "Deck" then
+			deck = obj
+			return deck
+		end
+	end
+	return deck
+end
+
+-- the per-player buttons that live on a token belonging to one colour
+buttonOwnerKeys = { "drawButton", "scryButton", "millButton", "untapButton", "mulliganButton", "revealButton", "playmat" }
+
+-- reverse-lookup the owner colour of a per-player button object, or nil
+function buttonOwner(obj)
+	for color, pdata in pairs(data) do
+		for _, key in ipairs(buttonOwnerKeys) do
+			if pdata[key] == obj then
+				return color
+			end
+		end
+	end
+	return nil
+end
+
+-- if obj is another player's button, tell the clicker it isn't theirs
+function warnNotYours(obj, clickerColor)
+	local owner = buttonOwner(obj)
+	if owner ~= nil and owner ~= clickerColor then
+		Player[clickerColor].broadcast(
+			"That's " .. owner .. "'s button -- you can only use your own.",
+			{ 1, 0.6, 0.2 }
+		)
+	end
+end
+
+-- button press animation
+function buttonPress(button, T)
+	local posUp = button.getPosition()
+	local posDown = button.getPosition()
+	posUp.y = 1
+	posDown.y = 0.9
+	local downT = T
+	if downT < 0.05 then
+		downT = 0.05
+	end
+	button.setPositionSmooth(posDown, false, true)
+	Wait.time(function()
+		button.setPositionSmooth(posUp, false, true)
+	end, downT)
+end
+
+-- rotate all buttons on the object upside down for the cooldown timer
+function buttonCooldown(button, T)
+	buts = button.getButtons()
+	for i, but in pairs(buts) do
+		-- skip display-only labels and the serum powder / reset buttons so their
+		-- text isn't mirrored during a neighbouring button's cooldown
+		if
+			but.click_function ~= "noop"
+			and but.click_function ~= "playerSerumPowder"
+			and but.click_function ~= "playerReset"
+		then
+			local oldRot = but.rotation
+			local ind = but.index
+			button.editButton({ index = ind, rotation = { x = oldRot.x, y = oldRot.y, z = 180 } })
+			Wait.time(function()
+				button.editButton({ index = ind, rotation = { x = oldRot.x, y = oldRot.y, z = 0 } })
+			end, T)
+		end
+	end
+end
+
+-- check that the card made it to it's target, if not, teleport it
+function checkMoveSuccess(card, targetPos, playerColor)
+	if card == nil then -- the card is gone, probably stacked into a deck already
+		return
+	end
+	-- use hands orientation to determine which coordinate to use to check position
+	-- currently only set up to work with hands rotated 0,90,180,270 degrees
+	local handForw = Player[playerColor].getHandTransform(2).forward
+	local posDiff = 0
+	if math.abs(handForw.z) > 0.5 then
+		posDiff = math.abs(card.getPosition().z - targetPos.z)
+	elseif math.abs(handForw.x) > 0.5 then
+		posDiff = math.abs(card.getPosition().x - targetPos.x)
+	end
+	if posDiff > 1 then
+		card.setPosition(targetPos)
+	end
+end
+
+-- for hiding cards
+function allBut(playerColor)
+	local players = {}
+	for key, color in pairs(Color.list) do
+		if color ~= playerColor then
+			table.insert(players, color)
+		end
+	end
+	return players
+end
+function unhide(card)
+	if card ~= nil then
+		card.setHiddenFrom({})
+	end
+end
+
+-- turns off gravity on the card for a few frames (prevents it from falling back onto a deck)
+function gravityTrigger(obj)
+	if obj ~= nil then
+		obj.use_gravity = false
+		Wait.time(function()
+			gravOn(obj)
+		end, 0.2)
+	end
+end
+function gravOn(obj)
+	if obj ~= nil then
+		obj.use_gravity = true
+	end
+end
+
+function interactTrigger(obj)
+	if obj ~= nil then
+		obj.interactable = false
+		Wait.time(function()
+			interactOn(obj)
+		end, 0.2)
+	end
+end
+function interactOn(obj)
+	if obj ~= nil then
+		obj.interactable = true
+	end
+end
+
+function handTrigger(obj)
+	if obj ~= nil then
+		obj.use_hands = false
+		Wait.time(function()
+			handOn(obj)
+		end, 0.1)
+	end
+end
+function handOn(obj)
+	if obj ~= nil then
+		obj.use_hands = true
+	end
+end
+
+-- Single source of truth for "is this card a land?" (basic lands included).
+-- Accepts either a card object or a name string. Card nicknames in this mod are
+-- "<name>\n<type line> <cmc>CMC", so the type line is part of the name; matching
+-- "land" there identifies lands without scanning the rules text. For objects we
+-- also accept a "Land" tag.
+function cardIsLand(card)
+	if card == nil then
+		return false
+	end
+	local name
+	if type(card) == "string" then
+		name = card
+	else
+		if card.getName == nil then
+			return false
+		end
+		for _, tag in ipairs(card.getTags()) do
+			if tag:lower() == "land" then
+				return true
+			end
+		end
+		name = card.getName()
+	end
+	return (name or ""):lower():find("land") ~= nil
+end
+
+-- the card nickname's second line is its type line (see mainCardName), so an
+-- instant/sorcery is detected by "instant"/"sorcery" appearing there
+function nameIsInstantOrSorcery(name)
+	local typeLine = ((name or ""):match("\n([^\r\n]*)") or ""):lower()
+	return typeLine:find("instant") ~= nil or typeLine:find("sorcery") ~= nil
+end
+
+-- as above, for a live card object (vs. a deck-contained card's name string)
+function cardIsInstantOrSorcery(card)
+	if card == nil or card.getName == nil then
+		return false
+	end
+	return nameIsInstantOrSorcery(card.getName())
+end
+
+-- does the type line (2nd line of the nickname) name a land? used to spot a
+-- double-faced card whose back face is a land
+function nameTypeLineIsLand(name)
+	local typeLine = ((name or ""):match("\n([^\r\n]*)") or ""):lower()
+	return typeLine:find("land") ~= nil
+end
+
+-- write text into a card's "Notepad[sup]π[/sup]" Encoder prop (propID "πotepad",
+-- value note = { text, editON }). Mirrors keyword_tokens.lua's πKeywords handling.
+function setCardNotepad(card, text)
+	local enc = Global.getVar("Encoder")
+	if enc == nil or card == nil then
+		return
+	end
+	if enc.call("APIobjectExists", { obj = card }) == false then
+		enc.call("APIencodeObject", { obj = card })
+	end
+	if enc.call("APIobjIsPropEnabled", { obj = card, propID = "πotepad" }) == false then
+		enc.call("APIobjEnableProp", { obj = card, propID = "πotepad" })
+	end
+	local data = enc.call("APIobjGetPropData", { obj = card, propID = "πotepad" })
+	if data == nil then
+		return
+	end
+	data.note = data.note or { editON = true }
+	data.note.text = text
+	enc.call("APIobjSetPropData", { obj = card, propID = "πotepad", data = data })
+	enc.call("APIrebuildButtons", { obj = card })
+end
+
+-- For a sticker card's space-separated name (e.g. "space fungus snickerdoodle"),
+-- return the word with the most unique vowels ("y" counts), lowercased with every
+-- vowel capitalised, then a space and that count -- e.g. "snIckErdOOdlE 3".
+function stickerNotepad(name)
+	local best, bestCount = nil, -1
+	for word in (name or ""):gmatch("%S+") do
+		local lower = word:lower()
+		local seen = {}
+		for ch in lower:gmatch("[aeiouy]") do
+			seen[ch] = true
+		end
+		local count = 0
+		for _ in pairs(seen) do
+			count = count + 1
+		end
+		if count > bestCount then
+			bestCount = count
+			best = lower
+		end
+	end
+	if best == nil then
+		return ""
+	end
+	return (best:gsub("[aeiouy]", string.upper)) .. " " .. bestCount
+end
+
+-- card nicknames in this mod are "<name>\n<type line> <cmc>CMC" (the importer
+-- appends the type line and CMC on following lines). Return just the displayed
+-- card name: the first line, trimmed.
+function mainCardName(name)
+	if name == nil then
+		return ""
+	end
+	return (name:match("^[^\r\n]*") or ""):gsub("%s+$", "")
+end
+
+-- the lowercased type line of a card: the text after the first newline in its
+-- "<name>\n<type line> <cmc>CMC" nickname. Accepts a nickname string or a card
+-- object. Returns "" if there's no type line. Matching subtypes/supertypes here
+-- (rather than the whole nickname) avoids a card name being mistaken for a type.
+function cardTypeLine(nameOrObj)
+	local name
+	if type(nameOrObj) == "string" then
+		name = nameOrObj
+	elseif nameOrObj ~= nil and nameOrObj.getName ~= nil then
+		name = nameOrObj.getName()
+	end
+	return ((name or ""):match("[\r\n]+(.*)$") or ""):lower()
+end
+
+-- is obj currently inside zone?
+function zoneContains(zone, obj)
+	if zone == nil or obj == nil then
+		return false
+	end
+	for _, o in ipairs(mtgZoneObjects(zone)) do
+		if o == obj then
+			return true
+		end
+	end
+	return false
+end
+
+-- run fn(obj) once obj has come to rest. Does nothing if obj is destroyed first.
+function whenSettled(obj, fn)
+	Wait.condition(function()
+		if obj ~= nil then
+			fn(obj)
+		end
+	end, function()
+		return obj == nil or obj.resting
+	end)
+end
+
+-- run fn(obj) once obj has come to rest while still inside zone. Does nothing if
+-- obj is destroyed or leaves zone before settling (e.g. a card just passing
+-- through the zone while being drawn/moved).
+function whenSettledInZone(obj, zone, fn)
+	Wait.condition(function()
+		if obj ~= nil and zoneContains(zone, obj) then
+			fn(obj)
+		end
+	end, function()
+		return obj == nil or obj.resting or not zoneContains(zone, obj)
+	end)
+end
+
+-- double-click detection: returns true on the second call with the same key
+-- within `window` seconds (default 0.5), else false. Key it however suits the
+-- caller (object guid, player colour, ...).
+doubleClickTimes = {}
+function isDoubleClick(key, window)
+	window = window or 0.5
+	local now = os.clock()
+	local last = doubleClickTimes[key]
+	if last ~= nil and (now - last) <= window then
+		doubleClickTimes[key] = nil
+		return true
+	end
+	doubleClickTimes[key] = now
+	return false
+end
+
+function null() end
+

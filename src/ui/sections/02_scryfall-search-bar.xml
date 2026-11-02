@@ -1,0 +1,90 @@
+<!-- Scryfall search bar -->
+<Defaults>
+    <Panel class="WindowBorder" color="#8F8478" outline="#635351" outlineSize="2 -2" />
+    <Row class="MenuBar" color="#666666" width="385"/>
+    <Button class="topButtons" width="25" height="25" color="#eeeeee" />
+    <Text class="UIText" fontSize="18" fontStyle="Bold" color="#000000" />
+    <TableLayout class="SearchTable" rectAlignment="LowerCenter" cellPadding="5" color="#FFFFFF" columnWidths="130 0" />
+    <Row class="SearchTableRow" preferredHeight="40" />
+    <InputField class="UIInputField" fontSize="14" colors="#FFFFFF|#dddddd|#FFFFFF|rgba(0.78,0.78,0.78,0.5)" />
+    <Button class="FAB" color="#4286f4" />
+    <ToggleButton class="UIToggleButton" iconAlignment="Right" padding="5" transition="None" isOn="True" />
+</Defaults>
+<Panel id="SearchPanel" class="WindowBorder" width="385" height="310" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="#666666" visibility="" active="False">
+    <Row id="MenuBar" class="MenuBar" width="385">
+        <Text id="WindowTitle" class="UIText" text="MTG Card Spawner" color="#FFFFFF" rectAlignment="UpperCenter" alignment="LowerCenter" width="230" height="80" offsetXY="0 55" />
+        <Button id="closeButton" class="topButtons" rectAlignment="UpperRight" color="#990000" textColor="#FFFFFF" text="X" onClick="close" />
+    </Row>
+    <TableLayout id="SearchTable" class="SearchTable" height="280">
+        <Row class="SearchTableRow">
+            <Cell>
+                <Text>Name</Text>
+            </Cell>
+            <Cell>
+                <InputField id="vName" class="UIInputField" onEndEdit="updateText" />
+            </Cell>
+        </Row>
+        <Row class="SearchTableRow">
+            <Cell>
+                <Text>CMC</Text>
+            </Cell>
+            <Cell>
+                <InputField id="vCmc" class="UIInputField" onEndEdit="updateText" />
+            </Cell>
+        </Row>
+        <Row class="SearchTableRow">
+            <Cell>
+                <Text>Power</Text>
+            </Cell>
+            <Cell>
+                <InputField id="vPower" class="UIInputField" onEndEdit="updateText" />
+            </Cell>
+        </Row>
+        <Row class="SearchTableRow">
+            <Cell>
+                <Text>Toughness</Text>
+            </Cell>
+            <Cell>
+                <InputField id="vToughness" class="UIInputField" onEndEdit="updateText" />
+            </Cell>
+        </Row>
+        <Row class="SearchTableRow">
+            <Cell>
+                <Text>Color</Text>
+            </Cell>
+            <Cell>
+                <HorizontalLayout spacing="5">
+                    <ToggleButton id="vWhite" class="UIToggleButton" icon="whiteMana" color="#fffbd5" onValueChanged="updatevColor" />
+                    <ToggleButton id="vBlue" class="UIToggleButton" icon="blueMana" color="#aae0fa" onValueChanged="updatevColor" />
+                    <ToggleButton id="vBlack" class="UIToggleButton" icon="blackMana" color="#cbc2bf" onValueChanged="updatevColor" />
+                    <ToggleButton id="vRed" class="UIToggleButton" icon="redMana" color="#f9aa8f" onValueChanged="updatevColor" />
+                    <ToggleButton id="vGreen" class="UIToggleButton" icon="greenMana" color="#9bd3ae" onValueChanged="updatevColor" />
+                    <ToggleButton id="vColorless" class="UIToggleButton" icon="colorlessMana" color="#ccc2c0" onValueChanged="updatevColor" />
+                </HorizontalLayout>
+            </Cell>
+        </Row>
+        <Row class="SearchTableRow">
+            <Cell>
+                <Text>Type</Text>
+            </Cell>
+            <Cell>
+                <ToggleGroup>
+                    <HorizontalLayout>
+                        <Toggle id="vToken" class="UIToggleField" onValueChanged="updateType" isOn="False">Token</Toggle>
+                        <Toggle id="vEmblem" class="UIToggleField" onValueChanged="updateType" isOn="False">Emblem</Toggle>
+                        <Toggle id="vOther" class="UIToggleField" onValueChanged="updateType" isOn="True">Other</Toggle>
+                </HorizontalLayout>
+                </ToggleGroup>
+            </Cell>
+        </Row>
+		<Row class="SearchTableRow">
+            <Cell columnSpan = "2">
+                <Button id="search" class="FAB" onClick="search">
+                    <Text>Search</Text>
+                </Button>
+            </Cell>
+        </Row>
+    </TableLayout>
+</Panel>
+
+

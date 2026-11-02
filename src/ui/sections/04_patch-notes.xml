@@ -1,0 +1,13 @@
+<!-- PATCH NOTES -->
+<Panel id="PatchNotesPanel" width="620" height="520" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
+    <Text id="PatchNotesTitle" rectAlignment="UpperCenter" offsetXY="0 -22" width="520" height="36" fontSize="28" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Patch Notes" />
+    <Button id="PatchNotesCloseButton" rectAlignment="UpperRight" offsetXY="-10 -10" width="34" height="34" color="#990000" textColor="#FFFFFF" text="X" fontSize="20" onClick="closePatchNotes" />
+    <VerticalScrollView rectAlignment="LowerCenter" offsetXY="0 14" width="596" height="448" horizontal="false" horizontalScrollbarVisibility="None" scrollSensitivity="30" color="rgba(0,0,0,0.35)">
+        <TableLayout autoCalculateHeight="true" cellSpacing="0" padding="4 8 4 4" columnWidths="560" cellBackgroundColor="rgba(0,0,0,0)">
+            <Row id="PatchNotesRow" preferredHeight="1100"><Cell>
+                <Text id="PatchNotesText" fontSize="17" color="rgb(0.9,0.9,0.9)" alignment="UpperLeft" text="Loading..." />
+            </Cell></Row>
+        </TableLayout>
+    </VerticalScrollView>
+</Panel>
+

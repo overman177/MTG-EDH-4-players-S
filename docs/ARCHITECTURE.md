@@ -1,37 +1,42 @@
-# Architecture proposal (non-destructive)
+# Actual table architecture
 
-## Runtime boundaries
+This repository uses **two layers**:
 
-1. **Global.lua** is the table-wide script and contains the master event callbacks.
-2. **MTG Lotus Helper** is a separate TTS object script; do not merge its event handlers into Global.
-3. **Global UI.html** is global XML UI. Callbacks must continue to resolve to their existing TTS owners.
-4. **Other objects** keep their current GUID-suffixed names and folder locations.
+- `src/`: human-editable ordered sections of the central Global Lua, Lotus Helper Lua and Global XML UI. `src/manifest.json` owns section ordering and target mapping.
+- `live/`: real GUID-suffixed TTS object files, scanned recursively by Smart Import v3.
 
-## Proposed layout
+Additional new scripts are placed in `New/` until categorized. `savegame.json` is a preserved TTS save snapshot; editing the saved JSON is **not** part of this build system.
 
-```text
-src/
-  global/    # ordered sections of Global.lua
-  lotus/     # ordered sections of the Lotus Helper
-  ui/        # ordered sections of Global UI.html
-objects/     # other TTS GUID-named scripts (after live inventory)
-New/         # incoming GUID objects from Smart Import v3
-tools/       # build, audit and validation
-docs/        # architecture, API contracts and test plans
-```
+## Boundaries
 
-**The source sections are not independent runtime Lua modules.** Initially concatenate them exactly in the original order, retaining lexical scope and callback registration. Do not introduce `require()` or change event dispatching until TTS regression tests exist.
+**Global / live/global/Global.-1.lua**
+- Player seats, turn flow, commander zones, counters, table buttons
+- Land tracking, fetchlands, zone logic, preview and context menus
+- Scryfall tools, chat, settings, UI callback handlers and patch notes
 
-## Feature areas
+**Lotus Helper / live/objects/lotus-helper/**
+- Card previews, playmats, random draw, personal settings
+- Equipment actions and reveal-top clone visuals
 
-Global: zone resolution; player/seat state; shortcuts; mulligans; board reset; pregame flow; commander helpers; turns; card entry; land/fetchland systems; counters; context menus; Scryfall; chat; patch notes; settings.
+**Global UI / live/global/Global.-1.xml**
+- Context panels, Scryfall, importer controls, patch notes
+- Player, host, Lotus settings and shortcuts overlay
 
-Lotus: per-player previews; playmats; random draw; settings; equipment; reveal-top clones; TTS event dispatcher.
+**Other objects / live/objects/** are classified by role: counters-and-trackers, commander, mana, zones-and-hand, automation, interface, game-mechanics, utilities and third-party. A folder is an **organizational category, not evidence of original authorship**.
 
-UI: deck/importer panels; reveal tools; Scryfall; patch notes; general and host settings; bug reports; Lotus settings.
+## Source section contract
 
-## Source of truth
+The first refactor is intentionally **lossless concatenation**, not independent module loading. The resulting Global Lua and Lotus Lua remain single TTS Lua environments with shared locals and existing event handlers. XML is assembled as concatenated top-level fragments, matching the original TTS UI payload.
 
-`src/` should eventually own the three central scripts; generated GUID target files must be deployed only after verification. Objects not yet migrated remain managed directly by Smart Import v3.
+Use `python tools/build.py --check` to verify the baseline. Build outputs use plain `Global.lua`, `LotusHelper.lua` and `Global.xml` to avoid duplicate GUID identities.
 
-**Do not bulk reorganize or overwrite the live GUID files from this scaffold.** The current GitHub repository did not contain a committed object inventory when this branch was made.
+When a legitimate source change is made, `--check` will report that it differs from the deployed live code. Run `python tools/deploy.py --apply` to update the original GUID target, with backups, then test with TTS.
+
+## Work not yet automated
+
+- Sync-back from edited live files to `src/` sections
+- Runtime TTS integration and UI/zone interaction testing
+- Object metadata/tag verification against `savegame.json`
+- Automatic upstream third-party script refresh
+
+These are deliberate boundaries to avoid silent gameplay regressions.

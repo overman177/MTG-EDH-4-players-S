@@ -14,11 +14,13 @@ In **Table Settings → General**, players can:
 3. **Release** the hotkey: Lotus draws an arrow from that attacker to that defender.
 4. Start on another defender and end on the **same attacker** to **add a second, third, or further arrow**. All existing arrows stay visible.
 5. Repeating an already-declared defender → attacker gesture **does nothing**. It never removes or overwrites an existing arrow.
-6. To remove **one defender's arrows**, press and release the key while hovering that **defender** (as long as that card isn't also an attacker with active arrows). This removes only your own arrows pointing at that card.
-7. To remove **every arrow from an attacker**, press and release the key while hovering the **attacker**.
+6. To remove **one defender's arrows**, briefly press and release the key **without moving the cursor** while hovering that **defender** (as long as that card isn't also an attacker with active arrows). This removes only your own arrows pointing at that card.
+7. To remove **every arrow from an attacker**, briefly press and release the key **without moving the cursor** while hovering the **attacker**.
 8. Use **Clear my arrows** in General to remove all combat arrows you declared, without removing another player's arrows.
 
-Each attacker can point at multiple defenders. A defender can also be targeted by more than one attacker. Each individual arrow remembers the player who created it, including when different players declare defenders for the same attacker. The arrows are session-only, follow cards when moved, and are removed when the referenced card is destroyed. TTS cards are not tapped, moved, or modified by this feature.
+Each attacker can point at multiple defenders. A defender can also be targeted by more than one attacker. Each individual arrow remembers the player who created it, including when different players declare defenders for the same attacker.
+
+**Safety against false deletion:** A key-up event that happens to report the same hovered card as key-down cannot remove arrows unless the world-space cursor moved no more than 0.24 table units. A drag with ambiguous hovered-object data is ignored rather than interpreted as a tap. TTS reports pointer positions separately for the press and release events. If pointer coordinates are unavailable, the operation cannot delete arrows. The arrows are session-only, follow cards when moved, and are removed when the referenced card is destroyed. TTS cards are not tapped, moved, or modified by this feature.
 
 ## Implementation boundaries
 - Source: `src/lotus/sections/06_combat-targeting.lua` assembled into the original Lotus GUID script.

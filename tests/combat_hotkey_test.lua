@@ -1,8 +1,9 @@
 -- Regression: normal defender -> attacker gesture only ADDS; tapping removes.
 Settings = {combatEnabledByColor = {White=true,Red=true,Yellow=true,Blue=true}}
-local cards, updated = {}, 0
+local cards, updated, nextX = {}, 0, 0
 local function card(guid)
-    local obj = {tag="Card", guid=guid}
+    nextX = nextX + 3
+    local obj = {tag="Card", guid=guid, point={x=nextX,z=0}}
     function obj.getGUID() return guid end
     function obj.isDestroyed() return false end
     cards[guid] = obj
@@ -14,9 +15,11 @@ function getObjectFromGUID(guid) return cards[guid] end
 function printToColor() end
 dofile("src/lotus/sections/06_combat-targeting.lua")
 Combat.updated = function() updated=updated+1 end
-local function gesture(color, startObj, endObj)
-    Combat.hotkey(color, startObj, nil, false)
-    Combat.hotkey(color, endObj, nil, true)
+local function gesture(color, startObj, endObj, downAt, upAt)
+    local startPos = downAt or (startObj and startObj.point)
+    local endPos = upAt or (endObj and endObj.point)
+    Combat.hotkey(color, startObj, startPos, false)
+    Combat.hotkey(color, endObj, endPos, true)
 end
 local function count(attacker)
     return Combat.countDefenders(Combat.links[attacker.guid])
@@ -29,6 +32,12 @@ assert(count(atkA)==2 and Combat.links[atkA.guid].defenders[defA.guid]=="White",
        "second defender does not remove first")
 gesture("White", defC, atkA)
 assert(count(atkA)==3,"third defender added")
+-- BUG REPRODUCTION: both hovered objects resolve to the attacker while the
+-- pointer actually moves substantially. This must NOT be treated as a tap.
+gesture("White", atkA, atkA, {x=0,z=0}, {x=5,z=0})
+assert(count(atkA)==3, "moved cursor must not erase previously declared arrows")
+assert(Combat.isStationaryTap({x=0,z=0}, {x=5,z=0})==false,
+       "moved gesture cannot be mistaken for a removal tap")
 local previousUpdates=updated
 gesture("White", defA, atkA)
 assert(count(atkA)==3 and updated==previousUpdates,
@@ -36,7 +45,7 @@ assert(count(atkA)==3 and updated==previousUpdates,
 gesture("Blue", defA, atkA)
 assert(count(atkA)==3 and Combat.links[atkA.guid].defenders[defA.guid]=="White",
        "repeating another player's pair does not steal ownership")
--- Same-card tap on a non-attacking defender removes only that defender's arrows.
+-- Same-card stationary tap on a non-attacking defender removes its arrows.
 gesture("White", defB, defB)
 assert(count(atkA)==2 and Combat.links[atkA.guid].defenders[defB.guid]==nil,
        "tap defender B removes B only")
@@ -63,7 +72,10 @@ Combat.clear("White")
 assert(count(atkA)==1 and Combat.links[atkA.guid].defenders[defC.guid]=="Blue",
        "Clear my arrows preserves other players' arrows on the same attacker")
 assert(count(atkB)==1,"Clear my arrows preserves other attack")
--- Explicit tap on attacker removes all its arrows, not only one pair.
+-- Moved same-hover event must never clear mixed-player arrows either.
+gesture("White", atkA, atkA, {x=-2,z=-2}, {x=0,z=0})
+assert(count(atkA)==1, "movement cannot erase mixed-player declarations")
+-- A truly stationary key tap on attacker clears all its arrows.
 gesture("White", atkA, atkA)
 assert(Combat.links[atkA.guid]==nil and Combat.links[atkB.guid]~=nil,
        "tap on attacker clears all that attacker's arrows")
@@ -76,4 +88,10 @@ Settings.combatEnabledByColor.Blue=true
 Combat.clear("Blue")
 assert(Combat.links[atkB.guid]==nil,"Blue clears own arrows")
 assert(updated>=10,"drawing updates fired")
+-- A key-up without recorded pointer positions is never destructive.
+gesture("White", defA, atkA)
+assert(count(atkA)==1,"re-create after clear")
+Combat.hotkey("White", atkA, nil, false)
+Combat.hotkey("White", atkA, nil, true)
+assert(count(atkA)==1,"missing pointer data cannot clear existing arrow")
 print("Additive multi-defender hotkey tests passed.")

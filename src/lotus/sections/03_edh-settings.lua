@@ -21,6 +21,7 @@ Settings = {
     previewFirstCommanderOwn = {},
     previewFirstCommanderOpponents = {},
     showShortcutsByColor = {}, -- personal HUD visibility, keyed by TTS seat color
+    combatEnabledByColor = {}, -- per-seat combat targeting preference
     menuOpen = false,
     menuOwner = nil,
     uiSyncing = false,
@@ -68,6 +69,9 @@ function Settings.normalize()
         if Settings.showShortcutsByColor[color] == nil then
             Settings.showShortcutsByColor[color] = true
         end
+        if Settings.combatEnabledByColor[color] == nil then
+            Settings.combatEnabledByColor[color] = true
+        end
     end
 end
 
@@ -94,7 +98,8 @@ function Settings.import(data)
         and type(data.previewHideLands) ~= "table"
         and type(data.previewShareEnabled) ~= "table"
         and type(data.previewHideOwnLandsForOthers) ~= "table"
-        and type(data.showShortcutsByColor) ~= "table" then
+        and type(data.showShortcutsByColor) ~= "table"
+        and type(data.combatEnabledByColor) ~= "table" then
         return false
     end
     if type(data.state) == "table" then Settings.state = data.state end
@@ -127,6 +132,9 @@ function Settings.import(data)
     if type(data.showShortcutsByColor) == "table" then
         Settings.showShortcutsByColor = data.showShortcutsByColor
     end
+    if type(data.combatEnabledByColor) == "table" then
+        Settings.combatEnabledByColor = data.combatEnabledByColor
+    end
     Settings.hasSavedState = true
     Settings.normalize()
     return true
@@ -141,6 +149,7 @@ function Settings.load(savedData)
     Settings.previewFirstCommanderOwn = {}
     Settings.previewFirstCommanderOpponents = {}
     Settings.showShortcutsByColor = {}
+    Settings.combatEnabledByColor = {}
     Settings.menuOpen = false
     Settings.menuOwner = nil
     Settings.uiSyncing = false
@@ -187,7 +196,8 @@ function Settings.export()
         previewHideOpponentsLands = Settings.previewHideOpponentsLands,
         previewFirstCommanderOwn = Settings.previewFirstCommanderOwn,
         previewFirstCommanderOpponents = Settings.previewFirstCommanderOpponents,
-        showShortcutsByColor = Settings.showShortcutsByColor
+        showShortcutsByColor = Settings.showShortcutsByColor,
+        combatEnabledByColor = Settings.combatEnabledByColor
     }
 end
 
@@ -308,6 +318,8 @@ function Settings.syncUI()
         Settings.previewFirstCommanderOpponents[color] ~= false)
     Settings.setToggle("lotus_show_shortcuts",
         Settings.showShortcutsByColor[color] ~= false)
+    Settings.setToggle("lotus_enable_combat",
+        Settings.combatEnabledByColor[color] ~= false)
     Settings.uiSyncing = false
 end
 
@@ -323,8 +335,8 @@ Settings.TAB_IDS = {
 function Settings.applyTab()
     local height = "465"
     if Settings.activeTab == "notes" then height = "605"
-    elseif Settings.activeTab == "general" or Settings.activeTab == "preview" then
-        height = "365"
+    elseif Settings.activeTab == "general" then height = "465"
+    elseif Settings.activeTab == "preview" then height = "365"
     end
     UI.setAttribute("CounterVisibilityPanel", "height", height)
     for tab, ids in pairs(Settings.TAB_IDS) do
@@ -612,14 +624,24 @@ function Settings.applyShortcutsVisibility()
 end
 
 function Settings.toggleGeneral(player, value, id)
-    if Settings.uiSyncing or id ~= "lotus_show_shortcuts" then return end
+    if Settings.uiSyncing then return end
     local color = Settings.playerColor(player)
     if color == nil or color ~= Settings.menuOwner or not Settings.validColor(color) then
         return
     end
-    Settings.showShortcutsByColor[color] = Settings.toBool(value)
+    if id == "lotus_show_shortcuts" then
+        Settings.showShortcutsByColor[color] = Settings.toBool(value)
+        Settings.applyShortcutsVisibility()
+    elseif id == "lotus_enable_combat" then
+        Settings.combatEnabledByColor[color] = Settings.toBool(value)
+        if not Settings.combatEnabledByColor[color] then
+            Combat.pending[color] = nil
+            Combat.clear(color)
+        end
+    else
+        return
+    end
     Settings.persist()
-    Settings.applyShortcutsVisibility()
 end
 
 -- Keep every unrelated button attached to the Lotus intact.
@@ -836,7 +858,7 @@ end
 function Settings.generalTab()
     return {tag = "Panel", attributes = {
         id = "MTG_Settings_Tab_General", rectAlignment = "UpperCenter",
-        offsetXY = "0 -124", width = "516", height = "205",
+        offsetXY = "0 -124", width = "516", height = "290",
         color = "clear", active = "false"
     }, children = {
         {tag = "Text", attributes = {
@@ -845,22 +867,57 @@ function Settings.generalTab()
             alignment = "MiddleLeft", color = "#6fa0d8", text = "GENERAL"
         }},
         {tag = "Panel", attributes = {
-            id = "MTG_Settings_GeneralContent_v142",
+            id = "MTG_Settings_GeneralContent_v150",
             rectAlignment = "UpperCenter", offsetXY = "0 -36",
-            width = "500", height = "125", color = "#28272B"
+            width = "500", height = "242", color = "#28272B"
         }, children = {
             {tag = "Toggle", attributes = {
                 id = "lotus_show_shortcuts", isOn = "True",
                 onValueChanged = self.getGUID() .. "/settingsGeneralToggle",
-                rectAlignment = "UpperLeft", offsetXY = "16 -16",
-                width = "460", height = "35", fontSize = "18",
+                rectAlignment = "UpperLeft", offsetXY = "16 -13",
+                width = "460", height = "35", fontSize = "17",
                 textColor = "#EDEEF2"
             }, value = "Show numpad shortcuts on my screen"},
             {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -61",
-                width = "465", height = "50", fontSize = "14",
-                color = "#9BA4B0", alignment = "UpperLeft",
-                text = "Only affects your view. Other players keep their own settings.\nKeys are configured in TTS Configuration > Controls."
+                rectAlignment = "UpperLeft", offsetXY = "16 -53",
+                width = "465", height = "20", fontSize = "13",
+                color = "#9BA4B0", alignment = "MiddleLeft",
+                text = "Numpad keys: TTS Configuration > Controls."
+            }},
+            {tag = "Text", attributes = {
+                rectAlignment = "UpperLeft", offsetXY = "16 -87",
+                width = "465", height = "22", fontSize = "14",
+                fontStyle = "Bold", color = "#6fa0d8",
+                text = "COMBAT TARGETING"
+            }},
+            {tag = "Toggle", attributes = {
+                id = "lotus_enable_combat", isOn = "True",
+                onValueChanged = self.getGUID() .. "/settingsGeneralToggle",
+                rectAlignment = "UpperLeft", offsetXY = "16 -112",
+                width = "465", height = "33", fontSize = "17",
+                textColor = "#EDEEF2"
+            }, value = "Enable combat targeting for me"},
+            {tag = "Button", attributes = {
+                id = "lotus_combat_bind",
+                onClick = self.getGUID() .. "/settingsCombatKeyConfig",
+                rectAlignment = "UpperLeft", offsetXY = "16 -160",
+                width = "260", height = "33", fontSize = "14",
+                textColor = "#FFFFFF", colors = "#315A87|#4274AC|#234363|#234363",
+                text = "Configure key (C suggested)"
+            }},
+            {tag = "Button", attributes = {
+                id = "lotus_combat_clear",
+                onClick = self.getGUID() .. "/settingsCombatClear",
+                rectAlignment = "UpperRight", offsetXY = "-16 -160",
+                width = "188", height = "33", fontSize = "14",
+                textColor = "#FFFFFF", colors = "#403A43|#57515B|#2B272E|#2B272E",
+                text = "Clear my arrows"
+            }},
+            {tag = "Text", attributes = {
+                rectAlignment = "UpperLeft", offsetXY = "16 -207",
+                width = "465", height = "24", fontSize = "13",
+                color = "#9BA4B0", alignment = "MiddleLeft",
+                text = "Hold bound key on a card; release it over another card."
             }}
         }}
     }}
@@ -957,6 +1014,19 @@ function Settings.ensureGeneralTab(panel)
         local id = child.attributes and child.attributes.id
         if id == "MTG_Settings_Tab_General" then
             hasGeneralPanel = true
+            -- Replace only Lotus' own obsolete General tab. Never touch other UI.
+            local current = false
+            for _, node in ipairs(child.children or {}) do
+                if node.attributes
+                    and node.attributes.id == "MTG_Settings_GeneralContent_v150" then
+                    current = true
+                    break
+                end
+            end
+            if not current then
+                panel.children[i] = Settings.generalTab()
+                changed = true
+            end
         elseif id == "MTG_Settings_Tab_Shortcuts" then
             table.remove(panel.children, i)
             changed = true
@@ -1452,7 +1522,9 @@ function Settings.installUI()
         previewToggle = true,
         settingsSelectTab = true,
         settingsNotesNavigate = true,
-        settingsGeneralToggle = true
+        settingsGeneralToggle = true,
+        settingsCombatKeyConfig = true,
+        settingsCombatClear = true
     }
 
     local function hasTabs(node)

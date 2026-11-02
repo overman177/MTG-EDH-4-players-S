@@ -48,6 +48,7 @@ end
 
 local Settings
 local RevealTop
+local Combat
 
 local Preview = {
     DISPLAY_TIME = 7,

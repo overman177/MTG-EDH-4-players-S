@@ -1,8 +1,10 @@
 -- Lua 5.2: two-key combat targeting, short Undo and five-second Clear.
-Settings={combatEnabledByColor={White=true,Blue=true,Red=true,Yellow=true}}
+local holdSeconds={White=5,Blue=5}
+Settings={combatEnabledByColor={White=true,Blue=true,Red=true,Yellow=true},
+    getUndoHold=function(color) return holdSeconds[color] or 5 end}
 local cards, updates, now, jobs = {}, 0, 0, {}
 Wait = {time=function(fn,delay)
-    assert(delay==5.0, "undo hold should schedule exactly five seconds")
+    assert(delay>=1 and delay<=10, "undo hold must use a valid configured duration")
     jobs[#jobs+1]={fn=fn,at=now+delay}
 end}
 local function advance(dt)
@@ -62,8 +64,9 @@ down("White") -- repeat key-down from key-repeat must not reset timer
 advance(0.1)
 assert(count(atk)==1 and count(atk2)==1,"five-second hold clears White only")
 assert(Combat.links[atk.guid].defenders[d4.guid]=="Blue","Blue owns surviving arrow")
-assert(Combat.undoHeld.White==nil,"hold has completed")
+assert(Combat.undoHeld.White and Combat.undoHeld.White.cleared,"hold remains marked until release")
 draw("White",d1,atk)
+down("White") -- key-repeat after clear must not start a second timer
 up("White")
 assert(count(atk)==2,"releasing after long hold cannot undo a new arrow")
 assert(Combat.undo("White") and count(atk)==1,"future short/normal undo still works")
@@ -97,4 +100,21 @@ advance(5)
 up("White")
 assert(count(atk)==1,"disabling cancels hold even after re-enable")
 assert(updates>0)
-print("Combat two-hotkey tap/5-second-hold/ownership tests passed.")
+-- Separate threshold for each seat; it is sampled once at key-down.
+holdSeconds.White=2
+holdSeconds.Blue=8
+draw("White",d2,atk)
+draw("Blue",d3,atk2)
+down("White");down("Blue")
+advance(2)
+assert(Combat.links[atk.guid].defenders[d4.guid]=="Blue","White clear preserves Blue")
+assert(Combat.links[atk.guid].defenders[d1.guid]==nil and
+       Combat.links[atk.guid].defenders[d2.guid]==nil,"White clears after 2 seconds")
+assert(count(atk2)>=1,"Blue's 8s timer has not fired after 2s")
+advance(5.9)
+assert(count(atk2)>=1,"Blue arrows remain before 8s")
+advance(0.1)
+assert(count(atk2)==0,"Blue clears at its own configured 8s")
+up("White");up("Blue")
+assert(not next(Combat.links) or count(atk)==1,"long hold does not disturb other players")
+print("Combat two-hotkey configurable hold/ownership tests passed.")

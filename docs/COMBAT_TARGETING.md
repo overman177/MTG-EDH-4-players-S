@@ -1,37 +1,29 @@
 # Lotus combat arrows
 
-Combat targeting is a **visual-only** feature inside the existing Lotus Helper. No combat damage calculation, FIGHT/AUTOFIGHT button, or damage-result UI is installed.
+Combat targeting is a **visual-only** feature inside the existing Lotus Helper. No damage calculation, FIGHT/AUTOFIGHT button, or combat-result UI is installed.
 
 ## Controls
-In **Table Settings → General**, players can:
-- Enable or disable combat targeting for their seat (enabled by default).
-- Open **Configure key (C suggested)** to assign the **MTG: Declare Combat Target** game hotkey in TTS. A physical default key cannot be set by Lua; each client must assign its own binding.
-- Use **Clear my arrows** to remove their own declarations without changing another player's arrows.
 
-### Defender-first gesture
-1. Hover a **defending card** and **hold** the combat hotkey.
-2. Move the pointer to the **attacking card**.
-3. **Release** the hotkey: Lotus draws an arrow from that attacker to that defender.
-4. Start on another defender and end on the **same attacker** to **add a second, third, or further arrow**. All existing arrows stay visible.
-5. Repeating an already-declared defender → attacker gesture **does nothing**. It never removes or overwrites an existing arrow.
-6. To remove **one defender's arrows**, briefly press and release the key **without moving the cursor** while hovering that **defender** (as long as that card isn't also an attacker with active arrows). This removes only your own arrows pointing at that card.
-7. To remove **every arrow from an attacker**, briefly press and release the key **without moving the cursor** while hovering the **attacker**.
-8. Use **Clear my arrows** in General to remove all combat arrows you declared, without removing another player's arrows.
+In **Table Settings → General**, players can enable combat targeting, open the TTS **Game Keys** dialog, **Undo last arrow**, or **Clear my arrows**. Configure three bindable game hotkeys in **Options → Game Keys**:
 
-Each attacker can point at multiple defenders. A defender can also be targeted by more than one attacker. Each individual arrow remembers the player who created it, including when different players declare defenders for the same attacker.
+- **MTG: Declare Combat Target** (C suggested): Hold over a **defender**, move to an **attacker**, release. Adds one arrow. Repeating the same pair is harmless.
+- **MTG: Remove Combat Target**: Hold over the **defender**, move to the **attacker**, release. Removes only that exact connection and only if you created it.
+- **MTG: Undo Combat Target**: Press once to remove the most recently added still-existing arrow belonging to you. The General-tab **Undo last arrow** button performs the same action.
 
-**Safety against false deletion:** A key-up event that happens to report the same hovered card as key-down cannot remove arrows unless the world-space cursor moved no more than 0.24 table units. A drag with ambiguous hovered-object data is ignored rather than interpreted as a tap. TTS reports pointer positions separately for the press and release events. If pointer coordinates are unavailable, the operation cannot delete arrows. The arrows are session-only, follow cards when moved, and are removed when the referenced card is destroyed. TTS cards are not tapped, moved, or modified by this feature.
+One attacker can have multiple defenders, and one defender can connect to multiple attackers. Each arrow remembers its creating player. A plain key tap, invalid target or duplicate gesture **never removes any arrow**. **Clear my arrows** removes only the player's own connections.
 
-## Implementation boundaries
-- Source: `src/lotus/sections/06_combat-targeting.lua` assembled into the original Lotus GUID script.
-- Hotkey registration and TTS event dispatch: `src/lotus/sections/07_shared-event-dispatcher.lua`.
-- Settings and preferences: `src/lotus/sections/03_edh-settings.lua` and `src/ui/sections/08_lotus-settings.xml`.
-- Tracking: `Combat.links[attackerGUID] = {defenders = {[defenderGUID] = playerColor, ...}, by = originalColor}`.
-- Drawing: Lotus vector lines, not extra world-space buttons or spawned objects. Existing Lotus vector lines are preserved.
-- Updates: once every 0.30 seconds while arrows are present, plus immediately on changes.
+The **Open Game Keys** button calls the official TTS `showHotkeyConfig()` with no arguments. If a client's game window does not open the dialog, it can be opened manually through **Options → Game Keys**. Physical keys cannot be assigned by Lua.
 
-## Removed legacy FIGHT artifacts
-An older version spawned transparent, temporary world-space AUTOFIGHT anchors, added dynamic private combat report panels, and potentially attached FIGHT buttons to the Lotus object. They are no longer created. On load the new script removes only the tagged **`MTG_Lotus_AutoFightAnchor`** objects, any Lotus buttons with the `MTG_COMBAT_FIGHT:` tooltip prefix, and top-level XML panels with the `MTG_Combat_Fight_Result_` ID prefix. It does not remove unrelated user objects, buttons, XML, or drawing lines.
+## Implementation
+
+- Combat source: `src/lotus/sections/06_combat-targeting.lua`
+- UI: `src/lotus/sections/03_edh-settings.lua` (migrates General tab to `v151`)
+- Callbacks: `src/lotus/sections/07_shared-event-dispatcher.lua`
+- Storage: `Combat.links[attackerGUID].defenders[defenderGUID] = ownerColor`
+- Rendering: Lotus vector lines, preserving existing lines; arrows follow cards every 0.3 seconds
+- Undo: per-player session history, skipping arrows already removed
+- Cleanup: deleting a card removes its arrows; legacy AUTOFIGHT anchors/buttons/reports are removed on load
 
 ## Validation
-Run `python tools/build.py --check`, `lua5.2 tests/combat_hotkey_test.lua`, and `lua5.2 tests/combat_arrows_test.lua`. These test the Lua source and fake TTS objects. In-game verification is still required for actual vector-line rendering and cursor events.
+
+Run `python tools/build.py --check`, `lua5.2 tests/combat_hotkey_test.lua`, and `lua5.2 tests/combat_arrows_test.lua`. These are mocked Lua tests, not an in-game verification. Validate actual multiplayer key events and the visual rendering in TTS before publishing.

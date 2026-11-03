@@ -21,13 +21,12 @@ The table's imported object scripts have been organized from `New/` into functio
 
 ## Combat targeting (Lotus Helper)
 
-In **Table Settings > General**, combat targeting has three independent controls:
+In **Table Settings > General**, combat targeting has **two bindable hotkeys**:
 
 - **MTG: Declare Combat Target** (C suggested): hold on defender, release on attacker to **add** an arrow; duplicates never toggle an existing connection.
-- **MTG: Remove Combat Target**: **press once anywhere** to clear all arrows you created. Other players' arrows are untouched. Existing bindings are preserved.
-- **MTG: Undo Combat Target**: removes your latest surviving arrow. The **Undo last arrow** button also works without binding another hotkey.
+- **MTG: Undo Combat Target**: **tap and release** to remove your latest surviving arrow; **hold for 5 seconds** to clear all arrows you created. Other players' arrows are untouched. Your existing Undo binding is preserved.
 
-**Open Game Keys** opens the TTS keybinding dialog, or open **Options > Game Keys** manually. The **Clear my arrows** button performs the same action as the Remove key. Arrows are visual only: no automatic combat result or rules enforcement.
+**Open Game Keys** opens the TTS keybinding dialog, or open **Options > Game Keys** manually. The **Clear my arrows** button still provides a one-click alternative to the 5-second hold. Arrows are visual only: no automatic combat result or rules enforcement.
 
 More details: [Combat targeting](docs/COMBAT_TARGETING.md).
 

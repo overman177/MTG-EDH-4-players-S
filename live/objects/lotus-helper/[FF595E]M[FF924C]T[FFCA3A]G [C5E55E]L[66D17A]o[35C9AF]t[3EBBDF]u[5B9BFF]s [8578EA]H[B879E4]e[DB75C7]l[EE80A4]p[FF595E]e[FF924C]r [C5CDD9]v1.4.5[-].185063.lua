@@ -4104,6 +4104,11 @@ function Combat.load()
     Combat.baseLines = self.getVectorLines() or {}
     Combat.loopActive = false
     Combat.loopGeneration = 0
+    -- TTS has no removeHotkey(label). Older registrations can remain in the
+    -- Game Keys menu after Save & Play, so reset the custom registry before
+    -- declaring the current two actions. Native controls are unaffected.
+    -- This table currently uses addHotkey only for Lotus combat shortcuts.
+    clearHotkeys()
     addHotkey(Combat.HOTKEY, Combat.hotkey, true)
     addHotkey(Combat.UNDO_HOTKEY, Combat.undoHotkey, true)
     -- TTS may restore old spawned anchors when loading a saved table.

@@ -1,6 +1,21 @@
--- Lua 5.2: additive draw, key-down personal clear, and undo remain independent.
+-- Lua 5.2: two-key combat targeting, short Undo and five-second Clear.
 Settings={combatEnabledByColor={White=true,Blue=true,Red=true,Yellow=true}}
-local cards,updates={},0
+local cards, updates, now, jobs = {}, 0, 0, {}
+Wait = {time=function(fn,delay)
+    assert(delay==5.0, "undo hold should schedule exactly five seconds")
+    jobs[#jobs+1]={fn=fn,at=now+delay}
+end}
+local function advance(dt)
+    now=now+dt
+    local run={}
+    for _,job in ipairs(jobs) do if job.at<=now then run[#run+1]=job end end
+    for _,job in ipairs(run) do
+        for i,stored in ipairs(jobs) do
+            if stored==job then table.remove(jobs,i);break end
+        end
+        job.fn()
+    end
+end
 local function card(guid)
     local o={tag="Card",guid=guid}
     o.getGUID=function() return guid end
@@ -12,52 +27,74 @@ function getObjectFromGUID(guid) return cards[guid] end
 function printToColor() end
 dofile("src/lotus/sections/06_combat-targeting.lua")
 Combat.updated=function() updates=updates+1 end
-local a=card("a11111");local b=card("b22222")
+local atk=card("a11111");local atk2=card("b22222")
 local d1=card("d11111");local d2=card("d22222");local d3=card("d33333")
-local function draw(color,def,atk)
+local function draw(color,def,attacker)
     Combat.hotkey(color,def,nil,false)
-    Combat.hotkey(color,atk,nil,true)
+    Combat.hotkey(color,attacker,nil,true)
 end
-local function count(atk) return Combat.countDefenders(Combat.links[atk.guid]) end
+local function count(attacker) return Combat.countDefenders(Combat.links[attacker.guid]) end
+local function down(color) Combat.undoHotkey(color,nil,nil,false) end
+local function up(color) Combat.undoHotkey(color,nil,nil,true) end
 
-draw("White",d1,a)
-draw("White",d2,a)
-draw("White",d3,a)
-assert(count(a)==3,"three defenders coexist")
-draw("White",d2,a)
-assert(count(a)==3,"duplicate draw is idempotent")
-draw("White",a,a)
-assert(count(a)==3,"same-card DRAW tap is harmless")
-assert(Combat.undo("White") and count(a)==2,"UNDO removes most recent arrow")
-assert(Combat.links[a.guid].defenders[d3.guid]==nil,"UNDO removed d3 only")
-assert(Combat.links[a.guid].defenders[d1.guid]=="White","UNDO preserves older arrow")
+draw("White",d1,atk);draw("White",d2,atk);draw("White",d3,atk)
+draw("Blue",d3,atk);draw("Blue",d2,atk2)
+assert(count(atk)==3 and count(atk2)==1,"multiple defenders and owners")
+draw("White",d1,atk);draw("White",atk,atk)
+assert(count(atk)==3,"drawing cannot remove links")
 
--- Blue owns a separate arrow on the same attacker, plus one on another.
-draw("Blue",d3,a)
-draw("Blue",d3,b)
-assert(count(a)==3 and count(b)==1,"both players have visible arrows")
--- REMOVE is now an instant clear on key-down, not a defender-to-attacker gesture.
-Combat.removeHotkey("White",nil,nil,true)
-assert(count(a)==3,"key-up alone must never clear")
-Combat.removeHotkey("White",nil,nil,false)
-assert(count(a)==1 and count(b)==1,"one press clears all White arrows only")
-assert(Combat.links[a.guid].defenders[d3.guid]=="Blue","Blue arrow preserved on shared attacker")
-assert(Combat.undo("White")==false,"clear empties White undo history")
-assert(Combat.undo("Blue")==true and count(b)==0,"Blue undo still works")
+-- Tap: undo is deferred until release, and its timer must become stale.
+down("White")
+assert(count(atk)==3,"keydown alone should not undo")
+advance(0.2)
+up("White")
+assert(count(atk)==2 and Combat.links[atk.guid].defenders[d3.guid]==nil,
+    "short press undoes last surviving White arrow")
+advance(10)
+assert(count(atk)==2 and count(atk2)==1,"expired short-press timer is harmless")
 
-draw("White",d1,a)
-draw("White",d2,b)
-assert(count(a)==2 and count(b)==1,"new White arrows can be created")
+-- Hold: no undo while held less than 5s; then clear only the owner's arrows.
+draw("White",d3,atk)
+down("White")
+advance(4.9)
+assert(count(atk)==3,"hold under threshold changes nothing")
+down("White") -- repeat key-down from key-repeat must not reset timer
+advance(0.1)
+assert(count(atk)==1 and count(atk2)==1,"five-second hold clears White only")
+assert(Combat.links[atk.guid].defenders[d3.guid]=="Blue","Blue owns surviving arrow")
+assert(Combat.undoHeld.White==nil,"hold has completed")
+draw("White",d1,atk)
+up("White")
+assert(count(atk)==2,"releasing after long hold cannot undo a new arrow")
+assert(Combat.undo("White") and count(atk)==1,"future short/normal undo still works")
+
+-- Two players holding different keys concurrently must not interfere.
+draw("White",d1,atk)
+draw("Blue",d1,atk2)
+down("White");down("Blue")
+advance(1)
+up("White")
+assert(count(atk)==1 and count(atk2)==2,"White short undo leaves Blue alone")
+advance(4)
+assert(count(atk)==0 and count(atk2)==0,"Blue long hold clears only Blue")
+up("Blue")
+assert(not next(Combat.links),"no extra action on Blue long-hold release")
+
+-- Manual clear or a disabled toggle cancels a pending hold and its timer.
+draw("White",d1,atk);draw("White",d2,atk)
+down("White")
+Combat.clear("White")
+draw("White",d3,atk)
+advance(6)
+up("White")
+assert(count(atk)==1,"manual clear cancels held timer and keyup")
+down("White")
 Settings.combatEnabledByColor.White=false
-Combat.removeHotkey("White",nil,nil,false)
-assert(count(a)==2 and count(b)==1,"disabled player cannot clear on press")
+Combat.clear("White") -- Settings.toggleGeneral calls this when disabling
 Settings.combatEnabledByColor.White=true
-Combat.removeHotkey("Purple",nil,nil,false)
-assert(count(a)==2 and count(b)==1,"non-seat input is ignored")
-Combat.removeHotkey("White",a,nil,false)
-assert(count(a)==1 and count(b)==0,"pointer location irrelevant to key press")
-assert(Combat.undo("White")==false,"cleared arrows cannot be undone back")
-Combat.clear("Blue")
-assert(next(Combat.links)==nil,"personal clear also available for Blue")
+draw("White",d1,atk)
+advance(5)
+up("White")
+assert(count(atk)==1,"disabling cancels hold even after re-enable")
 assert(updates>0)
-print("Combat draw / key-down personal clear / undo tests passed.")
+print("Combat two-hotkey tap/5-second-hold/ownership tests passed.")

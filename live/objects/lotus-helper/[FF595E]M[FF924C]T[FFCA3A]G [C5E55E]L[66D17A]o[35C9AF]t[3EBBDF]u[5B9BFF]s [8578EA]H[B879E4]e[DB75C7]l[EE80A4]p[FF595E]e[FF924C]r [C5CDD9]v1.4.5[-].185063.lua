@@ -1456,7 +1456,7 @@ Settings.TAB_IDS = {
 function Settings.applyTab()
     local height = "465"
     if Settings.activeTab == "notes" then height = "605"
-    elseif Settings.activeTab == "general" then height = "530"
+    elseif Settings.activeTab == "general" then height = "465"
     elseif Settings.activeTab == "preview" then height = "365"
     end
     UI.setAttribute("CounterVisibilityPanel", "height", height)
@@ -1993,7 +1993,7 @@ function Settings.generalTab()
     local cb = self.getGUID() .. "/"
     return {tag = "Panel", attributes = {
         id = "MTG_Settings_Tab_General", rectAlignment = "UpperCenter",
-        offsetXY = "0 -124", width = "516", height = "345",
+        offsetXY = "0 -124", width = "516", height = "280",
         color = "clear", active = "false"
     }, children = {
         {tag = "Text", attributes = {
@@ -2002,9 +2002,9 @@ function Settings.generalTab()
             alignment = "MiddleLeft", color = "#6fa0d8", text = "GENERAL"
         }},
         {tag = "Panel", attributes = {
-            id = "MTG_Settings_GeneralContent_v154",
+            id = "MTG_Settings_GeneralContent_v155",
             rectAlignment = "UpperCenter", offsetXY = "0 -36",
-            width = "500", height = "305", color = "#28272B"
+            width = "500", height = "240", color = "#28272B"
         }, children = {
             {tag = "Toggle", attributes = {
                 id = "lotus_show_shortcuts", isOn = "True",
@@ -2026,22 +2026,16 @@ function Settings.generalTab()
                 width = "465", height = "33", fontSize = "17",
                 textColor = "#EDEEF2"
             }, value = "Enable combat targeting for me"},
-            {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -119",
-                width = "470", height = "25", fontSize = "13",
-                color = "#D3D9E0", alignment = "MiddleLeft",
-                text = "DRAW: defender to attacker. Tap UNDO to remove one arrow."
-            }},
             {tag = "Button", attributes = {
                 id = "lotus_combat_bind",
                 onClick = cb .. "settingsCombatKeyConfig",
-                rectAlignment = "UpperLeft", offsetXY = "16 -155",
+                rectAlignment = "UpperLeft", offsetXY = "16 -127",
                 width = "468", height = "35", fontSize = "15",
                 textColor = "#FFFFFF", colors = "#315A87|#4274AC|#234363|#234363",
                 text = "Open Game Keys"
             }},
             {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -208",
+                rectAlignment = "UpperLeft", offsetXY = "16 -177",
                 width = "365", height = "24", fontSize = "15",
                 fontStyle = "Bold", color = "#EDEEF2",
                 alignment = "MiddleLeft",
@@ -2049,7 +2043,7 @@ function Settings.generalTab()
             }},
             {tag = "Text", attributes = {
                 id = "lotus_combat_hold_value",
-                rectAlignment = "UpperRight", offsetXY = "-16 -208",
+                rectAlignment = "UpperRight", offsetXY = "-16 -177",
                 width = "88", height = "24", fontSize = "17",
                 fontStyle = "Bold", color = "#87B9EF",
                 alignment = "MiddleRight", text = "5 s"
@@ -2057,19 +2051,13 @@ function Settings.generalTab()
             {tag = "Slider", attributes = {
                 id = "lotus_combat_hold_slider",
                 onValueChanged = cb .. "settingsCombatHoldChanged",
-                rectAlignment = "UpperLeft", offsetXY = "16 -241",
+                rectAlignment = "UpperLeft", offsetXY = "16 -209",
                 width = "468", height = "27",
                 minValue = "1", maxValue = "10", value = "5",
                 wholeNumbers = "true",
                 backgroundColor = "#393A42", fillColor = "#4274AC",
                 handleColor = "#E5EBF4"
             }},
-            {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -277",
-                width = "468", height = "22", fontSize = "12",
-                color = "#9BA4B0", alignment = "MiddleLeft",
-                text = "1-10 seconds  |  Applies to your own UNDO key only."
-            }}
         }}
     }}
 end
@@ -2169,7 +2157,7 @@ function Settings.ensureGeneralTab(panel)
             local current = false
             for _, node in ipairs(child.children or {}) do
                 if node.attributes
-                    and node.attributes.id == "MTG_Settings_GeneralContent_v154" then
+                    and node.attributes.id == "MTG_Settings_GeneralContent_v155" then
                     current = true
                     break
                 end

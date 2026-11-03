@@ -1,20 +1,18 @@
 -- =============================================================
--- MODULE 7: COMBAT TARGETING (DRAW / UNDO / CLEAR MY ARROWS)
+-- MODULE 7: COMBAT TARGETING (TWO HOTKEYS: DRAW / TAP-UNDO, HOLD-CLEAR)
 --
 -- TTS does not let Lua assign C (or any default key) programmatically.
 -- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
 -- DRAW: hold over defender and release over attacker to add a visual arrow.
--- REMOVE: press once to clear all of your own arrows, anywhere on the table.
--- UNDO: press once to remove your latest still-existing arrow.
+-- UNDO: tap to remove the latest arrow; hold for 5 seconds to clear all.
+-- Holding never performs the short-press undo.
 -- Arrows are visual-only and session-only; no MTG rules are enforced.
 -- =============================================================
 
 Combat = {
     HOTKEY = "MTG: Declare Combat Target",
-    -- Keep the previous hotkey name so players retain their existing binding.
-    -- This key now clears all arrows owned by the pressing player.
-    REMOVE_HOTKEY = "MTG: Remove Combat Target",
     UNDO_HOTKEY = "MTG: Undo Combat Target",
+    UNDO_HOLD_SECONDS = 5.0,
     OWNERS = {White = true, Red = true, Yellow = true, Blue = true},
     COLOR = {
         White = {0.95, 0.94, 0.83},
@@ -24,6 +22,7 @@ Combat = {
     },
     pending = {}, -- color -> defender GUID during DRAW
     history = {}, -- color -> created pairs in order
+    undoHeld = {}, -- color -> pending short/long press token
     links = {},   -- attacker GUID -> {defenders = { [defenderGUID] = playerColor }, by = color}
     baseLines = {},
     -- Used only to remove AUTOFIGHT objects from older table saves.
@@ -159,6 +158,7 @@ end
 function Combat.clear(color)
     if not Combat.OWNERS[color] then return end
     Combat.pending[color] = nil
+    Combat.undoHeld[color] = nil -- cancel a pending hold when clearing via UI/disable
     Combat.history[color] = {}
     local changed = false
     for attackerGUID, link in pairs(Combat.links) do
@@ -220,13 +220,6 @@ function Combat.removePair(attacker, defender, color)
     return true
 end
 
--- This action is deliberately press-only and independent of the pointer.
--- Retaining the registered key name preserves existing client bindings.
-function Combat.removeHotkey(color, hovered, pointerPosition, isKeyUp)
-    if isKeyUp or not Combat.enabled(color) then return end
-    Combat.clear(color)
-end
-
 function Combat.undo(color)
     if not Combat.enabled(color) then return false end
     local history = Combat.history[color] or {}
@@ -237,8 +230,31 @@ function Combat.undo(color)
     return false
 end
 
+-- A short press triggers on release. An uninterrupted 5-second hold clears
+-- only the holding player's arrows, and suppresses the short-press undo.
+-- Each hold has a unique table token so stale timers cannot clear later.
 function Combat.undoHotkey(color, hovered, pointerPosition, isKeyUp)
-    if not isKeyUp then Combat.undo(color) end
+    if not Combat.OWNERS[color] then return end
+
+    if isKeyUp then
+        local held = Combat.undoHeld[color]
+        if held == nil then return end
+        Combat.undoHeld[color] = nil -- cancel the pending long-press timer
+        Combat.undo(color)
+        return
+    end
+
+    if not Combat.enabled(color) or Combat.undoHeld[color] ~= nil then return end
+    local held = {}
+    Combat.undoHeld[color] = held
+    Wait.time(function()
+        if Combat.undoHeld[color] ~= held then return end
+        if not Combat.enabled(color) then
+            Combat.undoHeld[color] = nil
+            return
+        end
+        Combat.clear(color) -- also clears undoHeld, preventing undo on release
+    end, Combat.UNDO_HOLD_SECONDS)
 end
 
 -- Remove obsolete AUTOFIGHT world objects and old Lotus-mounted FIGHT
@@ -285,14 +301,14 @@ end
 
 function Combat.load()
     Combat.pending = {}
+    Combat.undoHeld = {}
     Combat.history = {}
     Combat.links = {}
     Combat.baseLines = self.getVectorLines() or {}
     Combat.loopActive = false
     Combat.loopGeneration = 0
     addHotkey(Combat.HOTKEY, Combat.hotkey, true)
-    addHotkey(Combat.REMOVE_HOTKEY, Combat.removeHotkey, false)
-    addHotkey(Combat.UNDO_HOTKEY, Combat.undoHotkey, false)
+    addHotkey(Combat.UNDO_HOTKEY, Combat.undoHotkey, true)
     -- TTS may restore old spawned anchors when loading a saved table.
     -- Clean them after all objects have spawned.
     Wait.frames(Combat.cleanupLegacyFight, 30)

@@ -64,9 +64,19 @@ local function findNode(node,id)
 end
 local tab=Settings.generalTab()
 assert(findNode(tab,"lotus_combat_bind"),"game keys button remains")
+local function assertAbsentText(node,phrase)
+    if node.attributes and type(node.attributes.text)=="string" then
+        assert(not node.attributes.text:find(phrase,1,true),
+            "redundant combat description must not be shown")
+    end
+    for _,child in ipairs(node.children or {}) do assertAbsentText(child,phrase) end
+end
+assertAbsentText(tab,"DRAW: defender to attacker.")
+assertAbsentText(tab,"1-10 seconds  |")
+
 assert(not findNode(tab,"lotus_combat_undo") and
        not findNode(tab,"lotus_combat_clear"),"obsolete buttons are absent")
-assert(findNode(tab,"MTG_Settings_GeneralContent_v154"),"new General tab version")
+assert(findNode(tab,"MTG_Settings_GeneralContent_v155"),"new General tab version")
 local slider=findNode(tab,"lotus_combat_hold_slider")
 assert(slider and slider.tag=="Slider","hold duration is a slider")
 assert(slider.attributes.minValue=="1" and slider.attributes.maxValue=="10" and

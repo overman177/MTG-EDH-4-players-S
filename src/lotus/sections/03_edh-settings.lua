@@ -335,7 +335,7 @@ Settings.TAB_IDS = {
 function Settings.applyTab()
     local height = "465"
     if Settings.activeTab == "notes" then height = "605"
-    elseif Settings.activeTab == "general" then height = "465"
+    elseif Settings.activeTab == "general" then height = "530"
     elseif Settings.activeTab == "preview" then height = "365"
     end
     UI.setAttribute("CounterVisibilityPanel", "height", height)
@@ -856,9 +856,10 @@ function Settings.shortcutsOverlay()
 end
 
 function Settings.generalTab()
+    local cb = self.getGUID() .. "/"
     return {tag = "Panel", attributes = {
         id = "MTG_Settings_Tab_General", rectAlignment = "UpperCenter",
-        offsetXY = "0 -124", width = "516", height = "290",
+        offsetXY = "0 -124", width = "516", height = "345",
         color = "clear", active = "false"
     }, children = {
         {tag = "Text", attributes = {
@@ -867,57 +868,65 @@ function Settings.generalTab()
             alignment = "MiddleLeft", color = "#6fa0d8", text = "GENERAL"
         }},
         {tag = "Panel", attributes = {
-            id = "MTG_Settings_GeneralContent_v150",
+            id = "MTG_Settings_GeneralContent_v151",
             rectAlignment = "UpperCenter", offsetXY = "0 -36",
-            width = "500", height = "242", color = "#28272B"
+            width = "500", height = "305", color = "#28272B"
         }, children = {
             {tag = "Toggle", attributes = {
                 id = "lotus_show_shortcuts", isOn = "True",
-                onValueChanged = self.getGUID() .. "/settingsGeneralToggle",
-                rectAlignment = "UpperLeft", offsetXY = "16 -13",
-                width = "460", height = "35", fontSize = "17",
+                onValueChanged = cb .. "settingsGeneralToggle",
+                rectAlignment = "UpperLeft", offsetXY = "16 -12",
+                width = "465", height = "31", fontSize = "17",
                 textColor = "#EDEEF2"
             }, value = "Show numpad shortcuts on my screen"},
             {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -53",
+                rectAlignment = "UpperLeft", offsetXY = "16 -46",
                 width = "465", height = "20", fontSize = "13",
                 color = "#9BA4B0", alignment = "MiddleLeft",
                 text = "Numpad keys: TTS Configuration > Controls."
             }},
-            {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -87",
-                width = "465", height = "22", fontSize = "14",
-                fontStyle = "Bold", color = "#6fa0d8",
-                text = "COMBAT TARGETING"
-            }},
             {tag = "Toggle", attributes = {
                 id = "lotus_enable_combat", isOn = "True",
-                onValueChanged = self.getGUID() .. "/settingsGeneralToggle",
-                rectAlignment = "UpperLeft", offsetXY = "16 -112",
+                onValueChanged = cb .. "settingsGeneralToggle",
+                rectAlignment = "UpperLeft", offsetXY = "16 -79",
                 width = "465", height = "33", fontSize = "17",
                 textColor = "#EDEEF2"
             }, value = "Enable combat targeting for me"},
+            {tag = "Text", attributes = {
+                rectAlignment = "UpperLeft", offsetXY = "16 -119",
+                width = "470", height = "36", fontSize = "13",
+                color = "#D3D9E0", alignment = "UpperLeft",
+                text = "DRAW: defender to attacker. REMOVE: same gesture with Remove key."
+            }},
             {tag = "Button", attributes = {
                 id = "lotus_combat_bind",
-                onClick = self.getGUID() .. "/settingsCombatKeyConfig",
-                rectAlignment = "UpperLeft", offsetXY = "16 -160",
-                width = "260", height = "33", fontSize = "14",
+                onClick = cb .. "settingsCombatKeyConfig",
+                rectAlignment = "UpperLeft", offsetXY = "16 -170",
+                width = "224", height = "35", fontSize = "15",
                 textColor = "#FFFFFF", colors = "#315A87|#4274AC|#234363|#234363",
-                text = "Configure key (C suggested)"
+                text = "Open Game Keys"
+            }},
+            {tag = "Button", attributes = {
+                id = "lotus_combat_undo",
+                onClick = cb .. "settingsCombatUndo",
+                rectAlignment = "UpperRight", offsetXY = "-16 -170",
+                width = "224", height = "35", fontSize = "15",
+                textColor = "#FFFFFF", colors = "#403A43|#57515B|#2B272E|#2B272E",
+                text = "Undo last arrow"
             }},
             {tag = "Button", attributes = {
                 id = "lotus_combat_clear",
-                onClick = self.getGUID() .. "/settingsCombatClear",
-                rectAlignment = "UpperRight", offsetXY = "-16 -160",
-                width = "188", height = "33", fontSize = "14",
+                onClick = cb .. "settingsCombatClear",
+                rectAlignment = "UpperLeft", offsetXY = "16 -218",
+                width = "468", height = "34", fontSize = "15",
                 textColor = "#FFFFFF", colors = "#403A43|#57515B|#2B272E|#2B272E",
                 text = "Clear my arrows"
             }},
             {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -207",
-                width = "465", height = "24", fontSize = "13",
-                color = "#9BA4B0", alignment = "MiddleLeft",
-                text = "Start: defender. End: attacker. Tap attacker to clear."
+                rectAlignment = "UpperLeft", offsetXY = "16 -264",
+                width = "468", height = "34", fontSize = "12",
+                color = "#9BA4B0", alignment = "UpperLeft",
+                text = "Bind Declare / Remove / Undo Combat Target in Options > Game Keys. Taps never delete."
             }}
         }}
     }}
@@ -1018,7 +1027,7 @@ function Settings.ensureGeneralTab(panel)
             local current = false
             for _, node in ipairs(child.children or {}) do
                 if node.attributes
-                    and node.attributes.id == "MTG_Settings_GeneralContent_v150" then
+                    and node.attributes.id == "MTG_Settings_GeneralContent_v151" then
                     current = true
                     break
                 end
@@ -1524,6 +1533,7 @@ function Settings.installUI()
         settingsNotesNavigate = true,
         settingsGeneralToggle = true,
         settingsCombatKeyConfig = true,
+        settingsCombatUndo = true,
         settingsCombatClear = true
     }
 

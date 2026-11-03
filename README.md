@@ -35,7 +35,7 @@ More details: [Combat targeting](docs/COMBAT_TARGETING.md).
 Once the latest files are on your PC, **double-click `UPDATE_TABLE.bat`** in the repository root. Or in VS Code choose **Terminal > Run Task > MTG: Update from GitHub + Deploy**. The updater:
 
 1. Moves any old `.tts-backups/` folder outside the repository to stop Smart Import duplicate GUID errors.
-2. Stashes local code edits and new files safely (but **keeps local `savegame.json` in place**).
+2. Stashes local code edits and new files safely, while keeping `savegame.json`, `.vscode/settings.json` and incoming `New/` files in place.
 3. Runs `git pull --ff-only origin main`.
 4. Runs `python tools/deploy.py --apply` and `python tools/build.py --check`.
 5. Stops with an error if any step fails. It never force-resets or deletes your code.
@@ -45,11 +45,11 @@ After a successful update, **Smart Import > Save & Play** in TTS is still requir
 **First-time setup when your current `git pull` is blocked:** run these commands once in the VS Code terminal to fetch the launcher safely:
 
 ```powershell
-git stash push -u -m "Before one-click updater" -- . ":(exclude)savegame.json"
+git stash push -u -m "Before one-click updater" -- . ":(exclude)savegame.json" ":(exclude).vscode/settings.json" ":(exclude)New/**"
 git pull --ff-only origin main
 ```
 
-Your stashed edits are **preserved**, not automatically reapplied. In particular, do not blindly `git stash pop` old GUID scripts over the new code. To review them, run `git stash list`. The updater will show a notice when it creates a new stash. Local `savegame.json` stays unmodified; if GitHub also changes that same file, pull stops safely rather than overwriting it.
+Your stashed edits are **preserved**, not automatically reapplied. In particular, do not blindly `git stash pop` old GUID scripts over the new code. To review them, run `git stash list`. The updater will show a notice when it creates a new stash. Personal `savegame.json`, `.vscode/settings.json` and `New/` files stay on disk; if a remote change would overwrite them, pull stops safely instead.
 
 ## Everyday workflow
 

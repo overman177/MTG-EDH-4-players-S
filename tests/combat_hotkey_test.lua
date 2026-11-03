@@ -28,7 +28,7 @@ function printToColor() end
 dofile("src/lotus/sections/06_combat-targeting.lua")
 Combat.updated=function() updates=updates+1 end
 local atk=card("a11111");local atk2=card("b22222")
-local d1=card("d11111");local d2=card("d22222");local d3=card("d33333")
+local d1=card("d11111");local d2=card("d22222");local d3=card("d33333");local d4=card("d44444")
 local function draw(color,def,attacker)
     Combat.hotkey(color,def,nil,false)
     Combat.hotkey(color,attacker,nil,true)
@@ -38,30 +38,30 @@ local function down(color) Combat.undoHotkey(color,nil,nil,false) end
 local function up(color) Combat.undoHotkey(color,nil,nil,true) end
 
 draw("White",d1,atk);draw("White",d2,atk);draw("White",d3,atk)
-draw("Blue",d3,atk);draw("Blue",d2,atk2)
-assert(count(atk)==3 and count(atk2)==1,"multiple defenders and owners")
+draw("Blue",d4,atk);draw("Blue",d2,atk2)
+assert(count(atk)==4 and count(atk2)==1,"multiple defenders and owners")
 draw("White",d1,atk);draw("White",atk,atk)
-assert(count(atk)==3,"drawing cannot remove links")
+assert(count(atk)==4,"drawing cannot remove links")
 
 -- Tap: undo is deferred until release, and its timer must become stale.
 down("White")
-assert(count(atk)==3,"keydown alone should not undo")
+assert(count(atk)==4,"keydown alone should not undo")
 advance(0.2)
 up("White")
-assert(count(atk)==2 and Combat.links[atk.guid].defenders[d3.guid]==nil,
+assert(count(atk)==3 and Combat.links[atk.guid].defenders[d3.guid]==nil,
     "short press undoes last surviving White arrow")
 advance(10)
-assert(count(atk)==2 and count(atk2)==1,"expired short-press timer is harmless")
+assert(count(atk)==3 and count(atk2)==1,"expired short-press timer is harmless")
 
 -- Hold: no undo while held less than 5s; then clear only the owner's arrows.
 draw("White",d3,atk)
 down("White")
 advance(4.9)
-assert(count(atk)==3,"hold under threshold changes nothing")
+assert(count(atk)==4,"hold under threshold changes nothing")
 down("White") -- repeat key-down from key-repeat must not reset timer
 advance(0.1)
 assert(count(atk)==1 and count(atk2)==1,"five-second hold clears White only")
-assert(Combat.links[atk.guid].defenders[d3.guid]=="Blue","Blue owns surviving arrow")
+assert(Combat.links[atk.guid].defenders[d4.guid]=="Blue","Blue owns surviving arrow")
 assert(Combat.undoHeld.White==nil,"hold has completed")
 draw("White",d1,atk)
 up("White")

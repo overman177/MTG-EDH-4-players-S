@@ -1,5 +1,5 @@
 -- =============================================================
--- MODULE 7: COMBAT TARGETING (CUSTOM GAME KEY, NOT NATIVE TAB)
+-- MODULE 7: COMBAT TARGETING (ADDITIVE DRAW, EXPLICIT REMOVE, UNDO)
 --
 -- TTS does not let Lua assign C (or any default key) programmatically.
 -- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
@@ -10,6 +10,8 @@
 
 Combat = {
     HOTKEY = "MTG: Declare Combat Target",
+    REMOVE_HOTKEY = "MTG: Remove Combat Target",
+    UNDO_HOTKEY = "MTG: Undo Combat Target",
     OWNERS = {White = true, Red = true, Yellow = true, Blue = true},
     COLOR = {
         White = {0.95, 0.94, 0.83},
@@ -17,17 +19,16 @@ Combat = {
         Yellow = {1.0, 0.83, 0.19},
         Blue = {0.30, 0.64, 1.0}
     },
-    pending = {}, -- initiator color -> defender GUID while key held
+    pending = {}, -- color -> defender GUID during DRAW
+    pendingRemove = {}, -- color -> defender GUID during REMOVE
+    history = {}, -- color -> created pairs in order
     links = {},   -- attacker GUID -> {defenders = { [defenderGUID] = playerColor }, by = color}
     baseLines = {},
     -- Used only to remove AUTOFIGHT objects from older table saves.
     LEGACY_ANCHOR_TAG = "MTG_Lotus_AutoFightAnchor",
     loopActive = false,
     loopGeneration = 0,
-    REFRESH_SECONDS = 0.30,
-    -- A valid remove gesture must be a genuine stationary key tap.
-    -- Pointer data comes from TTS' addHotkey callback (world coordinates).
-    TAP_MAX_MOVEMENT = 0.24
+    REFRESH_SECONDS = 0.30
 }
 
 local function combatCard(obj)
@@ -76,6 +77,8 @@ function Combat.addDefender(attackerGUID, defenderGUID, color)
     end
     if link.defenders[defenderGUID] ~= nil then return false end
     link.defenders[defenderGUID] = color
+    Combat.history[color] = Combat.history[color] or {}
+    table.insert(Combat.history[color], {attacker = attackerGUID, defender = defenderGUID})
     Combat.updated()
     return true
 end
@@ -180,6 +183,8 @@ end
 function Combat.clear(color)
     if not Combat.OWNERS[color] then return end
     Combat.pending[color] = nil
+    Combat.pendingRemove[color] = nil
+    Combat.history[color] = {}
     local changed = false
     for attackerGUID, link in pairs(Combat.links) do
         for defenderGUID, owner in pairs(link.defenders) do
@@ -212,67 +217,60 @@ function Combat.onDestroy(obj)
     if dirty then Combat.updated() end
 end
 
--- TTS provides pointerPosition on both hotkey events. Require the
--- world-space cursor to stay almost stationary for a REMOVE gesture.
--- This protects existing arrows if TTS resolves both hovered objects
--- to the same card during a real drag between overlapping card regions.
-local function combatPointerXZ(position)
-    if position == nil then return nil end
-    local ok, x, z = pcall(function()
-        return tonumber(position.x or position[1]),
-               tonumber(position.z or position[3])
-    end)
-    if not ok or x == nil or z == nil then return nil end
-    return {x = x, z = z}
-end
-
-function Combat.isStationaryTap(startXZ, endPosition)
-    local finishXZ = combatPointerXZ(endPosition)
-    if startXZ == nil or finishXZ == nil then
-        -- Missing pointer data must not trigger a destructive operation.
-        return false
-    end
-    local dx, dz = finishXZ.x - startXZ.x, finishXZ.z - startXZ.z
-    return dx * dx + dz * dz <= Combat.TAP_MAX_MOVEMENT ^ 2
-end
-
+-- The drawing key never performs a removal. Same-card release simply cancels.
 function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     if not Combat.OWNERS[color] then return end
     if not isKeyUp then
-        if Combat.enabled(color) and combatCard(hovered) then
-            Combat.pending[color] = {
-                guid = hovered.getGUID(),
-                position = combatPointerXZ(pointerPosition)
-            }
-        else
-            Combat.pending[color] = nil
-        end
+        Combat.pending[color] = (Combat.enabled(color) and combatCard(hovered))
+            and hovered.getGUID() or nil
         return
     end
-    local pending = Combat.pending[color]
+    local defender = Combat.pending[color]
     Combat.pending[color] = nil
-    if not Combat.enabled(color) or not pending then return end
-    local defenderGUID = pending.guid
-    if not combatCard(getObjectFromGUID(defenderGUID)) then return end
-    if not combatCard(hovered) then
-        printToColor("Combat: release over an attacking card.", color, {0.9, 0.72, 0.35})
+    if not Combat.enabled(color) or not defender
+        or not combatCard(getObjectFromGUID(defender))
+        or not combatCard(hovered) then return end
+    local attacker = hovered.getGUID()
+    if attacker ~= defender then Combat.addDefender(attacker, defender, color) end
+end
+
+-- Removing a single arrow requires an entirely separate key gesture.
+-- Ownership is checked on the exact attacker/defender pair.
+function Combat.removePair(attacker, defender, color)
+    local link = Combat.links[attacker]
+    if not link or link.defenders[defender] ~= color then return false end
+    link.defenders[defender] = nil
+    if next(link.defenders) == nil then Combat.links[attacker] = nil end
+    Combat.updated()
+    return true
+end
+
+function Combat.removeHotkey(color, hovered, pointerPosition, isKeyUp)
+    if not Combat.OWNERS[color] then return end
+    if not isKeyUp then
+        Combat.pendingRemove[color] = (Combat.enabled(color) and combatCard(hovered))
+            and hovered.getGUID() or nil
         return
     end
-    local attackerGUID = hovered.getGUID()
-    if attackerGUID == defenderGUID then
-        -- Merely receiving the same card on both callback events is NOT
-        -- enough to remove its arrows. TTS can still report the same hover
-        -- after a moved cursor. Require a stationary physical key tap.
-        if Combat.isStationaryTap(pending.position, pointerPosition) then
-            if not Combat.clearAttacker(attackerGUID) then
-                Combat.removeDefender(defenderGUID, color)
-            end
-        end
-        return
+    local defender = Combat.pendingRemove[color]
+    Combat.pendingRemove[color] = nil
+    if not Combat.enabled(color) or not defender or not combatCard(hovered) then return end
+    local attacker = hovered.getGUID()
+    if attacker ~= defender then Combat.removePair(attacker, defender, color) end
+end
+
+function Combat.undo(color)
+    if not Combat.enabled(color) then return false end
+    local history = Combat.history[color] or {}
+    while #history > 0 do
+        local entry = table.remove(history)
+        if Combat.removePair(entry.attacker, entry.defender, color) then return true end
     end
-    -- DEFENDER first, ATTACKER second: ADD ONLY, even if an earlier
-    -- arrow uses this attacker or the declaration is repeated.
-    Combat.addDefender(attackerGUID, defenderGUID, color)
+    return false
+end
+
+function Combat.undoHotkey(color, hovered, pointerPosition, isKeyUp)
+    if not isKeyUp then Combat.undo(color) end
 end
 
 -- Remove obsolete AUTOFIGHT world objects and old Lotus-mounted FIGHT
@@ -319,11 +317,15 @@ end
 
 function Combat.load()
     Combat.pending = {}
+    Combat.pendingRemove = {}
+    Combat.history = {}
     Combat.links = {}
     Combat.baseLines = self.getVectorLines() or {}
     Combat.loopActive = false
     Combat.loopGeneration = 0
     addHotkey(Combat.HOTKEY, Combat.hotkey, true)
+    addHotkey(Combat.REMOVE_HOTKEY, Combat.removeHotkey, true)
+    addHotkey(Combat.UNDO_HOTKEY, Combat.undoHotkey, false)
     -- TTS may restore old spawned anchors when loading a saved table.
     -- Clean them after all objects have spawned.
     Wait.frames(Combat.cleanupLegacyFight, 30)

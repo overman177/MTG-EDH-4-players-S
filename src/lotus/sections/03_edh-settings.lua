@@ -22,6 +22,7 @@ Settings = {
     previewFirstCommanderOpponents = {},
     showShortcutsByColor = {}, -- personal HUD visibility, keyed by TTS seat color
     combatEnabledByColor = {}, -- per-seat combat targeting preference
+    combatUndoHoldSecondsByColor = {}, -- per-seat long-press threshold, 1-10 seconds
     menuOpen = false,
     menuOwner = nil,
     uiSyncing = false,
@@ -32,6 +33,18 @@ Settings = {
     notesIndex = 1,
     notesRaw = nil
 }
+
+-- Clamp saved/client values to whole seconds. Invalid/old saves default to 5.
+function Settings.normalizeUndoHold(value)
+    local n = tonumber(value)
+    if not n or n ~= n then return 5 end
+    return math.max(1, math.min(10, math.floor(n + 0.5)))
+end
+
+function Settings.getUndoHold(color)
+    if type(Settings.combatUndoHoldSecondsByColor) ~= "table" then return 5 end
+    return Settings.normalizeUndoHold(Settings.combatUndoHoldSecondsByColor[color])
+end
 
 function Settings.normalize()
     for _, kind in ipairs(Settings.TYPES) do
@@ -72,6 +85,8 @@ function Settings.normalize()
         if Settings.combatEnabledByColor[color] == nil then
             Settings.combatEnabledByColor[color] = true
         end
+        Settings.combatUndoHoldSecondsByColor[color] =
+            Settings.normalizeUndoHold(Settings.combatUndoHoldSecondsByColor[color])
     end
 end
 
@@ -99,7 +114,8 @@ function Settings.import(data)
         and type(data.previewShareEnabled) ~= "table"
         and type(data.previewHideOwnLandsForOthers) ~= "table"
         and type(data.showShortcutsByColor) ~= "table"
-        and type(data.combatEnabledByColor) ~= "table" then
+        and type(data.combatEnabledByColor) ~= "table"
+        and type(data.combatUndoHoldSecondsByColor) ~= "table" then
         return false
     end
     if type(data.state) == "table" then Settings.state = data.state end
@@ -135,6 +151,9 @@ function Settings.import(data)
     if type(data.combatEnabledByColor) == "table" then
         Settings.combatEnabledByColor = data.combatEnabledByColor
     end
+    if type(data.combatUndoHoldSecondsByColor) == "table" then
+        Settings.combatUndoHoldSecondsByColor = data.combatUndoHoldSecondsByColor
+    end
     Settings.hasSavedState = true
     Settings.normalize()
     return true
@@ -150,6 +169,7 @@ function Settings.load(savedData)
     Settings.previewFirstCommanderOpponents = {}
     Settings.showShortcutsByColor = {}
     Settings.combatEnabledByColor = {}
+    Settings.combatUndoHoldSecondsByColor = {}
     Settings.menuOpen = false
     Settings.menuOwner = nil
     Settings.uiSyncing = false
@@ -197,7 +217,8 @@ function Settings.export()
         previewFirstCommanderOwn = Settings.previewFirstCommanderOwn,
         previewFirstCommanderOpponents = Settings.previewFirstCommanderOpponents,
         showShortcutsByColor = Settings.showShortcutsByColor,
-        combatEnabledByColor = Settings.combatEnabledByColor
+        combatEnabledByColor = Settings.combatEnabledByColor,
+        combatUndoHoldSecondsByColor = Settings.combatUndoHoldSecondsByColor
     }
 end
 
@@ -320,6 +341,9 @@ function Settings.syncUI()
         Settings.showShortcutsByColor[color] ~= false)
     Settings.setToggle("lotus_enable_combat",
         Settings.combatEnabledByColor[color] ~= false)
+    local hold = Settings.getUndoHold(color)
+    UI.setAttribute("lotus_combat_hold_slider", "value", tostring(hold))
+    UI.setAttribute("lotus_combat_hold_value", "text", tostring(hold) .. " s")
     Settings.uiSyncing = false
 end
 
@@ -644,6 +668,19 @@ function Settings.toggleGeneral(player, value, id)
     Settings.persist()
 end
 
+-- A per-player value selected in the General tab. The menu is owner-only;
+-- another player's slider callback must never change this owner's setting.
+function Settings.changeUndoHold(player, value, id)
+    if Settings.uiSyncing or id ~= "lotus_combat_hold_slider" then return end
+    local color = Settings.playerColor(player)
+    if not Settings.validColor(color) or color ~= Settings.menuOwner then return end
+    local seconds = Settings.normalizeUndoHold(value)
+    UI.setAttribute("lotus_combat_hold_value", "text", tostring(seconds) .. " s")
+    if Settings.getUndoHold(color) == seconds then return end
+    Settings.combatUndoHoldSecondsByColor[color] = seconds
+    Settings.persist()
+end
+
 -- Keep every unrelated button attached to the Lotus intact.
 function Settings.createButton()
     for _, button in ipairs(self.getButtons() or {}) do
@@ -868,7 +905,7 @@ function Settings.generalTab()
             alignment = "MiddleLeft", color = "#6fa0d8", text = "GENERAL"
         }},
         {tag = "Panel", attributes = {
-            id = "MTG_Settings_GeneralContent_v153",
+            id = "MTG_Settings_GeneralContent_v154",
             rectAlignment = "UpperCenter", offsetXY = "0 -36",
             width = "500", height = "305", color = "#28272B"
         }, children = {
@@ -894,39 +931,47 @@ function Settings.generalTab()
             }, value = "Enable combat targeting for me"},
             {tag = "Text", attributes = {
                 rectAlignment = "UpperLeft", offsetXY = "16 -119",
-                width = "470", height = "36", fontSize = "13",
-                color = "#D3D9E0", alignment = "UpperLeft",
-                text = "DRAW: defender to attacker. UNDO: tap for one, hold 5s to clear all."
+                width = "470", height = "25", fontSize = "13",
+                color = "#D3D9E0", alignment = "MiddleLeft",
+                text = "DRAW: defender to attacker. Tap UNDO to remove one arrow."
             }},
             {tag = "Button", attributes = {
                 id = "lotus_combat_bind",
                 onClick = cb .. "settingsCombatKeyConfig",
-                rectAlignment = "UpperLeft", offsetXY = "16 -170",
-                width = "224", height = "35", fontSize = "15",
+                rectAlignment = "UpperLeft", offsetXY = "16 -155",
+                width = "468", height = "35", fontSize = "15",
                 textColor = "#FFFFFF", colors = "#315A87|#4274AC|#234363|#234363",
                 text = "Open Game Keys"
             }},
-            {tag = "Button", attributes = {
-                id = "lotus_combat_undo",
-                onClick = cb .. "settingsCombatUndo",
-                rectAlignment = "UpperRight", offsetXY = "-16 -170",
-                width = "224", height = "35", fontSize = "15",
-                textColor = "#FFFFFF", colors = "#403A43|#57515B|#2B272E|#2B272E",
-                text = "Undo last arrow"
-            }},
-            {tag = "Button", attributes = {
-                id = "lotus_combat_clear",
-                onClick = cb .. "settingsCombatClear",
-                rectAlignment = "UpperLeft", offsetXY = "16 -218",
-                width = "468", height = "34", fontSize = "15",
-                textColor = "#FFFFFF", colors = "#403A43|#57515B|#2B272E|#2B272E",
-                text = "Clear my arrows"
+            {tag = "Text", attributes = {
+                rectAlignment = "UpperLeft", offsetXY = "16 -208",
+                width = "365", height = "24", fontSize = "15",
+                fontStyle = "Bold", color = "#EDEEF2",
+                alignment = "MiddleLeft",
+                text = "Hold UNDO to clear all your arrows"
             }},
             {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -264",
-                width = "468", height = "34", fontSize = "12",
-                color = "#9BA4B0", alignment = "UpperLeft",
-                text = "Bind Declare and Undo in Options > Game Keys. No separate Remove key."
+                id = "lotus_combat_hold_value",
+                rectAlignment = "UpperRight", offsetXY = "-16 -208",
+                width = "88", height = "24", fontSize = "17",
+                fontStyle = "Bold", color = "#87B9EF",
+                alignment = "MiddleRight", text = "5 s"
+            }},
+            {tag = "Slider", attributes = {
+                id = "lotus_combat_hold_slider",
+                onValueChanged = cb .. "settingsCombatHoldChanged",
+                rectAlignment = "UpperLeft", offsetXY = "16 -241",
+                width = "468", height = "27",
+                minValue = "1", maxValue = "10", value = "5",
+                wholeNumbers = "true",
+                backgroundColor = "#393A42", fillColor = "#4274AC",
+                handleColor = "#E5EBF4"
+            }},
+            {tag = "Text", attributes = {
+                rectAlignment = "UpperLeft", offsetXY = "16 -277",
+                width = "468", height = "22", fontSize = "12",
+                color = "#9BA4B0", alignment = "MiddleLeft",
+                text = "1-10 seconds  |  Applies to your own UNDO key only."
             }}
         }}
     }}
@@ -1027,7 +1072,7 @@ function Settings.ensureGeneralTab(panel)
             local current = false
             for _, node in ipairs(child.children or {}) do
                 if node.attributes
-                    and node.attributes.id == "MTG_Settings_GeneralContent_v153" then
+                    and node.attributes.id == "MTG_Settings_GeneralContent_v154" then
                     current = true
                     break
                 end
@@ -1533,8 +1578,7 @@ function Settings.installUI()
         settingsNotesNavigate = true,
         settingsGeneralToggle = true,
         settingsCombatKeyConfig = true,
-        settingsCombatUndo = true,
-        settingsCombatClear = true
+        settingsCombatHoldChanged = true
     }
 
     local function hasTabs(node)

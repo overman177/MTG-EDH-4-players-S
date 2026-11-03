@@ -17,8 +17,17 @@ self={
 function spawnObject() error("combat cannot spawn objects") end
 function getObjectsWithTag(tag) assert(tag=="MTG_Lotus_AutoFightAnchor");return {anchor} end
 Wait={frames=function(fn) scheduled[#scheduled+1]=fn end,time=function(fn,n) timers[#timers+1]={fn=fn,delay=n} end}
-local binds={}
-function addHotkey(name,fn,up) binds[name]={fn=fn,up=up} end
+local binds={["MTG: Remove Combat Target"]={fn=function() end,up=false}}
+local resetCount, callOrder = 0, {}
+function clearHotkeys()
+    resetCount=resetCount+1
+    binds={}
+    callOrder[#callOrder+1]="clear"
+end
+function addHotkey(name,fn,up)
+    callOrder[#callOrder+1]=name
+    binds[name]={fn=fn,up=up}
+end
 function getObjectFromGUID(guid) return cards[guid] end
 function printToColor() end
 local function card(guid,x,z)
@@ -33,6 +42,10 @@ local d1=card("d11111",4,0)
 local d2=card("d22222",8,0)
 dofile("src/lotus/sections/06_combat-targeting.lua")
 Combat.load()
+assert(resetCount==1,"hotkeys cleared during Lotus load")
+assert(#callOrder==3 and callOrder[1]=="clear","clear precedes both registrations")
+assert(callOrder[2]=="MTG: Declare Combat Target" and
+       callOrder[3]=="MTG: Undo Combat Target","register Draw and Undo only")
 assert(binds["MTG: Declare Combat Target"].up)
 assert(binds["MTG: Undo Combat Target"].up==true,"Undo requires key release")
 assert(binds["MTG: Remove Combat Target"]==nil,"only two hotkeys registered")

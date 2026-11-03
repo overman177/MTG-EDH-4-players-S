@@ -24,10 +24,10 @@ The table's imported object scripts have been organized from `New/` into functio
 In **Table Settings > General**, combat targeting has three independent controls:
 
 - **MTG: Declare Combat Target** (C suggested): hold on defender, release on attacker to **add** an arrow; duplicates never toggle an existing connection.
-- **MTG: Remove Combat Target**: same gesture with a different bound key removes that exact arrow, only if you created it.
+- **MTG: Remove Combat Target**: **press once anywhere** to clear all arrows you created. Other players' arrows are untouched. Existing bindings are preserved.
 - **MTG: Undo Combat Target**: removes your latest surviving arrow. The **Undo last arrow** button also works without binding another hotkey.
 
-**Open Game Keys** opens the TTS keybinding dialog, or open **Options > Game Keys** manually. **Clear my arrows** removes only your declarations. Arrows are visual only: no automatic combat result or rules enforcement.
+**Open Game Keys** opens the TTS keybinding dialog, or open **Options > Game Keys** manually. The **Clear my arrows** button performs the same action as the Remove key. Arrows are visual only: no automatic combat result or rules enforcement.
 
 More details: [Combat targeting](docs/COMBAT_TARGETING.md).
 

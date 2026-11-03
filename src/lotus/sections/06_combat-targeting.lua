@@ -1,15 +1,18 @@
 -- =============================================================
--- MODULE 7: COMBAT TARGETING (ADDITIVE DRAW, EXPLICIT REMOVE, UNDO)
+-- MODULE 7: COMBAT TARGETING (DRAW / UNDO / CLEAR MY ARROWS)
 --
 -- TTS does not let Lua assign C (or any default key) programmatically.
 -- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
--- Holding the bound key on DEFENDER and releasing on ATTACKER creates
--- a persistent, purely visual arrow. No MTG rules are enforced.
--- Arrows are session-only; each player can clear their own arrows.
+-- DRAW: hold over defender and release over attacker to add a visual arrow.
+-- REMOVE: press once to clear all of your own arrows, anywhere on the table.
+-- UNDO: press once to remove your latest still-existing arrow.
+-- Arrows are visual-only and session-only; no MTG rules are enforced.
 -- =============================================================
 
 Combat = {
     HOTKEY = "MTG: Declare Combat Target",
+    -- Keep the previous hotkey name so players retain their existing binding.
+    -- This key now clears all arrows owned by the pressing player.
     REMOVE_HOTKEY = "MTG: Remove Combat Target",
     UNDO_HOTKEY = "MTG: Undo Combat Target",
     OWNERS = {White = true, Red = true, Yellow = true, Blue = true},
@@ -20,7 +23,6 @@ Combat = {
         Blue = {0.30, 0.64, 1.0}
     },
     pending = {}, -- color -> defender GUID during DRAW
-    pendingRemove = {}, -- color -> defender GUID during REMOVE
     history = {}, -- color -> created pairs in order
     links = {},   -- attacker GUID -> {defenders = { [defenderGUID] = playerColor }, by = color}
     baseLines = {},
@@ -79,32 +81,6 @@ function Combat.addDefender(attackerGUID, defenderGUID, color)
     link.defenders[defenderGUID] = color
     Combat.history[color] = Combat.history[color] or {}
     table.insert(Combat.history[color], {attacker = attackerGUID, defender = defenderGUID})
-    Combat.updated()
-    return true
-end
-
--- Tap a defender card to remove only the arrows that this player declared
--- pointing at that defender. Other defenders and players are unaffected.
-function Combat.removeDefender(defenderGUID, color)
-    local changed = false
-    for attackerGUID, link in pairs(Combat.links) do
-        local owner = link.defenders[defenderGUID]
-        if owner == color or (owner == true and link.by == color) then
-            link.defenders[defenderGUID] = nil
-            changed = true
-            if next(link.defenders) == nil then
-                Combat.links[attackerGUID] = nil
-            end
-        end
-    end
-    if changed then Combat.updated() end
-    return changed
-end
-
--- Tapping the attacker clears all arrows starting at that attacker.
-function Combat.clearAttacker(attackerGUID)
-    if Combat.links[attackerGUID] == nil then return false end
-    Combat.links[attackerGUID] = nil
     Combat.updated()
     return true
 end
@@ -183,7 +159,6 @@ end
 function Combat.clear(color)
     if not Combat.OWNERS[color] then return end
     Combat.pending[color] = nil
-    Combat.pendingRemove[color] = nil
     Combat.history[color] = {}
     local changed = false
     for attackerGUID, link in pairs(Combat.links) do
@@ -245,18 +220,11 @@ function Combat.removePair(attacker, defender, color)
     return true
 end
 
+-- This action is deliberately press-only and independent of the pointer.
+-- Retaining the registered key name preserves existing client bindings.
 function Combat.removeHotkey(color, hovered, pointerPosition, isKeyUp)
-    if not Combat.OWNERS[color] then return end
-    if not isKeyUp then
-        Combat.pendingRemove[color] = (Combat.enabled(color) and combatCard(hovered))
-            and hovered.getGUID() or nil
-        return
-    end
-    local defender = Combat.pendingRemove[color]
-    Combat.pendingRemove[color] = nil
-    if not Combat.enabled(color) or not defender or not combatCard(hovered) then return end
-    local attacker = hovered.getGUID()
-    if attacker ~= defender then Combat.removePair(attacker, defender, color) end
+    if isKeyUp or not Combat.enabled(color) then return end
+    Combat.clear(color)
 end
 
 function Combat.undo(color)
@@ -317,14 +285,13 @@ end
 
 function Combat.load()
     Combat.pending = {}
-    Combat.pendingRemove = {}
     Combat.history = {}
     Combat.links = {}
     Combat.baseLines = self.getVectorLines() or {}
     Combat.loopActive = false
     Combat.loopGeneration = 0
     addHotkey(Combat.HOTKEY, Combat.hotkey, true)
-    addHotkey(Combat.REMOVE_HOTKEY, Combat.removeHotkey, true)
+    addHotkey(Combat.REMOVE_HOTKEY, Combat.removeHotkey, false)
     addHotkey(Combat.UNDO_HOTKEY, Combat.undoHotkey, false)
     -- TTS may restore old spawned anchors when loading a saved table.
     -- Clean them after all objects have spawned.

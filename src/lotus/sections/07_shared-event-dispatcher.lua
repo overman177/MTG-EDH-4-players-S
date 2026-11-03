@@ -119,21 +119,14 @@ function settingsCombatKeyConfig(player, value, id)
     if not Settings.validColor(color) or color ~= Settings.menuOwner then return end
     local ok = pcall(function() showHotkeyConfig() end)
     if not ok then
-        printToColor("Open Options > Game Keys and bind MTG: Declare, Remove, Undo Combat Target.",
+        printToColor("Open Options > Game Keys and bind MTG: Declare and Undo Combat Target.",
             color, {0.90, 0.75, 0.45})
     end
 end
 
-function settingsCombatUndo(player, value, id)
-    local color = Settings.playerColor(player)
-    if not Settings.validColor(color) or color ~= Settings.menuOwner then return end
-    Combat.undo(color)
-end
-
-function settingsCombatClear(player, value, id)
-    local color = Settings.playerColor(player)
-    if color == nil or color ~= Settings.menuOwner then return end
-    Combat.clear(color)
+-- Per-seat slider callback for the Undo long-press threshold.
+function settingsCombatHoldChanged(player, value, id)
+    Settings.changeUndoHold(player, value, id)
 end
 
 -- Global XML: navigate read-only patch notes release pages.

@@ -868,7 +868,7 @@ function Settings.generalTab()
             alignment = "MiddleLeft", color = "#6fa0d8", text = "GENERAL"
         }},
         {tag = "Panel", attributes = {
-            id = "MTG_Settings_GeneralContent_v151",
+            id = "MTG_Settings_GeneralContent_v152",
             rectAlignment = "UpperCenter", offsetXY = "0 -36",
             width = "500", height = "305", color = "#28272B"
         }, children = {
@@ -896,7 +896,7 @@ function Settings.generalTab()
                 rectAlignment = "UpperLeft", offsetXY = "16 -119",
                 width = "470", height = "36", fontSize = "13",
                 color = "#D3D9E0", alignment = "UpperLeft",
-                text = "DRAW: defender to attacker. REMOVE: same gesture with Remove key."
+                text = "DRAW: defender to attacker. REMOVE: press once to clear all your arrows."
             }},
             {tag = "Button", attributes = {
                 id = "lotus_combat_bind",
@@ -926,7 +926,7 @@ function Settings.generalTab()
                 rectAlignment = "UpperLeft", offsetXY = "16 -264",
                 width = "468", height = "34", fontSize = "12",
                 color = "#9BA4B0", alignment = "UpperLeft",
-                text = "Bind Declare / Remove / Undo Combat Target in Options > Game Keys. Taps never delete."
+                text = "Bind Declare / Remove / Undo in Options > Game Keys. Remove clears your arrows."
             }}
         }}
     }}
@@ -1027,7 +1027,7 @@ function Settings.ensureGeneralTab(panel)
             local current = false
             for _, node in ipairs(child.children or {}) do
                 if node.attributes
-                    and node.attributes.id == "MTG_Settings_GeneralContent_v151" then
+                    and node.attributes.id == "MTG_Settings_GeneralContent_v152" then
                     current = true
                     break
                 end

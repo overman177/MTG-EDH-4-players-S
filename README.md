@@ -24,9 +24,9 @@ The table's imported object scripts have been organized from `New/` into functio
 In **Table Settings > General**, combat targeting has **two bindable hotkeys**:
 
 - **MTG: Declare Combat Target** (C suggested): hold on defender, release on attacker to **add** an arrow; duplicates never toggle an existing connection.
-- **MTG: Undo Combat Target**: **tap and release** to remove your latest surviving arrow; **hold for 5 seconds** to clear all arrows you created. Other players' arrows are untouched. Your existing Undo binding is preserved.
+- **MTG: Undo Combat Target**: **tap and release** to remove your latest surviving arrow; **hold for your chosen duration (1–10 seconds, default 5)** to clear all arrows you created. Other players' arrows are untouched. Your existing Undo binding is preserved.
 
-**Open Game Keys** opens the TTS keybinding dialog, or open **Options > Game Keys** manually. The **Clear my arrows** button still provides a one-click alternative to the 5-second hold. Arrows are visual only: no automatic combat result or rules enforcement.
+**Open Game Keys** opens the TTS keybinding dialog, or open **Options > Game Keys** manually. The General tab now has a **per-player Undo hold-duration slider** instead of Undo/Clear buttons. Your setting is saved. Arrows are visual only: no automatic combat result or rules enforcement.
 
 More details: [Combat targeting](docs/COMBAT_TARGETING.md).
 

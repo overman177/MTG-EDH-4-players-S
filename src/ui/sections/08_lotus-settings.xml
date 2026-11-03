@@ -94,7 +94,7 @@
 </Panel>
 
 <!-- LOTUS NUMPAD HUD: personal visibility controlled by Settings > General -->
-<Panel id="MTG_ShortcutsOverlay" rectAlignment="MiddleLeft" offsetXY="7 -120" width="252" height="325" color="clear" raycastTarget="false" active="true">
+<Panel id="MTG_ShortcutsOverlay" rectAlignment="MiddleLeft" offsetXY="7 -165" width="252" height="325" color="clear" raycastTarget="false" active="true">
     <Text rectAlignment="UpperLeft" offsetXY="0 -9" width="230" height="22" fontSize="17" fontStyle="Bold" color="#F0F1F4" raycastTarget="false" text="Shortcuts" />
     <VerticalLayout rectAlignment="UpperCenter" offsetXY="0 -34" width="228" height="251" spacing="1" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">
         <HorizontalLayout preferredHeight="24" minHeight="24" spacing="6" childForceExpandHeight="false" childForceExpandWidth="false" raycastTarget="false">

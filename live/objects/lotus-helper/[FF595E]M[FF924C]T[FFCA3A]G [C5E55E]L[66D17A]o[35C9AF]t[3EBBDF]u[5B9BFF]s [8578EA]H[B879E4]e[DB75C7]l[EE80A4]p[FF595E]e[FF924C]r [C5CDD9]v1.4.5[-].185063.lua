@@ -1432,7 +1432,7 @@ Settings.TAB_IDS = {
 function Settings.applyTab()
     local height = "465"
     if Settings.activeTab == "notes" then height = "605"
-    elseif Settings.activeTab == "general" then height = "465"
+    elseif Settings.activeTab == "general" then height = "530"
     elseif Settings.activeTab == "preview" then height = "365"
     end
     UI.setAttribute("CounterVisibilityPanel", "height", height)
@@ -1953,9 +1953,10 @@ function Settings.shortcutsOverlay()
 end
 
 function Settings.generalTab()
+    local cb = self.getGUID() .. "/"
     return {tag = "Panel", attributes = {
         id = "MTG_Settings_Tab_General", rectAlignment = "UpperCenter",
-        offsetXY = "0 -124", width = "516", height = "290",
+        offsetXY = "0 -124", width = "516", height = "345",
         color = "clear", active = "false"
     }, children = {
         {tag = "Text", attributes = {
@@ -1964,57 +1965,65 @@ function Settings.generalTab()
             alignment = "MiddleLeft", color = "#6fa0d8", text = "GENERAL"
         }},
         {tag = "Panel", attributes = {
-            id = "MTG_Settings_GeneralContent_v150",
+            id = "MTG_Settings_GeneralContent_v151",
             rectAlignment = "UpperCenter", offsetXY = "0 -36",
-            width = "500", height = "242", color = "#28272B"
+            width = "500", height = "305", color = "#28272B"
         }, children = {
             {tag = "Toggle", attributes = {
                 id = "lotus_show_shortcuts", isOn = "True",
-                onValueChanged = self.getGUID() .. "/settingsGeneralToggle",
-                rectAlignment = "UpperLeft", offsetXY = "16 -13",
-                width = "460", height = "35", fontSize = "17",
+                onValueChanged = cb .. "settingsGeneralToggle",
+                rectAlignment = "UpperLeft", offsetXY = "16 -12",
+                width = "465", height = "31", fontSize = "17",
                 textColor = "#EDEEF2"
             }, value = "Show numpad shortcuts on my screen"},
             {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -53",
+                rectAlignment = "UpperLeft", offsetXY = "16 -46",
                 width = "465", height = "20", fontSize = "13",
                 color = "#9BA4B0", alignment = "MiddleLeft",
                 text = "Numpad keys: TTS Configuration > Controls."
             }},
-            {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -87",
-                width = "465", height = "22", fontSize = "14",
-                fontStyle = "Bold", color = "#6fa0d8",
-                text = "COMBAT TARGETING"
-            }},
             {tag = "Toggle", attributes = {
                 id = "lotus_enable_combat", isOn = "True",
-                onValueChanged = self.getGUID() .. "/settingsGeneralToggle",
-                rectAlignment = "UpperLeft", offsetXY = "16 -112",
+                onValueChanged = cb .. "settingsGeneralToggle",
+                rectAlignment = "UpperLeft", offsetXY = "16 -79",
                 width = "465", height = "33", fontSize = "17",
                 textColor = "#EDEEF2"
             }, value = "Enable combat targeting for me"},
+            {tag = "Text", attributes = {
+                rectAlignment = "UpperLeft", offsetXY = "16 -119",
+                width = "470", height = "36", fontSize = "13",
+                color = "#D3D9E0", alignment = "UpperLeft",
+                text = "DRAW: defender to attacker. REMOVE: same gesture with Remove key."
+            }},
             {tag = "Button", attributes = {
                 id = "lotus_combat_bind",
-                onClick = self.getGUID() .. "/settingsCombatKeyConfig",
-                rectAlignment = "UpperLeft", offsetXY = "16 -160",
-                width = "260", height = "33", fontSize = "14",
+                onClick = cb .. "settingsCombatKeyConfig",
+                rectAlignment = "UpperLeft", offsetXY = "16 -170",
+                width = "224", height = "35", fontSize = "15",
                 textColor = "#FFFFFF", colors = "#315A87|#4274AC|#234363|#234363",
-                text = "Configure key (C suggested)"
+                text = "Open Game Keys"
+            }},
+            {tag = "Button", attributes = {
+                id = "lotus_combat_undo",
+                onClick = cb .. "settingsCombatUndo",
+                rectAlignment = "UpperRight", offsetXY = "-16 -170",
+                width = "224", height = "35", fontSize = "15",
+                textColor = "#FFFFFF", colors = "#403A43|#57515B|#2B272E|#2B272E",
+                text = "Undo last arrow"
             }},
             {tag = "Button", attributes = {
                 id = "lotus_combat_clear",
-                onClick = self.getGUID() .. "/settingsCombatClear",
-                rectAlignment = "UpperRight", offsetXY = "-16 -160",
-                width = "188", height = "33", fontSize = "14",
+                onClick = cb .. "settingsCombatClear",
+                rectAlignment = "UpperLeft", offsetXY = "16 -218",
+                width = "468", height = "34", fontSize = "15",
                 textColor = "#FFFFFF", colors = "#403A43|#57515B|#2B272E|#2B272E",
                 text = "Clear my arrows"
             }},
             {tag = "Text", attributes = {
-                rectAlignment = "UpperLeft", offsetXY = "16 -207",
-                width = "465", height = "24", fontSize = "13",
-                color = "#9BA4B0", alignment = "MiddleLeft",
-                text = "Start: defender. End: attacker. Tap attacker to clear."
+                rectAlignment = "UpperLeft", offsetXY = "16 -264",
+                width = "468", height = "34", fontSize = "12",
+                color = "#9BA4B0", alignment = "UpperLeft",
+                text = "Bind Declare / Remove / Undo Combat Target in Options > Game Keys. Taps never delete."
             }}
         }}
     }}
@@ -2115,7 +2124,7 @@ function Settings.ensureGeneralTab(panel)
             local current = false
             for _, node in ipairs(child.children or {}) do
                 if node.attributes
-                    and node.attributes.id == "MTG_Settings_GeneralContent_v150" then
+                    and node.attributes.id == "MTG_Settings_GeneralContent_v151" then
                     current = true
                     break
                 end
@@ -2621,6 +2630,7 @@ function Settings.installUI()
         settingsNotesNavigate = true,
         settingsGeneralToggle = true,
         settingsCombatKeyConfig = true,
+        settingsCombatUndo = true,
         settingsCombatClear = true
     }
 
@@ -3786,7 +3796,7 @@ function RevealTop.onDestroy(obj)
 end
 
 -- =============================================================
--- MODULE 7: COMBAT TARGETING (CUSTOM GAME KEY, NOT NATIVE TAB)
+-- MODULE 7: COMBAT TARGETING (ADDITIVE DRAW, EXPLICIT REMOVE, UNDO)
 --
 -- TTS does not let Lua assign C (or any default key) programmatically.
 -- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
@@ -3797,6 +3807,8 @@ end
 
 Combat = {
     HOTKEY = "MTG: Declare Combat Target",
+    REMOVE_HOTKEY = "MTG: Remove Combat Target",
+    UNDO_HOTKEY = "MTG: Undo Combat Target",
     OWNERS = {White = true, Red = true, Yellow = true, Blue = true},
     COLOR = {
         White = {0.95, 0.94, 0.83},
@@ -3804,17 +3816,16 @@ Combat = {
         Yellow = {1.0, 0.83, 0.19},
         Blue = {0.30, 0.64, 1.0}
     },
-    pending = {}, -- initiator color -> defender GUID while key held
+    pending = {}, -- color -> defender GUID during DRAW
+    pendingRemove = {}, -- color -> defender GUID during REMOVE
+    history = {}, -- color -> created pairs in order
     links = {},   -- attacker GUID -> {defenders = { [defenderGUID] = playerColor }, by = color}
     baseLines = {},
     -- Used only to remove AUTOFIGHT objects from older table saves.
     LEGACY_ANCHOR_TAG = "MTG_Lotus_AutoFightAnchor",
     loopActive = false,
     loopGeneration = 0,
-    REFRESH_SECONDS = 0.30,
-    -- A valid remove gesture must be a genuine stationary key tap.
-    -- Pointer data comes from TTS' addHotkey callback (world coordinates).
-    TAP_MAX_MOVEMENT = 0.24
+    REFRESH_SECONDS = 0.30
 }
 
 local function combatCard(obj)
@@ -3863,6 +3874,8 @@ function Combat.addDefender(attackerGUID, defenderGUID, color)
     end
     if link.defenders[defenderGUID] ~= nil then return false end
     link.defenders[defenderGUID] = color
+    Combat.history[color] = Combat.history[color] or {}
+    table.insert(Combat.history[color], {attacker = attackerGUID, defender = defenderGUID})
     Combat.updated()
     return true
 end
@@ -3967,6 +3980,8 @@ end
 function Combat.clear(color)
     if not Combat.OWNERS[color] then return end
     Combat.pending[color] = nil
+    Combat.pendingRemove[color] = nil
+    Combat.history[color] = {}
     local changed = false
     for attackerGUID, link in pairs(Combat.links) do
         for defenderGUID, owner in pairs(link.defenders) do
@@ -3999,67 +4014,60 @@ function Combat.onDestroy(obj)
     if dirty then Combat.updated() end
 end
 
--- TTS provides pointerPosition on both hotkey events. Require the
--- world-space cursor to stay almost stationary for a REMOVE gesture.
--- This protects existing arrows if TTS resolves both hovered objects
--- to the same card during a real drag between overlapping card regions.
-local function combatPointerXZ(position)
-    if position == nil then return nil end
-    local ok, x, z = pcall(function()
-        return tonumber(position.x or position[1]),
-               tonumber(position.z or position[3])
-    end)
-    if not ok or x == nil or z == nil then return nil end
-    return {x = x, z = z}
-end
-
-function Combat.isStationaryTap(startXZ, endPosition)
-    local finishXZ = combatPointerXZ(endPosition)
-    if startXZ == nil or finishXZ == nil then
-        -- Missing pointer data must not trigger a destructive operation.
-        return false
-    end
-    local dx, dz = finishXZ.x - startXZ.x, finishXZ.z - startXZ.z
-    return dx * dx + dz * dz <= Combat.TAP_MAX_MOVEMENT ^ 2
-end
-
+-- The drawing key never performs a removal. Same-card release simply cancels.
 function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     if not Combat.OWNERS[color] then return end
     if not isKeyUp then
-        if Combat.enabled(color) and combatCard(hovered) then
-            Combat.pending[color] = {
-                guid = hovered.getGUID(),
-                position = combatPointerXZ(pointerPosition)
-            }
-        else
-            Combat.pending[color] = nil
-        end
+        Combat.pending[color] = (Combat.enabled(color) and combatCard(hovered))
+            and hovered.getGUID() or nil
         return
     end
-    local pending = Combat.pending[color]
+    local defender = Combat.pending[color]
     Combat.pending[color] = nil
-    if not Combat.enabled(color) or not pending then return end
-    local defenderGUID = pending.guid
-    if not combatCard(getObjectFromGUID(defenderGUID)) then return end
-    if not combatCard(hovered) then
-        printToColor("Combat: release over an attacking card.", color, {0.9, 0.72, 0.35})
+    if not Combat.enabled(color) or not defender
+        or not combatCard(getObjectFromGUID(defender))
+        or not combatCard(hovered) then return end
+    local attacker = hovered.getGUID()
+    if attacker ~= defender then Combat.addDefender(attacker, defender, color) end
+end
+
+-- Removing a single arrow requires an entirely separate key gesture.
+-- Ownership is checked on the exact attacker/defender pair.
+function Combat.removePair(attacker, defender, color)
+    local link = Combat.links[attacker]
+    if not link or link.defenders[defender] ~= color then return false end
+    link.defenders[defender] = nil
+    if next(link.defenders) == nil then Combat.links[attacker] = nil end
+    Combat.updated()
+    return true
+end
+
+function Combat.removeHotkey(color, hovered, pointerPosition, isKeyUp)
+    if not Combat.OWNERS[color] then return end
+    if not isKeyUp then
+        Combat.pendingRemove[color] = (Combat.enabled(color) and combatCard(hovered))
+            and hovered.getGUID() or nil
         return
     end
-    local attackerGUID = hovered.getGUID()
-    if attackerGUID == defenderGUID then
-        -- Merely receiving the same card on both callback events is NOT
-        -- enough to remove its arrows. TTS can still report the same hover
-        -- after a moved cursor. Require a stationary physical key tap.
-        if Combat.isStationaryTap(pending.position, pointerPosition) then
-            if not Combat.clearAttacker(attackerGUID) then
-                Combat.removeDefender(defenderGUID, color)
-            end
-        end
-        return
+    local defender = Combat.pendingRemove[color]
+    Combat.pendingRemove[color] = nil
+    if not Combat.enabled(color) or not defender or not combatCard(hovered) then return end
+    local attacker = hovered.getGUID()
+    if attacker ~= defender then Combat.removePair(attacker, defender, color) end
+end
+
+function Combat.undo(color)
+    if not Combat.enabled(color) then return false end
+    local history = Combat.history[color] or {}
+    while #history > 0 do
+        local entry = table.remove(history)
+        if Combat.removePair(entry.attacker, entry.defender, color) then return true end
     end
-    -- DEFENDER first, ATTACKER second: ADD ONLY, even if an earlier
-    -- arrow uses this attacker or the declaration is repeated.
-    Combat.addDefender(attackerGUID, defenderGUID, color)
+    return false
+end
+
+function Combat.undoHotkey(color, hovered, pointerPosition, isKeyUp)
+    if not isKeyUp then Combat.undo(color) end
 end
 
 -- Remove obsolete AUTOFIGHT world objects and old Lotus-mounted FIGHT
@@ -4106,11 +4114,15 @@ end
 
 function Combat.load()
     Combat.pending = {}
+    Combat.pendingRemove = {}
+    Combat.history = {}
     Combat.links = {}
     Combat.baseLines = self.getVectorLines() or {}
     Combat.loopActive = false
     Combat.loopGeneration = 0
     addHotkey(Combat.HOTKEY, Combat.hotkey, true)
+    addHotkey(Combat.REMOVE_HOTKEY, Combat.removeHotkey, true)
+    addHotkey(Combat.UNDO_HOTKEY, Combat.undoHotkey, false)
     -- TTS may restore old spawned anchors when loading a saved table.
     -- Clean them after all objects have spawned.
     Wait.frames(Combat.cleanupLegacyFight, 30)
@@ -4230,17 +4242,21 @@ function settingsGeneralToggle(player, value, id)
     Settings.toggleGeneral(player, value, id)
 end
 
--- Binding must be selected by the player in TTS; Lua cannot write the key.
+-- TTS shows the local Game Keys dialog with no arguments.
 function settingsCombatKeyConfig(player, value, id)
     local color = Settings.playerColor(player)
     if not Settings.validColor(color) or color ~= Settings.menuOwner then return end
-    -- TTS's networked hotkey dialog requires the requesting player's color.
-    -- Without this argument it may open only for the host (or not at all).
-    local ok = pcall(showHotkeyConfig, color)
+    local ok = pcall(function() showHotkeyConfig() end)
     if not ok then
-        printToColor("Open Options > Game Keys and bind 'MTG: Declare Combat Target' to C (or your preferred key).",
+        printToColor("Open Options > Game Keys and bind MTG: Declare, Remove, Undo Combat Target.",
             color, {0.90, 0.75, 0.45})
     end
+end
+
+function settingsCombatUndo(player, value, id)
+    local color = Settings.playerColor(player)
+    if not Settings.validColor(color) or color ~= Settings.menuOwner then return end
+    Combat.undo(color)
 end
 
 function settingsCombatClear(player, value, id)

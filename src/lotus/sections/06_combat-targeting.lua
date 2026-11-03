@@ -4,7 +4,7 @@
 -- TTS does not let Lua assign C (or any default key) programmatically.
 -- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
 -- DRAW: hold over defender and release over attacker to add a visual arrow.
--- UNDO: tap to remove the latest arrow; hold for 5 seconds to clear all.
+-- UNDO: tap to remove latest arrow; hold for your chosen duration to clear all.
 -- Holding never performs the short-press undo.
 -- Arrows are visual-only and session-only; no MTG rules are enforced.
 -- =============================================================
@@ -12,7 +12,7 @@
 Combat = {
     HOTKEY = "MTG: Declare Combat Target",
     UNDO_HOTKEY = "MTG: Undo Combat Target",
-    UNDO_HOLD_SECONDS = 5.0,
+    DEFAULT_UNDO_HOLD_SECONDS = 5.0,
     OWNERS = {White = true, Red = true, Yellow = true, Blue = true},
     COLOR = {
         White = {0.95, 0.94, 0.83},
@@ -230,7 +230,7 @@ function Combat.undo(color)
     return false
 end
 
--- A short press triggers on release. An uninterrupted 5-second hold clears
+-- A short press triggers on release. A continuous configurable hold clears
 -- only the holding player's arrows, and suppresses the short-press undo.
 -- Each hold has a unique table token so stale timers cannot clear later.
 function Combat.undoHotkey(color, hovered, pointerPosition, isKeyUp)
@@ -238,23 +238,28 @@ function Combat.undoHotkey(color, hovered, pointerPosition, isKeyUp)
 
     if isKeyUp then
         local held = Combat.undoHeld[color]
-        if held == nil then return end
-        Combat.undoHeld[color] = nil -- cancel the pending long-press timer
+        Combat.undoHeld[color] = nil -- cancels an outstanding timer
+        if held == nil or held.cleared then return end
         Combat.undo(color)
         return
     end
 
+    -- A completed long hold retains a sentinel until key-up. This blocks
+    -- keyboard-repeat key-down events from starting another hold.
     if not Combat.enabled(color) or Combat.undoHeld[color] ~= nil then return end
-    local held = {}
+    local held = {cleared = false}
     Combat.undoHeld[color] = held
+    local seconds = Combat.DEFAULT_UNDO_HOLD_SECONDS
+    if Settings.getUndoHold then seconds = Settings.getUndoHold(color) end
     Wait.time(function()
         if Combat.undoHeld[color] ~= held then return end
         if not Combat.enabled(color) then
             Combat.undoHeld[color] = nil
             return
         end
-        Combat.clear(color) -- also clears undoHeld, preventing undo on release
-    end, Combat.UNDO_HOLD_SECONDS)
+        Combat.clear(color) -- removes this player's arrows and history
+        Combat.undoHeld[color] = {cleared = true} -- suppress undo until release
+    end, seconds)
 end
 
 -- Remove obsolete AUTOFIGHT world objects and old Lotus-mounted FIGHT

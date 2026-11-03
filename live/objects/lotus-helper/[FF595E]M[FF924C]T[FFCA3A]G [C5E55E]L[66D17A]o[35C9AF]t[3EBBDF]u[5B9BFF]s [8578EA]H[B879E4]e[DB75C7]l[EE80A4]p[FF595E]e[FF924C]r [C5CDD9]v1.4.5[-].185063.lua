@@ -1964,7 +1964,7 @@ function Settings.shortcutsOverlay()
     end
     return {tag = "Panel", attributes = {
         id = "MTG_ShortcutsOverlay", rectAlignment = "MiddleLeft",
-        offsetXY = "14 -70", width = "252", height = "325",
+        offsetXY = "7 -165", width = "252", height = "325",
         color = "clear",
         raycastTarget = "false", active = "true"
     }, children = {

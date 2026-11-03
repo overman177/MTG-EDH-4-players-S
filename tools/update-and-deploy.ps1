@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
   One-click safe update for MTG EDH / Tabletop Simulator (Windows PowerShell).
-  - Keep the locally modified savegame.json on disk.
+  - Keep savegame.json, .vscode/settings.json and New/ on disk.
   - Stash other Git changes, including new files, before a fast-forward pull.
   - Move old .tts-backups OUT of the Smart Import project tree.
   - Rebuild/deploy and check all GUID targets.
@@ -49,10 +49,10 @@ try {
     }
 
     Write-Host "[1/4] Protecting local edits..."
-    # savegame.json is a personal table-save file; do not put it in the stash.
-    # Git stops safely if a remote change would overwrite that local file.
+    # Keep personal table saves, VS Code connection settings and incoming
+    # TTS objects in place. Git fails safely if a remote update conflicts.
     $stashMessage = "MTG auto-backup before update " + $timestamp
-    $stashOutput = & git stash push --include-untracked -m $stashMessage -- . ":(exclude)savegame.json"
+    $stashOutput = & git stash push --include-untracked -m $stashMessage -- . ":(exclude)savegame.json" ":(exclude).vscode/settings.json" ":(exclude)New/**"
     if ($LASTEXITCODE -ne 0) { throw "Could not back up local edits with git stash." }
     $stashText = $stashOutput -join [Environment]::NewLine
     if ($stashText -notmatch "No local changes to save") {
@@ -87,7 +87,7 @@ try {
         Write-Host "      Ask for help restoring specific edits; do NOT blindly pop old Lotus code."
     }
     if (Test-Path -LiteralPath (Join-Path $repoRoot "savegame.json")) {
-        Write-Host "Local savegame.json was left untouched by the updater."
+        Write-Host "Local savegame.json, .vscode/settings.json and New/ were not stashed by the updater."
     }
     $exitCode = 0
 }

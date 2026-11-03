@@ -13,6 +13,8 @@ One attacker can have multiple defenders, and one defender can connect to multip
 
 The **Open Game Keys** button calls the official TTS `showHotkeyConfig()` with no arguments. If a client's game window does not open the dialog, it can be opened manually through **Options → Game Keys**. Physical keys cannot be assigned by Lua.
 
+**Old hotkey cleanup:** TTS has no API to unregister one named hotkey. Lotus calls `clearHotkeys()` before registering its two combat actions on load so the former **MTG: Remove Combat Target** row disappears. This resets the table's *custom* hotkey registry, not native TTS controls. The current table's Game Keys list contains only Lotus combat custom actions; if future mods add their own `addHotkey` actions, they must register them after this cleanup.
+
 ## Implementation
 
 - Combat source: `src/lotus/sections/06_combat-targeting.lua`

@@ -1,6 +1,6 @@
 -- Lua 5.2: vector lines, multi-defender, legacy cleanup.
 Settings={combatEnabledByColor={White=true,Blue=true,Red=true,Yellow=true}}
-local cards,lines,scheduled={}, {}, {}
+local cards,lines,scheduled,timers={}, {}, {}, {}
 local oldLines={{points={{-1,1,-1},{-2,1,-2}},color={0,1,0},thickness=0.05}}
 local buttons={{index=0,tooltip="Settings"},{index=1,tooltip="MTG_COMBAT_FIGHT:a11111"},{index=2,tooltip="Other"}}
 local xml={{tag="Panel",attributes={id="OtherPanel"}},{tag="Panel",attributes={id="MTG_Combat_Fight_Result_White"}}}
@@ -16,7 +16,7 @@ self={
 }
 function spawnObject() error("combat cannot spawn objects") end
 function getObjectsWithTag(tag) assert(tag=="MTG_Lotus_AutoFightAnchor");return {anchor} end
-Wait={frames=function(fn) scheduled[#scheduled+1]=fn end,time=function(fn,n) end}
+Wait={frames=function(fn) scheduled[#scheduled+1]=fn end,time=function(fn,n) timers[#timers+1]={fn=fn,delay=n} end}
 local binds={}
 function addHotkey(name,fn,up) binds[name]={fn=fn,up=up} end
 function getObjectFromGUID(guid) return cards[guid] end
@@ -34,15 +34,15 @@ local d2=card("d22222",8,0)
 dofile("src/lotus/sections/06_combat-targeting.lua")
 Combat.load()
 assert(binds["MTG: Declare Combat Target"].up)
-assert(binds["MTG: Remove Combat Target"].up==false,"Remove is press-only")
-assert(binds["MTG: Undo Combat Target"].up==false)
+assert(binds["MTG: Undo Combat Target"].up==true,"Undo requires key release")
+assert(binds["MTG: Remove Combat Target"]==nil,"only two hotkeys registered")
 scheduled[1]()
 assert(anchor.destroyed and #buttons==2 and #xml==1,"legacy cleanup only")
 local function gesture(fn,def,atk)
     fn("White",def,def.pos,false);fn("White",atk,atk.pos,true)
 end
 local draw=binds["MTG: Declare Combat Target"].fn
-local remove=binds["MTG: Remove Combat Target"].fn
+local undo=binds["MTG: Undo Combat Target"].fn
 gesture(draw,d1,attacker);gesture(draw,d2,attacker)
 assert(Combat.countDefenders(Combat.links["a11111"])==2)
 assert(#lines==5 and lines[1]==oldLines[1],"both arrows and base line")
@@ -54,12 +54,20 @@ for i=2,#lines do
     if math.abs(lines[i].points[2][1]-9.65)<0.08 then moved=true end
 end
 assert(moved,"moving card moves arrow")
-remove("White",nil,nil,true)
-assert(#lines==5,"release alone does not clear")
-remove("White",nil,nil,false)
-assert(#lines==1 and not next(Combat.links),"press clears every own arrow")
+undo("White",nil,nil,false)
+assert(#lines==5,"short-press down does not undo")
+undo("White",nil,nil,true)
+assert(#lines==3,"short-press release removes latest arrow")
 gesture(draw,d2,attacker)
-assert(#lines==3,"drawing works after clear")
+assert(#lines==5,"drawing works after an undo")
+undo("White",nil,nil,false)
+assert(timers[#timers].delay==5.0,"long hold timer is five seconds")
+local longHold=timers[#timers].fn
+longHold()
+assert(#lines==1 and not next(Combat.links),"long hold clears every own arrow")
+gesture(draw,d2,attacker)
+undo("White",nil,nil,true)
+assert(#lines==3,"release after long hold does not undo")
 Combat.onDestroy(d2)
 assert(#lines==1 and not next(Combat.links),"destroy cleanup")
-print("Combat vector line and press-to-clear tests passed.")
+print("Combat vector line and two-key short/long Undo tests passed.")

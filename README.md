@@ -38,7 +38,7 @@ More details: [Combat targeting](docs/COMBAT_TARGETING.md).
 3. Preview the assembled scripts: `python tools/build.py`.
 4. Review differences versus live GUID files: `git diff` (or `python tools/build.py --check`; this check intentionally fails after real edits).
 5. Preview deployment: `python tools/deploy.py`.
-6. Deploy with automatic backups: `python tools/deploy.py --apply`.
+6. Deploy with automatic backups **outside the repository**, in its sibling `MTG-EDH-4-players-S-backups/` directory: `python tools/deploy.py --apply`.
 7. Use TTS Lua **Save & Play** only after reviewing changes, testing on a copy of the TTS table.
 8. Commit and push the source sections and updated GUID target files together.
 
@@ -48,6 +48,7 @@ When **Get Lua Scripts** imports changes from TTS, the existing GUID-named files
 
 - Do not rename/remove the final `.GUID.lua` / `.GUID.xml` suffixes.
 - Do not copy compiled GUID filenames into `src/` or `.build/`. Recursive Smart Import would see duplicates.
+- **Never keep `.lua` GUID backup copies under the repository root.** Smart Import v3 discovers scripts recursively even in Git-ignored directories such as `.tts-backups/`. If old `.tts-backups/` exists, move it to a sibling folder outside the project before using Smart Import.
 - Keep bundled third-party scripts complete; **do not** replace them with `require("import")`.
 - Source sections concatenate **byte-for-byte**; avoid turning them into runtime Lua modules, renaming handlers, or changing their order without testing.
 - Git push does not deploy to TTS, and Save & Play does not commit to GitHub.

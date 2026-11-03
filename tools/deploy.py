@@ -4,7 +4,7 @@
 Safety:
 - Dry run unless --apply is supplied.
 - Rebuilds source first.
-- Creates a timestamped backup of every changed target.
+- Creates a timestamped backup of every changed target OUTSIDE the repo.
 - Never creates a second GUID script path.
 - No TTS or GitHub communication; use Smart Import Save & Play afterwards.
 """
@@ -41,7 +41,9 @@ def deploy(apply=False):
         print("No live files changed. Run: python tools/deploy.py --apply")
         return 0
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    backup_root = ROOT / ".tts-backups" / stamp
+    # Smart Import v3 recursively scans the project directory for GUID scripts.
+    # Keep deploy backups OUTSIDE that directory to avoid duplicate GUIDs.
+    backup_root = ROOT.parent / (ROOT.name + "-backups") / stamp
     for system, target, source in updates:
         backup = backup_root / target.relative_to(ROOT)
         backup.parent.mkdir(parents=True, exist_ok=True)
@@ -54,7 +56,7 @@ def deploy(apply=False):
         finally:
             if os.path.exists(temp):
                 os.unlink(temp)
-        print("Updated " + system + " (backup: " + str(backup.relative_to(ROOT)) + ")")
+        print("Updated " + system + " (backup: " + str(backup) + ")")
     print("Deployment complete. Review diff before running TTS Save & Play.")
     return 0
 

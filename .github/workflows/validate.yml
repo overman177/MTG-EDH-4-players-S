@@ -31,6 +31,8 @@ jobs:
           sudo apt-get install -y lua5.2
           luac5.2 -p .build/Global.lua
           luac5.2 -p .build/LotusHelper.lua
+      - name: Test per-seat combat hold settings and General tab
+        run: lua5.2 tests/combat_settings_test.lua
       - name: Test combat targeting interactions
         run: lua5.2 tests/combat_hotkey_test.lua
       - name: Test Lotus keybind menu routing

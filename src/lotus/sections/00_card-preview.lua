@@ -1,5 +1,5 @@
 --[[==========================================================================
-    MTG LOTUS HELPER  |  v1.4.5  |  Tabletop Simulator Object Script
+    MTG LOTUS HELPER  |  v1.5.1  |  Tabletop Simulator Object Script
 
     MODULES
       1. Card Preview  - Hand plays and first CommanderZone battlefield entry
@@ -14,7 +14,7 @@
 ==========================================================================]]
 
 local HELPER_NAME = "MTG Lotus Helper"
-local HELPER_VERSION = "1.4.5"
+local HELPER_VERSION = "1.5.1"
 
 -- Patch notes are stored outside Lua in a TTS Notebook page named
 -- LOTUS_PATCH_NOTES, assigned to the Black (GM) seat. The Notes API reads
@@ -52,6 +52,12 @@ local Combat
 
 local Preview = {
     DISPLAY_TIME = 7,
+    NEW_IMAGE_GRACE = 3, -- extra display time for remote clients
+    ASSET_CACHE_LIMIT = 24,
+    DROP_RETRY_FRAMES = 3,
+    DROP_RETRY_ATTEMPTS = 20,
+    DEBUG = false,
+    dropSerialByGUID = {},
     HAND_TAG = "MTG_Preview_InHand",
     PREVIEW_TAG = "MTG_PlayedCardPreview_Controller",
     SETTINGS_TAG = "MTG_EDH_Settings_Controller",
@@ -503,7 +509,25 @@ function Preview.onPickUp(playerColor, card)
     if card == nil or card.tag ~= "Card" then return end
     -- Capture the zone before it may disappear from getZones() during drag.
     for _, zone in ipairs(card.getZones() or {}) do
+        if zone.type == "Hand" and not card.hasTag(Preview.HAND_TAG) then
+            card.addTag(Preview.HAND_TAG)
+        end
         Preview.rememberCommanderOrigin(zone, card)
+    end
+    -- Fallback for a missed Hand-enter event if the card remains in the hand list.
+    if not card.hasTag(Preview.HAND_TAG) then
+        local player = Player and Player[playerColor]
+        if player ~= nil then
+            local ok, cards = pcall(function() return player.getHandObjects(1) end)
+            if ok and type(cards) == "table" then
+                for _, inHand in ipairs(cards) do
+                    if inHand == card then
+                        card.addTag(Preview.HAND_TAG)
+                        break
+                    end
+                end
+            end
+        end
     end
 
     -- Tagged scripting zones can filter untagged cards out of getZones().
@@ -525,6 +549,11 @@ function Preview.onPickUp(playerColor, card)
 end
 
 function Preview.onLeaveZone(zone, card)
+    if zone ~= nil and zone.type == "Hand" and card ~= nil
+        and card.tag == "Card" and not card.isDestroyed()
+        and not card.hasTag(Preview.HAND_TAG) then
+        card.addTag(Preview.HAND_TAG)
+    end
     -- Fallback for scripted moves, or when a zone-leave event occurs before
     -- onObjectPickUp. We only act after a subsequent valid battlefield drop.
     Preview.rememberCommanderOrigin(zone, card)
@@ -532,13 +561,59 @@ end
 
 function Preview.onEnterZone(zone, obj)
     if obj == nil or obj.tag ~= "Card" then return end
-    if zone.type == "Hand" and not obj.hasTag(Preview.HAND_TAG) then
-        obj.addTag(Preview.HAND_TAG)
+    if zone.type == "Hand" then
+        if not obj.hasTag(Preview.HAND_TAG) then
+            obj.addTag(Preview.HAND_TAG)
+        end
+        local guid = obj.getGUID()
+        Preview.dropSerialByGUID[guid] = (Preview.dropSerialByGUID[guid] or 0) + 1
     end
-    -- Moving a card back into its CommanderZone cancels an incomplete play.
+    -- Returning to the command zone invalidates an unfinished entry check.
     if Preview.commanderZoneOwner(zone) ~= nil then
-        Preview.commanderPending[obj.getGUID()] = nil
+        local guid = obj.getGUID()
+        Preview.commanderPending[guid] = nil
+        Preview.dropSerialByGUID[guid] = (Preview.dropSerialByGUID[guid] or 0) + 1
     end
+end
+
+-- Distinct, stable names avoid rewriting the same image for every preview.
+-- Preserve unrelated Global UI assets and limit our preview-only cache.
+function Preview.assetForFace(faceURL)
+    local assets = UI.getCustomAssets() or {}
+    local maxID, count = 0, 0
+    for _, asset in ipairs(assets) do
+        local id = type(asset.name) == "string"
+            and tonumber(asset.name:match("^MTG_CAST_PREVIEW_(%d+)$")) or nil
+        if id ~= nil then
+            if id > maxID then maxID = id end
+            count = count + 1
+            if asset.url == faceURL then return asset.name, false end
+        end
+    end
+
+    -- One-time cleanup of the old mutable asset.
+    for i = #assets, 1, -1 do
+        if assets[i].name == "MTG_CAST_PREVIEW" then
+            table.remove(assets, i)
+        end
+    end
+    if count >= Preview.ASSET_CACHE_LIMIT then
+        for i, asset in ipairs(assets) do
+            if type(asset.name) == "string"
+                and asset.name:match("^MTG_CAST_PREVIEW_%d+$") then
+                table.remove(assets, i)
+                break
+            end
+        end
+    end
+    local name = "MTG_CAST_PREVIEW_" .. tostring(maxID + 1)
+    table.insert(assets, {name = name, url = faceURL})
+    UI.setCustomAssets(assets)
+    return name, true
+end
+
+function Preview.debugLog(message)
+    if Preview.DEBUG then print("MTG Preview: " .. tostring(message)) end
 end
 
 function Preview.showCard(card, playerColor, kind)
@@ -579,90 +654,98 @@ function Preview.showCard(card, playerColor, kind)
         end)
     end
 
-    local assetName = "MTG_CAST_PREVIEW"
-    local assets = UI.getCustomAssets() or {}
-    for i = #assets, 1, -1 do
-        if assets[i].name == assetName then
-            table.remove(assets, i)
-        end
-    end
-    table.insert(assets, {name = assetName, url = custom.face})
-    UI.setCustomAssets(assets)
+    local assetName, isNew = Preview.assetForFace(custom.face)
+    Preview.debugLog((isNew and "registered " or "reused ") .. assetName)
+    local function activate()
+        if previewID ~= Preview.currentPreviewID then return end
+        UI.setAttribute("MTG_CastImage", "image", assetName)
+        UI.setAttribute("MTG_CastDisplay", "outline", playerColor)
+        Preview.imageReady = true
+        Preview.isPreviewActive = true
+        Preview.updateVisibility()
 
-    Wait.condition(
-        function()
+        -- UI.loading reports SERVER readiness, not each client's readiness.
+        local duration = Preview.DISPLAY_TIME
+            + (isNew and Preview.NEW_IMAGE_GRACE or 0)
+        Preview.timerID = Wait.time(function()
             if previewID ~= Preview.currentPreviewID then return end
-            UI.setAttribute("MTG_CastImage", "image", assetName)
-            UI.setAttribute("MTG_CastDisplay", "outline", playerColor)
-            Preview.imageReady = true
-            Preview.isPreviewActive = true
-            Preview.updateVisibility()
+            Preview.isPreviewActive = false
+            UI.setAttribute("MTG_CastDisplay", "active", "false")
+            Preview.timerID = nil
+        end, duration)
+    end
 
-            Preview.timerID = Wait.time(function()
+    if not isNew then
+        activate()
+    else
+        Wait.condition(
+            activate,
+            function() return not UI.loading end,
+            10,
+            function()
                 if previewID ~= Preview.currentPreviewID then return end
-                Preview.isPreviewActive = false
-                UI.setAttribute("MTG_CastDisplay", "active", "false")
-                Preview.timerID = nil
-            end, Preview.DISPLAY_TIME)
-        end,
-        function()
-            return not UI.loading
-        end,
-        10,
-        function()
-            if previewID == Preview.currentPreviewID then
-                print("MTG Preview: image asset failed to load.")
+                -- Unrelated server assets must not permanently suppress previews.
+                print("MTG Preview: server UI load timed out for " .. assetName)
+                activate()
             end
-        end
-    )
+        )
+    end
 end
 
 function Preview.onDrop(playerColor, card)
-    if card == nil or card.tag ~= "Card" then return end
-
+    if card == nil or card.tag ~= "Card" or card.isDestroyed() then return end
     local guid = card.getGUID()
-    local commanderOwner = guid and Preview.commanderPending[guid] or nil
-    if guid ~= nil then Preview.commanderPending[guid] = nil end
+    if guid == nil then return end
+    local commanderOwner = Preview.commanderPending[guid]
 
-    local inHand = false
     for _, zone in ipairs(card.getZones() or {}) do
         if zone.type == "Hand" then
-            inHand = true
-            break
+            if not card.hasTag(Preview.HAND_TAG) then
+                card.addTag(Preview.HAND_TAG)
+            end
+            return
         end
-    end
-
-    if inHand then
-        if not card.hasTag(Preview.HAND_TAG) then
-            card.addTag(Preview.HAND_TAG)
-        end
-        return
     end
 
     local fromHand = card.hasTag(Preview.HAND_TAG)
-    if fromHand then card.removeTag(Preview.HAND_TAG) end
     if not fromHand and commanderOwner == nil then return end
 
-    -- Wait for the actual drop position. A CommanderZone pickup that is
-    -- merely moved elsewhere must not count as a first battlefield entry.
-    Wait.frames(function()
-        if card == nil or card.isDestroyed() or card.is_face_down then return end
-        if not Preview.isOnBattlefield(card) then return end
+    -- Keep origin state until the card is confirmed on a battlefield.
+    -- A single five-frame check could lose the preview permanently.
+    local serial = (Preview.dropSerialByGUID[guid] or 0) + 1
+    Preview.dropSerialByGUID[guid] = serial
+    local attempts = 0
+    local function checkBattlefield()
+        if Preview.dropSerialByGUID[guid] ~= serial then return end
+        if card.isDestroyed() or card.is_face_down then return end
+        if not Preview.isOnBattlefield(card) then
+            attempts = attempts + 1
+            if attempts < Preview.DROP_RETRY_ATTEMPTS then
+                Wait.frames(checkBattlefield, Preview.DROP_RETRY_FRAMES)
+            else
+                Preview.debugLog("not on battlefield: " .. guid .. " (origin retained)")
+            end
+            return
+        end
 
-        if commanderOwner ~= nil and guid ~= nil
-            and not Preview.commanderFirstShown[guid] then
-            -- Consume the first entry even when this viewer has the preview
-            -- disabled, so toggling it later cannot replay an old event.
+        if fromHand and card.hasTag(Preview.HAND_TAG) then
+            card.removeTag(Preview.HAND_TAG)
+        end
+        Preview.commanderPending[guid] = nil
+        Preview.debugLog("confirmed battlefield: " .. guid)
+        if commanderOwner ~= nil and not Preview.commanderFirstShown[guid] then
             Preview.commanderFirstShown[guid] = true
             Preview.showCard(card, commanderOwner, "commander")
         elseif fromHand then
             Preview.showCard(card, playerColor, "played")
         end
-    end, 5)
+    end
+    Wait.frames(checkBattlefield, Preview.DROP_RETRY_FRAMES)
 end
 
 function Preview.load(savedData)
     Preview.commanderPending = {}
+    Preview.dropSerialByGUID = {}
     Preview.commanderFirstShown = {}
     if type(savedData) == "string" and savedData ~= "" then
         local ok, data = pcall(JSON.decode, savedData)

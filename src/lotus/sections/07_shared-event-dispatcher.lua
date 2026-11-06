@@ -73,6 +73,14 @@ function applyPreviewSettings()
     Settings.applyPreview()
 end
 
+-- Optional host-side tracing (TTS console):
+-- getObjectFromGUID("185063").call("previewDebug", {enabled=true})
+function previewDebug(params)
+    Preview.DEBUG = type(params) == "table" and params.enabled == true
+    print("MTG Preview diagnostics " .. (Preview.DEBUG and "enabled" or "disabled"))
+    return Preview.DEBUG
+end
+
 function applyAll()
     Settings.applyAll(true)
 end

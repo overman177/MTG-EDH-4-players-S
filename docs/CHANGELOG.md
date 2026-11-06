@@ -7,7 +7,7 @@
 - Retry battlefield placement checks instead of relying on one five-frame check.
 - Preserve hand/commander origin until battlefield placement succeeds.
 - Recover missed hand-entry events on pickup/leave.
-- Allow optional Lotus preview diagnostics.
+- Allow optional Lotus preview diagnostics with `getObjectFromGUID("185063").call("previewDebug", {enabled=true})` in the TTS console.
 
 TTS does not expose per-client image loading status; the longer first-load
 display mitigates that limitation, but cannot guarantee a remote download.

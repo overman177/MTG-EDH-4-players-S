@@ -1,8 +1,8 @@
 <!-- BUG REPORT -->
 <!-- always-on report button; any seated player files a bug/feature request -->
 <!-- Uses an ASCII exclamation icon to avoid the missing-glyph blank tile. -->
-<Button id="bugReportButton" onClick="openBugReport" text="!" fontStyle="Bold"
-    rectAlignment="LowerRight" offsetXY="-165 6" width="46" height="46" fontSize="32"
+<Button id="bugReportButton" onClick="openBugReport" text="!" fontStyle="Bold" textAlignment="MiddleCenter" padding="0 0 0 0"
+    rectAlignment="LowerRight" offsetXY="-177 6" width="46" height="46" fontSize="32"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#FF7070"
     tooltip="Report a bug / request a feature" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 

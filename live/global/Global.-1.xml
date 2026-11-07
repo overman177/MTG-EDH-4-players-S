@@ -186,8 +186,8 @@
 
 <!-- SETTINGS -->
 <!-- always-on gear button; each player opens their own private settings panel -->
-<Button id="settingsGear" onClick="openSettings" text="&#9881;"
-    rectAlignment="LowerRight" offsetXY="-61 6" width="46" height="46" fontSize="28"
+<Button id="settingsGear" onClick="openSettings" text="&#9881;" textAlignment="MiddleCenter" padding="0 0 0 0"
+    rectAlignment="LowerRight" offsetXY="-73 6" width="46" height="46" fontSize="28"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#FFFFFF"
     tooltip="Player settings" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 
@@ -263,8 +263,8 @@
 <!-- BUG REPORT -->
 <!-- always-on report button; any seated player files a bug/feature request -->
 <!-- Uses an ASCII exclamation icon to avoid the missing-glyph blank tile. -->
-<Button id="bugReportButton" onClick="openBugReport" text="!" fontStyle="Bold"
-    rectAlignment="LowerRight" offsetXY="-165 6" width="46" height="46" fontSize="32"
+<Button id="bugReportButton" onClick="openBugReport" text="!" fontStyle="Bold" textAlignment="MiddleCenter" padding="0 0 0 0"
+    rectAlignment="LowerRight" offsetXY="-177 6" width="46" height="46" fontSize="32"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#FF7070"
     tooltip="Report a bug / request a feature" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 
@@ -292,8 +292,8 @@
 
 <!-- HOST SETTINGS -->
 <!-- host-only gear (gold), sits left of the per-player gear -->
-<Button id="hostGear" onClick="openHostSettings" text="&#9881;"
-    rectAlignment="LowerRight" offsetXY="-113 6" width="46" height="46" fontSize="28"
+<Button id="hostGear" onClick="openHostSettings" text="&#9881;" textAlignment="MiddleCenter" padding="0 0 0 0"
+    rectAlignment="LowerRight" offsetXY="-125 6" width="46" height="46" fontSize="28"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#e0a030"
     tooltip="Host settings (host only)" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 

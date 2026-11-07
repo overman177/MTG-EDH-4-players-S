@@ -1,7 +1,7 @@
 <!-- SETTINGS -->
 <!-- always-on gear button; each player opens their own private settings panel -->
-<Button id="settingsGear" onClick="openSettings" text="&#9881;"
-    rectAlignment="LowerRight" offsetXY="-61 6" width="46" height="46" fontSize="28"
+<Button id="settingsGear" onClick="openSettings" text="&#9881;" textAlignment="MiddleCenter" padding="0 0 0 0"
+    rectAlignment="LowerRight" offsetXY="-73 6" width="46" height="46" fontSize="28"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#FFFFFF"
     tooltip="Player settings" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 

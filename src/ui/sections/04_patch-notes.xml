@@ -11,3 +11,15 @@
     </VerticalScrollView>
 </Panel>
 
+
+<!-- Brief, non-interactive version label shown on table load. -->
+<Panel id="MTG_VersionBanner" rectAlignment="UpperCenter" offsetXY="0 -28"
+    width="410" height="58" color="rgba(0.08,0.09,0.12,0.92)"
+    outline="#506B8A" outlineSize="1 -1"
+    showAnimation="FadeIn" hideAnimation="FadeOut"
+    active="false" raycastTarget="false">
+    <Text id="MTG_VersionBannerText" rectAlignment="MiddleCenter"
+        width="388" height="44" fontSize="21" fontStyle="Bold"
+        alignment="MiddleCenter" color="#E6EEF8" raycastTarget="false"
+        text="" />
+</Panel>

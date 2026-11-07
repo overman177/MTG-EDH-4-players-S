@@ -12,6 +12,10 @@ end
 -- TTS event names are case-sensitive: onLoad, not onload.
 function onLoad(saved)
     mtgSafeInit("settings", function() restoreSettings(saved) end)
+    -- Display a non-blocking version notice after Global/Lotus UI initializes.
+    mtgSafeInit("version banner", function()
+        Wait.frames(mtgShowVersionBanner, 30)
+    end)
     buildDataStructure()
     registerObjectGUIDs()
     mtgResolveTaggedZones()

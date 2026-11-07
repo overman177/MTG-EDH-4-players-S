@@ -12,6 +12,10 @@ end
 -- TTS event names are case-sensitive: onLoad, not onload.
 function onLoad(saved)
     mtgSafeInit("settings", function() restoreSettings(saved) end)
+    -- Display a non-blocking version notice after Global/Lotus UI initializes.
+    mtgSafeInit("version banner", function()
+        Wait.frames(mtgShowVersionBanner, 30)
+    end)
     buildDataStructure()
     registerObjectGUIDs()
     mtgResolveTaggedZones()
@@ -6703,6 +6707,18 @@ end
 -------------------------------- PATCH NOTES -----------------------------------
 -- Version currently deployed. Bump this when cutting a new release.
 VERSION = "v1.6.0"
+
+-- Transient top-center screen message; reads VERSION so future releases only
+-- need to change the existing version constant. The XML itself is not edited
+-- at runtime and the banner never intercepts tabletop clicks.
+function mtgShowVersionBanner()
+    UI.setAttribute("MTG_VersionBannerText", "text",
+        "MTG EDH 4-Player  |  " .. VERSION)
+    UI.setAttribute("MTG_VersionBanner", "active", "true")
+    Wait.time(function()
+        UI.setAttribute("MTG_VersionBanner", "active", "false")
+    end, 6)
+end
 
 local PATCH_NOTES_TAG = "patchNotesButton"
 local RELEASES_API = "https://api.github.com/repos/klrmngr/mtg-edh-4player/releases"

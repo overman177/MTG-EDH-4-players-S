@@ -7334,14 +7334,12 @@ end
 -- title/description/type are mirrored into one shared draft as they're edited,
 -- and the submitting player is attributed at submit time.
 
--- POST target: the dedicated report worker (separate from the img.klrmngr.com
--- image host). A POST to /report files a GitHub issue. See
--- tools/r2-worker/src/worker.js.
-bugReportURL = "https://report.klrmngr.com/report"
+-- Reports use the table owner's Cloudflare Worker, which keeps GitHub
+-- credentials server-side. Each table has its own endpoint and repository.
+bugReportURL = "https://mtg-bug-reporter.wajencz.workers.dev/report/4"
 
--- Weak, ships-in-the-save shared key. This is NOT a secret (anyone with the mod
--- can read it) -- it only turns away trivial drive-by POSTs. The Worker enforces
--- it only when REPORT_KEY is configured there.
+-- Public shared client key: readable by players in the TTS save. The Worker
+-- must use server-side rate limiting as well as this basic key check.
 bugReportKey = "mtg-edh-4player"
 
 -- one shared in-progress report, matching the shared panel widgets

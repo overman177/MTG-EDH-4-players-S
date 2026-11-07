@@ -111,6 +111,10 @@ function previewToggle(player, value, id)
     Settings.togglePreview(player, value, id)
 end
 
+function settingsPreviewSizeChanged(player, value, id)
+    Settings.changePreviewSize(player, value, id)
+end
+
 -- Global XML: tab navigation. Notebook patch notes are read-only.
 function settingsSelectTab(player, value, id)
     Settings.selectTab(player, value, id)

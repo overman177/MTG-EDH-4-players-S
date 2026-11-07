@@ -262,9 +262,10 @@
 
 <!-- BUG REPORT -->
 <!-- always-on report button; any seated player files a bug/feature request -->
-<Button id="bugReportButton" onClick="openBugReport" text="&#9873;"
-    rectAlignment="LowerRight" offsetXY="-165 6" width="46" height="46" fontSize="26"
-    color="rgba(0.1,0.1,0.1,0.85)" textColor="#d86f6f"
+<!-- Uses an ASCII exclamation icon to avoid the missing-glyph blank tile. -->
+<Button id="bugReportButton" onClick="openBugReport" text="!" fontStyle="Bold"
+    rectAlignment="LowerRight" offsetXY="-165 6" width="46" height="46" fontSize="32"
+    color="rgba(0.1,0.1,0.1,0.85)" textColor="#FF7070"
     tooltip="Report a bug / request a feature" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 
 <Panel id="BugReportPanel" width="470" height="490" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
@@ -481,7 +482,7 @@
             </HorizontalLayout>
         </VerticalLayout>
     </Panel>
-    <Panel id="MTG_Settings_Tab_Preview" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="230" color="clear" active="false">
+    <Panel id="MTG_Settings_Tab_Preview" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="320" color="clear" active="false">
         <HorizontalLayout id="MTG_Settings_PreviewGrid_v120_compact" rectAlignment="UpperCenter" offsetXY="0 -8" width="500" height="28" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
             <Text preferredWidth="220" minWidth="220" fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="PREVIEW OPTION" />
             <Text preferredWidth="105" minWidth="105" fontSize="13" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="MY CARDS" />
@@ -502,6 +503,22 @@
             <Toggle id="preview_first_commander_mine" isOn="True" onValueChanged="777766/previewToggle" preferredWidth="105" minWidth="105" />
             <Toggle id="preview_first_commander_opponents" isOn="True" onValueChanged="777766/previewToggle" preferredWidth="155" minWidth="155" />
         </HorizontalLayout>
+        <Text rectAlignment="UpperLeft" offsetXY="8 -211" width="480" height="21"
+            fontSize="14" fontStyle="Bold" color="#6fa0d8" text="PREVIEW SIZE (MY SCREEN ONLY)" />
+        <HorizontalLayout rectAlignment="UpperCenter" offsetXY="0 -240" width="500" height="35"
+            spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+            <Text preferredWidth="176" minWidth="176" fontSize="16" color="rgb(0.9,0.9,0.9)"
+                alignment="MiddleLeft" text="Card preview scale" />
+            <Slider id="lotus_preview_size_slider" onValueChanged="777766/settingsPreviewSizeChanged"
+                minValue="50" maxValue="150" value="100" wholeNumbers="true"
+                preferredWidth="237" minWidth="237" preferredHeight="30" minHeight="30"
+                backgroundColor="#393A42" fillColor="#4274AC" handleColor="#E5EBF4" />
+            <Text id="lotus_preview_size_value" preferredWidth="65" minWidth="65" fontSize="17"
+                fontStyle="Bold" color="#87B9EF" alignment="MiddleRight" text="100%" />
+        </HorizontalLayout>
+        <Text rectAlignment="UpperLeft" offsetXY="8 -288" width="490" height="20"
+            fontSize="13" color="#9BA4B0"
+            text="Affects my and opponents' card previews on my screen only." />
     </Panel>
 </Panel>
 

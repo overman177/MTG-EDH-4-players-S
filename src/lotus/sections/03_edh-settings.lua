@@ -20,6 +20,7 @@ Settings = {
     previewHideOpponentsLands = {},
     previewFirstCommanderOwn = {},
     previewFirstCommanderOpponents = {},
+    previewSizeByColor = {}, -- per-seat scale percentage
     showShortcutsByColor = {}, -- personal HUD visibility, keyed by TTS seat color
     combatEnabledByColor = {}, -- per-seat combat targeting preference
     combatUndoHoldSecondsByColor = {}, -- per-seat long-press threshold, 1-10 seconds
@@ -44,6 +45,16 @@ end
 function Settings.getUndoHold(color)
     if type(Settings.combatUndoHoldSecondsByColor) ~= "table" then return 5 end
     return Settings.normalizeUndoHold(Settings.combatUndoHoldSecondsByColor[color])
+end
+
+function Settings.normalizePreviewSize(value)
+    local n = tonumber(value)
+    if not n or n ~= n then return 100 end
+    return math.max(50, math.min(150, math.floor(n / 5 + 0.5) * 5))
+end
+
+function Settings.getPreviewSize(color)
+    return Settings.normalizePreviewSize(Settings.previewSizeByColor[color])
 end
 
 function Settings.normalize()
@@ -79,6 +90,8 @@ function Settings.normalize()
         if Settings.previewFirstCommanderOpponents[color] == nil then
             Settings.previewFirstCommanderOpponents[color] = true
         end
+        Settings.previewSizeByColor[color] =
+            Settings.normalizePreviewSize(Settings.previewSizeByColor[color])
         if Settings.showShortcutsByColor[color] == nil then
             Settings.showShortcutsByColor[color] = true
         end
@@ -109,6 +122,7 @@ function Settings.import(data)
         and type(data.previewHideOpponentsLands) ~= "table"
         and type(data.previewFirstCommanderOwn) ~= "table"
         and type(data.previewFirstCommanderOpponents) ~= "table"
+        and type(data.previewSizeByColor) ~= "table"
         and type(data.previewEnabled) ~= "table"
         and type(data.previewHideLands) ~= "table"
         and type(data.previewShareEnabled) ~= "table"
@@ -145,6 +159,9 @@ function Settings.import(data)
     if type(data.previewFirstCommanderOpponents) == "table" then
         Settings.previewFirstCommanderOpponents = data.previewFirstCommanderOpponents
     end
+    if type(data.previewSizeByColor) == "table" then
+        Settings.previewSizeByColor = data.previewSizeByColor
+    end
     if type(data.showShortcutsByColor) == "table" then
         Settings.showShortcutsByColor = data.showShortcutsByColor
     end
@@ -167,6 +184,7 @@ function Settings.load(savedData)
     Settings.previewHideOpponentsLands = {}
     Settings.previewFirstCommanderOwn = {}
     Settings.previewFirstCommanderOpponents = {}
+    Settings.previewSizeByColor = {}
     Settings.showShortcutsByColor = {}
     Settings.combatEnabledByColor = {}
     Settings.combatUndoHoldSecondsByColor = {}
@@ -216,6 +234,7 @@ function Settings.export()
         previewHideOpponentsLands = Settings.previewHideOpponentsLands,
         previewFirstCommanderOwn = Settings.previewFirstCommanderOwn,
         previewFirstCommanderOpponents = Settings.previewFirstCommanderOpponents,
+        previewSizeByColor = Settings.previewSizeByColor,
         showShortcutsByColor = Settings.showShortcutsByColor,
         combatEnabledByColor = Settings.combatEnabledByColor,
         combatUndoHoldSecondsByColor = Settings.combatUndoHoldSecondsByColor
@@ -229,6 +248,7 @@ end
 function Settings.getPreviewPreferences()
     local own, opponents, hideOwn, hideOpponents = {}, {}, {}, {}
     local commanderOwn, commanderOpponents = {}, {}
+    local sizeByColor = {}
     for _, color in ipairs(Settings.OWNERS) do
         own[color] = Settings.previewOwnEnabled[color] ~= false
         opponents[color] = Settings.previewOpponentsEnabled[color] ~= false
@@ -237,6 +257,7 @@ function Settings.getPreviewPreferences()
         commanderOwn[color] = Settings.previewFirstCommanderOwn[color] ~= false
         commanderOpponents[color] =
             Settings.previewFirstCommanderOpponents[color] ~= false
+        sizeByColor[color] = Settings.getPreviewSize(color)
     end
     return {
         ownEnabledByColor = own,
@@ -244,7 +265,8 @@ function Settings.getPreviewPreferences()
         hideOwnLandsByColor = hideOwn,
         hideOpponentsLandsByColor = hideOpponents,
         firstCommanderOwnByColor = commanderOwn,
-        firstCommanderOpponentsByColor = commanderOpponents
+        firstCommanderOpponentsByColor = commanderOpponents,
+        sizeByColor = sizeByColor
     }
 end
 
@@ -337,6 +359,9 @@ function Settings.syncUI()
         Settings.previewFirstCommanderOwn[color] ~= false)
     Settings.setToggle("preview_first_commander_opponents",
         Settings.previewFirstCommanderOpponents[color] ~= false)
+    local scale = Settings.getPreviewSize(color)
+    UI.setAttribute("lotus_preview_size_slider", "value", tostring(scale))
+    UI.setAttribute("lotus_preview_size_value", "text", tostring(scale) .. "%")
     Settings.setToggle("lotus_show_shortcuts",
         Settings.showShortcutsByColor[color] ~= false)
     Settings.setToggle("lotus_enable_combat",
@@ -360,7 +385,7 @@ function Settings.applyTab()
     local height = "465"
     if Settings.activeTab == "notes" then height = "605"
     elseif Settings.activeTab == "general" then height = "465"
-    elseif Settings.activeTab == "preview" then height = "365"
+    elseif Settings.activeTab == "preview" then height = "465"
     end
     UI.setAttribute("CounterVisibilityPanel", "height", height)
     for tab, ids in pairs(Settings.TAB_IDS) do
@@ -625,6 +650,20 @@ function Settings.togglePreview(player, value, id)
     Settings.syncUI()
 end
 
+-- Scale is a viewer preference, not a publisher preference. The callback
+-- validates the current menu owner before touching any seat-specific panel.
+function Settings.changePreviewSize(player, value, id)
+    if Settings.uiSyncing or id ~= "lotus_preview_size_slider" then return end
+    local color = Settings.playerColor(player)
+    if not Settings.validColor(color) or color ~= Settings.menuOwner then return end
+    local scale = Settings.normalizePreviewSize(value)
+    UI.setAttribute("lotus_preview_size_value", "text", tostring(scale) .. "%")
+    if Settings.getPreviewSize(color) == scale then return end
+    Settings.previewSizeByColor[color] = scale
+    Preview.setSize(color, scale)
+    Settings.persist()
+end
+
 -- HUD visibility is a VIEWER preference. One player's switch never changes
 -- any other player's overlay; global keyboard bindings remain in Global.lua.
 Settings.HUD_VIEWERS = {
@@ -804,7 +843,7 @@ function Settings.previewTab()
     return {tag = "Panel", attributes = {
         id = "MTG_Settings_Tab_Preview",
         rectAlignment = "UpperCenter", offsetXY = "0 -124",
-        width = "516", height = "230", color = "clear", active = "false"
+        width = "516", height = "320", color = "clear", active = "false"
     }, children = {
         {tag = "HorizontalLayout", attributes = {
             id = "MTG_Settings_PreviewGrid_v120_compact",
@@ -822,7 +861,42 @@ function Settings.previewTab()
             "preview_hide_lands_opponents", false),
         row(-154, "First Commander Entry Preview",
             "preview_first_commander_mine", true,
-            "preview_first_commander_opponents", true, 14)
+            "preview_first_commander_opponents", true, 14),
+        {tag = "Text", attributes = {
+            rectAlignment = "UpperLeft", offsetXY = "8 -211",
+            width = "480", height = "21", fontSize = "14",
+            fontStyle = "Bold", color = "#6fa0d8",
+            text = "PREVIEW SIZE (MY SCREEN ONLY)"
+        }},
+        {tag = "HorizontalLayout", attributes = {
+            rectAlignment = "UpperCenter", offsetXY = "0 -240",
+            width = "500", height = "35", spacing = "8",
+            childForceExpandWidth = "false", childForceExpandHeight = "false"
+        }, children = {
+            label("Card preview scale", 176, nil, 16),
+            {tag = "Slider", attributes = {
+                id = "lotus_preview_size_slider",
+                onValueChanged = self.getGUID() .. "/settingsPreviewSizeChanged",
+                preferredWidth = "237", minWidth = "237",
+                preferredHeight = "30", minHeight = "30",
+                minValue = "50", maxValue = "150", value = "100",
+                wholeNumbers = "true",
+                backgroundColor = "#393A42", fillColor = "#4274AC",
+                handleColor = "#E5EBF4"
+            }},
+            {tag = "Text", attributes = {
+                id = "lotus_preview_size_value",
+                preferredWidth = "65", minWidth = "65",
+                fontSize = "17", fontStyle = "Bold",
+                color = "#87B9EF", alignment = "MiddleRight", text = "100%"
+            }}
+        }},
+        {tag = "Text", attributes = {
+            rectAlignment = "UpperLeft", offsetXY = "8 -288",
+            width = "490", height = "20", fontSize = "13",
+            color = "#9BA4B0",
+            text = "Affects my and opponents' card previews on my screen only."
+        }}
     }}
 end
 
@@ -1566,7 +1640,8 @@ function Settings.installUI()
         settingsNotesNavigate = true,
         settingsGeneralToggle = true,
         settingsCombatKeyConfig = true,
-        settingsCombatHoldChanged = true
+        settingsCombatHoldChanged = true,
+        settingsPreviewSizeChanged = true
     }
 
     local function hasTabs(node)
@@ -1618,7 +1693,7 @@ function Settings.installUI()
                     local upgraded = false
                     for _, child in ipairs(node.children or {}) do
                         if child.attributes and
-                            child.attributes.id == "MTG_Settings_PreviewGrid_v120_compact" then
+                            child.attributes.id == "lotus_preview_size_slider" then
                             upgraded = true
                             break
                         end

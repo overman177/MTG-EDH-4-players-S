@@ -74,6 +74,7 @@ local Preview = {
     hideOpponentsLandsByColor = {},
     firstCommanderOwnByColor = {},
     firstCommanderOpponentsByColor = {},
+    sizeByColor = {}, -- viewer-specific preview size (percent)
     commanderPending = {},     -- GUID -> CommanderZone owner color (transient)
     commanderFirstShown = {},  -- GUID -> true, saved across reloads
     currentPreviewKind = "played",  -- "played" or "commander"
@@ -126,62 +127,101 @@ function Preview.isOnBattlefield(card)
     return false
 end
 
-function Preview.createDisplay()
-    local xml = UI.getXmlTable() or {}
-    for _, element in ipairs(xml) do
-        if element.attributes and element.attributes.id == "MTG_CastDisplay" then
-            return
-        end
-    end
-
-    table.insert(xml, {
-        tag = "Panel",
-        attributes = {
-            id = "MTG_CastDisplay",
-            width = "400",
-            height = "560",
-            rectAlignment = "MiddleRight",
-            offsetXY = "-50 0",
-            active = "false",
-            color = "rgba(0,0,0,0.85)",
-            outline = "White",
-            outlineSize = "2 2",
-            ignoreLayout = "true"
-        },
-        children = {{
-            tag = "Image",
-            attributes = {
-                id = "MTG_CastImage",
-                width = "380",
-                height = "540",
-                preserveAspect = "true"
-            }
-        }}
-    })
-
-    UI.setXmlTable(xml)
+-- Global UI attributes are shared, so each seat needs a distinct,
+-- color-restricted viewport to support independent preview scaling.
+function Preview.panelID(color)
+    return "MTG_CastDisplay_" .. color
 end
 
--- All preferences belong to the VIEWER, not to the player casting a card.
--- MY CARDS means cards dropped by the viewer; OPPONENTS' CARDS means
--- cards dropped by anyone else. A player's choices NEVER affect another
--- player's view of those cards.
--- TTS treats empty UI visibility as 'everyone', so we must keep the
--- display inactive when no viewers qualify.
+function Preview.imageID(color)
+    return "MTG_CastImage_" .. color
+end
+
+function Preview.makeDisplay(id, imageID, visibility)
+    return {tag = "Panel", attributes = {
+        id = id, width = "400", height = "560",
+        rectAlignment = "MiddleRight", offsetXY = "-50 0",
+        visibility = visibility, active = "false",
+        color = "rgba(0,0,0,0.85)", outline = "White",
+        outlineSize = "2 2", ignoreLayout = "true"
+    }, children = {{tag = "Image", attributes = {
+        id = imageID, width = "380", height = "540",
+        preserveAspect = "true"
+    }}}}
+end
+
+function Preview.createDisplay()
+    local xml = UI.getXmlTable() or {}
+    local existing = {}
+    for _, node in ipairs(xml) do
+        if node.attributes and node.attributes.id then
+            existing[node.attributes.id] = true
+        end
+    end
+    local changed = false
+    if not existing.MTG_CastDisplay then
+        table.insert(xml, Preview.makeDisplay(
+            "MTG_CastDisplay", "MTG_CastImage", "Black"))
+        changed = true
+    end
+    for _, color in ipairs(Preview.EDH_COLORS) do
+        if not existing[Preview.panelID(color)] then
+            table.insert(xml, Preview.makeDisplay(
+                Preview.panelID(color), Preview.imageID(color), color))
+            changed = true
+        end
+    end
+    if changed then UI.setXmlTable(xml) end
+end
+
+function Preview.hideAll()
+    UI.setAttribute("MTG_CastDisplay", "active", "false")
+    for _, color in ipairs(Preview.EDH_COLORS) do
+        UI.setAttribute(Preview.panelID(color), "active", "false")
+    end
+end
+
+function Preview.setImage(assetName)
+    UI.setAttribute("MTG_CastImage", "image", assetName)
+    for _, color in ipairs(Preview.EDH_COLORS) do
+        UI.setAttribute(Preview.imageID(color), "image", assetName)
+    end
+end
+
+-- Color-specific panel IDs prevent one player's sizing from
+-- changing another player's screen. The original aspect ratio is kept.
+function Preview.setSize(color, percent)
+    local n = tonumber(percent) or 100
+    n = math.max(50, math.min(150, math.floor(n + 0.5)))
+    Preview.sizeByColor[color] = n
+    local factor = n / 100
+    UI.setAttribute(Preview.panelID(color), "width",
+        tostring(math.floor(400 * factor + 0.5)))
+    UI.setAttribute(Preview.panelID(color), "height",
+        tostring(math.floor(560 * factor + 0.5)))
+    UI.setAttribute(Preview.imageID(color), "width",
+        tostring(math.floor(380 * factor + 0.5)))
+    UI.setAttribute(Preview.imageID(color), "height",
+        tostring(math.floor(540 * factor + 0.5)))
+end
+
+-- Viewers see only their own viewport; spectators retain the old
+-- default-size viewport. All enable/hide/commander flags remain per viewer.
 function Preview.updateVisibility(isLand)
     if isLand == nil then isLand = Preview.currentLandStatus end
     local source = Preview.currentSourceColor
-    local visibleTo = {}
+    local spectators = {}
+    local seated = {}
+    local count = 0
+    for _, color in ipairs(Preview.EDH_COLORS) do seated[color] = true end
     for _, viewer in ipairs(Preview.ALL_UI_COLORS) do
         local ownCard = (source ~= nil and source == viewer)
         local allowed, hideLands
         if Preview.currentPreviewKind == "commander" then
-            -- First-entry previews have their own personal switches. They
-            -- are independent of ordinary Played Card / Hide Land switches.
-            allowed = ownCard
-                and Preview.firstCommanderOwnByColor[viewer] ~= false
-                or not ownCard
-                    and Preview.firstCommanderOpponentsByColor[viewer] ~= false
+            allowed = (ownCard and
+                Preview.firstCommanderOwnByColor[viewer] ~= false)
+                or (not ownCard and
+                Preview.firstCommanderOpponentsByColor[viewer] ~= false)
         else
             if ownCard then
                 allowed = Preview.ownEnabledByColor[viewer] ~= false
@@ -190,20 +230,23 @@ function Preview.updateVisibility(isLand)
                 allowed = Preview.opponentsEnabledByColor[viewer] ~= false
                 hideLands = Preview.hideOpponentsLandsByColor[viewer] == true
             end
-            -- Hide only cards POSITIVELY identified as lands.
             if isLand == true and hideLands then allowed = false end
         end
-        if allowed then table.insert(visibleTo, viewer) end
+        if allowed then count = count + 1 end
+        if seated[viewer] then
+            UI.setAttribute(Preview.panelID(viewer), "active",
+                allowed and Preview.isPreviewActive and Preview.imageReady
+                    and "true" or "false")
+        elseif allowed then
+            table.insert(spectators, viewer)
+        end
     end
-    Preview.visibleViewerCount = #visibleTo
+    Preview.visibleViewerCount = count
     UI.setAttribute("MTG_CastDisplay", "visibility",
-        #visibleTo > 0 and table.concat(visibleTo, "|") or "Black")
-    if Preview.isPreviewActive and Preview.imageReady then
-        UI.setAttribute("MTG_CastDisplay", "active",
-            #visibleTo > 0 and "true" or "false")
-    elseif #visibleTo == 0 then
-        UI.setAttribute("MTG_CastDisplay", "active", "false")
-    end
+        #spectators > 0 and table.concat(spectators, "|") or "Black")
+    UI.setAttribute("MTG_CastDisplay", "active",
+        #spectators > 0 and Preview.isPreviewActive and Preview.imageReady
+            and "true" or "false")
 end
 
 function Preview.setPreferences(params)
@@ -216,6 +259,7 @@ function Preview.setPreferences(params)
     local hideOpponents = params.hideOpponentsLandsByColor or oldLandFilter
     local commanderOwn = params.firstCommanderOwnByColor or {}
     local commanderOpponents = params.firstCommanderOpponentsByColor or {}
+    local sizes = params.sizeByColor or {}
     if type(own) ~= "table" or type(opponents) ~= "table" then return end
 
     for _, color in ipairs(Preview.EDH_COLORS) do
@@ -226,6 +270,7 @@ function Preview.setPreferences(params)
         Preview.firstCommanderOwnByColor[color] = commanderOwn[color] ~= false
         Preview.firstCommanderOpponentsByColor[color] =
             commanderOpponents[color] ~= false
+        Preview.setSize(color, sizes[color] or 100)
     end
     Preview.updateVisibility()
 end
@@ -636,7 +681,7 @@ function Preview.showCard(card, playerColor, kind)
     Preview.currentLandStatus = isLand
     Preview.isPreviewActive = false
     Preview.imageReady = false
-    UI.setAttribute("MTG_CastDisplay", "active", "false")
+    Preview.hideAll()
     Preview.updateVisibility()
 
     if Preview.timerID ~= nil then
@@ -658,8 +703,11 @@ function Preview.showCard(card, playerColor, kind)
     Preview.debugLog((isNew and "registered " or "reused ") .. assetName)
     local function activate()
         if previewID ~= Preview.currentPreviewID then return end
-        UI.setAttribute("MTG_CastImage", "image", assetName)
+        Preview.setImage(assetName)
         UI.setAttribute("MTG_CastDisplay", "outline", playerColor)
+        for _, color in ipairs(Preview.EDH_COLORS) do
+            UI.setAttribute(Preview.panelID(color), "outline", playerColor)
+        end
         Preview.imageReady = true
         Preview.isPreviewActive = true
         Preview.updateVisibility()
@@ -670,7 +718,7 @@ function Preview.showCard(card, playerColor, kind)
         Preview.timerID = Wait.time(function()
             if previewID ~= Preview.currentPreviewID then return end
             Preview.isPreviewActive = false
-            UI.setAttribute("MTG_CastDisplay", "active", "false")
+            Preview.hideAll()
             Preview.timerID = nil
         end, duration)
     end
@@ -762,7 +810,7 @@ function Preview.load(savedData)
     Preview.createDisplay()
 
     Wait.frames(function()
-        UI.setAttribute("MTG_CastDisplay", "active", "false")
+        Preview.hideAll()
         Preview.updateVisibility()
         Preview.loadPreferences()
     end, 12)

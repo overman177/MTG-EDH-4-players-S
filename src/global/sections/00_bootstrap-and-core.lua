@@ -18,6 +18,7 @@ function onLoad(saved)
     end)
     buildDataStructure()
     registerObjectGUIDs()
+    mtgSafeInit("token zones", mtgRegisterTokenZones)
     mtgResolveTaggedZones()
     mtgSafeInit("buttons", buildTableButtons)
     mtgSafeInit("context menus", addZoneContextMenus)
@@ -167,37 +168,64 @@ function registerObjectGUIDs()
 	data["Red"]["commanderDamage"] = { "4bfa09", "95eb63", "d5907a" }
 	data["Yellow"]["commanderDamage"] = { "45331a", "484c38", "906d4b" }
 	data["Blue"]["commanderDamage"] = { "8d172a", "bfcf4a", "f43e61" }
-	-- Physical TokenZone spreaders, retained in each player's data for future
-	-- deckbox/token automation. Prefer color tags, else use nearest playmat.
-	for _, guid in ipairs({ "031b64", "42728f", "51562f", "e6554f" }) do
-		local zone = getObjectFromGUID(guid)
-		if zone ~= nil then
-			local owner
-			for _, color in ipairs({ "White", "Red", "Yellow", "Blue" }) do
-				if zone.hasTag(color) then
-					if owner ~= nil then owner = nil; break end
-					owner = color
-				end
-			end
-			if owner == nil then
-				local pos = zone.getPosition()
-				local nearest = math.huge
-				for color, playerData in pairs(data) do
-					if playerData.playmat ~= nil then
-						local mat = playerData.playmat.getPosition()
-						local dx, dz = pos.x - mat.x, pos.z - mat.z
-						local distanceSq = dx * dx + dz * dz
-						if distanceSq < nearest then
-							owner, nearest = color, distanceSq
-						end
-					end
-				end
-			end
-			if owner ~= nil then
-				table.insert(data[owner].tokenZones, zone)
-			end
-		end
-	end
+end
+
+-- TokenZone spreaders are optional props. Never let a missing/misidentified
+-- spreader interrupt Global.onLoad or any other required GUID registration.
+function mtgRegisterTokenZones()
+    local colors = { "White", "Red", "Yellow", "Blue" }
+    for _, color in ipairs(colors) do
+        local playerData = data and data[color]
+        if type(playerData) == "table" then
+            playerData.tokenZones = {}
+        end
+    end
+
+    for _, guid in ipairs({ "031b64", "42728f", "51562f", "e6554f" }) do
+        local ok, err = pcall(function()
+            local obj = getObjectFromGUID(guid)
+            if obj == nil then return end
+            local owner, colorTags = nil, 0
+            for _, color in ipairs(colors) do
+                if obj.hasTag(color) then
+                    owner, colorTags = color, colorTags + 1
+                end
+            end
+            if colorTags ~= 1 then owner = nil end
+
+            -- Untagged TokenZone props are associated with their nearest
+            -- existing playmat. Only consider the four known player keys.
+            if owner == nil then
+                local pos = obj.getPosition()
+                local nearest = math.huge
+                for _, color in ipairs(colors) do
+                    local playerData = data and data[color]
+                    local mat = playerData and playerData.playmat
+                    if mat ~= nil then
+                        local matPos = mat.getPosition()
+                        local dx, dz = pos.x - matPos.x, pos.z - matPos.z
+                        local dist = dx * dx + dz * dz
+                        if dist < nearest then
+                            owner, nearest = color, dist
+                        end
+                    end
+                end
+            end
+            local playerData = owner and data and data[owner]
+            if type(playerData) ~= "table" then
+                print("[MTG Global] TokenZone " .. guid .. " has no valid player; skipped.")
+                return
+            end
+            if type(playerData.tokenZones) ~= "table" then
+                playerData.tokenZones = {}
+            end
+            table.insert(playerData.tokenZones, obj)
+        end)
+        if not ok then
+            print("[MTG Global] Optional TokenZone " .. guid
+                .. " could not be registered: " .. tostring(err))
+        end
+    end
 end
 
 

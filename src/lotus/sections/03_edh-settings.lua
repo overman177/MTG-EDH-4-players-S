@@ -63,10 +63,19 @@ function Settings.normalize()
             Settings.state[kind] = {}
         end
         local state = Settings.state[kind]
-        if state.everyone == nil then state.everyone = true end
         if type(state.owners) ~= "table" then
             state.owners = type(state.ownerVisible) == "table" and state.ownerVisible or {}
         end
+        -- Legacy saves used "everyone" as a hard global gate. If that gate
+        -- was off, every counter of this type was effectively invisible,
+        -- even if all of the individual owner flags were still checked.
+        -- Migrate that state once, then store only per-owner visibility.
+        if state.everyone == false then
+            for _, color in ipairs(Settings.OWNERS) do
+                state.owners[color] = false
+            end
+        end
+        state.everyone = nil
         for _, color in ipairs(Settings.OWNERS) do
             if state.owners[color] == nil then state.owners[color] = true end
         end
@@ -282,11 +291,25 @@ function Settings.getOwner(obj)
     return nil
 end
 
+-- EVERYONE is a bulk action and an aggregate indicator, not a master gate.
+-- When the last player's ME flag is enabled, EVERYONE automatically checks.
+function Settings.allOwnersVisible(kind)
+    local state = Settings.state[kind]
+    if not state or type(state.owners) ~= "table" then return false end
+    for _, color in ipairs(Settings.OWNERS) do
+        if state.owners[color] == false then return false end
+    end
+    return true
+end
+
 function Settings.visibility(kind, obj)
     local state = Settings.state[kind]
+    if not state then return true end
     local owner = Settings.getOwner(obj)
-    return state.everyone ~= false
-       and (owner == nil or state.owners[owner] ~= false)
+    -- Unknown-owner counters cannot be selectively assigned to one seat.
+    -- Keep them hidden unless all seats have this counter type enabled.
+    if owner == nil then return Settings.allOwnersVisible(kind) end
+    return state.owners[owner] ~= false
 end
 
 function Settings.applyType(kind, force)
@@ -341,7 +364,7 @@ function Settings.syncUI()
 
     for _, kind in ipairs(Settings.TYPES) do
         local mine = Settings.state[kind].owners[color] ~= false
-        local everyone = Settings.state[kind].everyone ~= false
+        local everyone = Settings.allOwnersVisible(kind)
         Settings.setToggle("counter_" .. kind .. "_me", mine)
         Settings.setToggle("counter_" .. kind .. "_everyone", everyone)
         if not mine then allMe = false end
@@ -591,7 +614,9 @@ function Settings.toggle(player, value, id)
     if column == "me" then
         Settings.state[kind].owners[color] = checked
     elseif column == "everyone" then
-        Settings.state[kind].everyone = checked
+        for _, owner in ipairs(Settings.OWNERS) do
+            Settings.state[kind].owners[owner] = checked
+        end
     else
         return
     end
@@ -618,7 +643,9 @@ function Settings.toggleAllEveryone(player, value)
     if Settings.playerColor(player) ~= Settings.menuOwner then return end
     local checked = Settings.toBool(value)
     for _, kind in ipairs(Settings.TYPES) do
-        Settings.state[kind].everyone = checked
+        for _, owner in ipairs(Settings.OWNERS) do
+            Settings.state[kind].owners[owner] = checked
+        end
         Settings.applyType(kind, true)
     end
     Settings.persist()

@@ -32,9 +32,20 @@ local function rtName(raw)
     return name:gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+-- Decks and loose Cards can disappear while TTS merges a library stack.
+-- Deferred callbacks must not dereference the original Unity object.
+local function rtAlive(obj)
+    if obj == nil then return false end
+    local ok, destroyed = pcall(function() return obj.isDestroyed() end)
+    return ok and destroyed == false
+end
+
 local function rtIsVisual(obj)
-    return obj ~= nil and obj.hasTag ~= nil
-        and obj.hasTag(RevealTop.VISUAL_TAG)
+    if obj == nil then return false end
+    local ok, visual = pcall(function()
+        return obj.hasTag ~= nil and obj.hasTag(RevealTop.VISUAL_TAG)
+    end)
+    return ok and visual == true
 end
 
 function RevealTop.findZone(color)
@@ -173,11 +184,11 @@ end
 
 function RevealTop.visualFor(color)
     local obj = RevealTop.visuals[color]
-    if obj and not obj.isDestroyed() and rtIsVisual(obj) then return obj end
+    if rtAlive(obj) and rtIsVisual(obj) then return obj end
     local guid = RevealTop.visualGuids[color]
     if guid then
         obj = getObjectFromGUID(guid)
-        if obj and not obj.isDestroyed() and rtIsVisual(obj) then
+        if rtAlive(obj) and rtIsVisual(obj) then
             RevealTop.visuals[color] = obj
             return obj
         end
@@ -212,7 +223,7 @@ end
 
 function RevealTop.follow(color, library)
     local obj = RevealTop.visualFor(color)
-    if not obj or not library then return end
+    if not rtAlive(obj) or not rtAlive(library) then return end
     local newPos = RevealTop.topPosition(library)
     local oldPos = obj.getPosition()
     if math.abs(newPos.x - oldPos.x) > 0.035
@@ -323,6 +334,19 @@ function RevealTop.spawnVisual(color, info)
                     pcall(function() obj.destruct() end)
                     return
                 end
+                -- Re-resolve the library after the async spawn. A group of
+                -- loose cards can replace the Deck before this callback runs.
+                local freshOK, fresh = pcall(function()
+                    return RevealTop.inspect(color, false)
+                end)
+                if not freshOK or not fresh
+                    or fresh.signature ~= info.signature
+                    or not rtAlive(fresh.library) then
+                    RevealTop.signatures[color] = nil
+                    RevealTop.errors[color] = "Library changed while visual spawned"
+                    pcall(function() obj.destruct() end)
+                    return
+                end
                 local success, setupErr = pcall(function()
                     obj.addTag(RevealTop.VISUAL_TAG)
                     obj.addTag("LotusRT_" .. color)
@@ -332,8 +356,8 @@ function RevealTop.spawnVisual(color, info)
                     obj.tooltip = false
                     obj.sticky = false
                     obj.setLock(true)
-                    obj.setPosition(RevealTop.topPosition(info.library))
-                    obj.setRotation(RevealTop.faceUpRotation(info.library))
+                    obj.setPosition(RevealTop.topPosition(fresh.library))
+                    obj.setRotation(RevealTop.faceUpRotation(fresh.library))
                     -- Components can be available immediately, but some TTS
                     -- spawns initialize physics in the following frame.
                     RevealTop.disableVisualColliders(obj)
@@ -348,7 +372,7 @@ function RevealTop.spawnVisual(color, info)
                 -- Reapply collider removal after physics initialization; no
                 -- effect on the real library or any other card.
                 Wait.frames(function()
-                    if RevealTop.visuals[color] == obj and not obj.isDestroyed() then
+                    if RevealTop.visuals[color] == obj and rtAlive(obj) then
                         RevealTop.visualGuids[color] = obj.getGUID()
                         local count = RevealTop.disableVisualColliders(obj)
                         if count == 0 then
@@ -368,8 +392,8 @@ function RevealTop.spawnVisual(color, info)
     end
 end
 
-function RevealTop.poll()
-    for _, color in ipairs(RevealTop.COLORS) do
+-- Isolate each seat when physics replaces a library Deck mid-poll.
+function RevealTop.pollOne(color)
         local library = RevealTop.findLibrary(color)
         if library then
             RevealTop.addMenu(library)
@@ -405,6 +429,15 @@ function RevealTop.poll()
                     end
                 end
             end
+        end
+end
+
+function RevealTop.poll()
+    for _, color in ipairs(RevealTop.COLORS) do
+        local ok, err = pcall(RevealTop.pollOne, color)
+        if not ok then
+            RevealTop.errors[color] = "Transient library change: " .. tostring(err)
+            RevealTop.signatures[color] = nil -- retry on the next poll
         end
     end
 end
@@ -507,10 +540,13 @@ function RevealTop.load(saved)
 end
 
 function RevealTop.onSpawn(obj)
-    if not obj or (obj.type ~= "Deck" and obj.type ~= "Card")
+    if not rtAlive(obj) or (obj.type ~= "Deck" and obj.type ~= "Card")
         or rtIsVisual(obj) then return end
+    local guid = obj.getGUID()
     Wait.frames(function()
-        if obj and not obj.isDestroyed() then RevealTop.addMenu(obj) end
+        -- Re-resolve instead of retaining an object consumed by a new Deck.
+        local current = guid and getObjectFromGUID(guid) or nil
+        if rtAlive(current) then RevealTop.addMenu(current) end
     end, 3)
 end
 

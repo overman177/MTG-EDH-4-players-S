@@ -33,6 +33,10 @@ jobs:
           luac5.2 -p .build/LotusHelper.lua
       - name: Test preview pipeline and asset cache
         run: lua5.2 tests/preview_pipeline_test.lua
+      - name: Test independent four-seat counter visibility
+        run: lua5.2 tests/counter_visibility_test.lua
+      - name: Test Reveal Top during library deck merges
+        run: lua5.2 tests/reveal_top_deck_merge_test.lua
       - name: Test per-seat combat hold settings and General tab
         run: lua5.2 tests/combat_settings_test.lua
       - name: Test combat targeting interactions

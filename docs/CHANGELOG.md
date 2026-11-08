@@ -1,5 +1,15 @@
 # Lotus Helper release history
 
+## Version 1.7.0 — Counter visibility and deck stacking
+
+- Fixed occasional Lua errors while multiple loose cards merge onto a library.
+- Prevented Always Reveal Top from using a destroyed or replaced library reference.
+- Deferred equipment processing until dropped cards can be resolved by GUID.
+- Made ME counter visibility independent after EVERYONE is turned off.
+- Changed EVERYONE toggles into per-counter bulk controls across all four seats.
+- Migrated older counter settings without unexpectedly revealing hidden counters.
+
+
 ## Version 1.6.0 — Personal previews and feedback
 
 - Added per-player card preview sizing from 50% to 150%, saved per seat.

@@ -477,19 +477,24 @@ function Equipment.onHover(player_color, obj)
 end
 
 function Equipment.onDrop(player_color, obj)
-    init_card(obj)
     if obj == nil then return end
-    if obj.tag == "Deck" then
-        refresh_deck_later(obj)
-    elseif obj.tag == "Card" then
-        local guid = obj.getGUID()
-        Wait.frames(function()
-            local current = getObjectFromGUID(guid)
-            if current ~= nil and current.tag == "Card" then
-                refresh_equipped_card(current)
-            end
-        end, 2)
-    end
+    local ok, guid, kind = pcall(function()
+        return obj.getGUID(), obj.tag
+    end)
+    if not ok or not guid or (kind ~= "Deck" and kind ~= "Card") then return end
+
+    -- Multiple loose cards dropped on a library are consumed by TTS while
+    -- merging. Avoid sending a destroyed Card reference to Encoder.
+    Wait.frames(function()
+        local current = getObjectFromGUID(guid)
+        if current == nil or current.isDestroyed() then return end
+        if current.tag == "Card" then
+            init_card(current)
+            refresh_equipped_card(current)
+        elseif current.tag == "Deck" then
+            refresh_deck(current)
+        end
+    end, 2)
 end
 
 function Equipment.onEnterZone(zone, obj)

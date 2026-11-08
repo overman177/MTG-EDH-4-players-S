@@ -1,5 +1,5 @@
 --[[==========================================================================
-    MTG LOTUS HELPER  |  v1.6.1  |  Tabletop Simulator Object Script
+    MTG LOTUS HELPER  |  v1.7.0  |  Tabletop Simulator Object Script
 
     MODULES
       1. Card Preview  - Hand plays and first CommanderZone battlefield entry
@@ -14,7 +14,7 @@
 ==========================================================================]]
 
 local HELPER_NAME = "MTG Lotus Helper"
-local HELPER_VERSION = "1.6.1"
+local HELPER_VERSION = "1.7.0"
 
 -- Patch notes are stored outside Lua in a TTS Notebook page named
 -- LOTUS_PATCH_NOTES, assigned to the Black (GM) seat. The Notes API reads
@@ -1291,10 +1291,19 @@ function Settings.normalize()
             Settings.state[kind] = {}
         end
         local state = Settings.state[kind]
-        if state.everyone == nil then state.everyone = true end
         if type(state.owners) ~= "table" then
             state.owners = type(state.ownerVisible) == "table" and state.ownerVisible or {}
         end
+        -- Legacy saves used "everyone" as a hard global gate. If that gate
+        -- was off, every counter of this type was effectively invisible,
+        -- even if all of the individual owner flags were still checked.
+        -- Migrate that state once, then store only per-owner visibility.
+        if state.everyone == false then
+            for _, color in ipairs(Settings.OWNERS) do
+                state.owners[color] = false
+            end
+        end
+        state.everyone = nil
         for _, color in ipairs(Settings.OWNERS) do
             if state.owners[color] == nil then state.owners[color] = true end
         end
@@ -1510,11 +1519,25 @@ function Settings.getOwner(obj)
     return nil
 end
 
+-- EVERYONE is a bulk action and an aggregate indicator, not a master gate.
+-- When the last player's ME flag is enabled, EVERYONE automatically checks.
+function Settings.allOwnersVisible(kind)
+    local state = Settings.state[kind]
+    if not state or type(state.owners) ~= "table" then return false end
+    for _, color in ipairs(Settings.OWNERS) do
+        if state.owners[color] == false then return false end
+    end
+    return true
+end
+
 function Settings.visibility(kind, obj)
     local state = Settings.state[kind]
+    if not state then return true end
     local owner = Settings.getOwner(obj)
-    return state.everyone ~= false
-       and (owner == nil or state.owners[owner] ~= false)
+    -- Unknown-owner counters cannot be selectively assigned to one seat.
+    -- Keep them hidden unless all seats have this counter type enabled.
+    if owner == nil then return Settings.allOwnersVisible(kind) end
+    return state.owners[owner] ~= false
 end
 
 function Settings.applyType(kind, force)
@@ -1569,7 +1592,7 @@ function Settings.syncUI()
 
     for _, kind in ipairs(Settings.TYPES) do
         local mine = Settings.state[kind].owners[color] ~= false
-        local everyone = Settings.state[kind].everyone ~= false
+        local everyone = Settings.allOwnersVisible(kind)
         Settings.setToggle("counter_" .. kind .. "_me", mine)
         Settings.setToggle("counter_" .. kind .. "_everyone", everyone)
         if not mine then allMe = false end
@@ -1819,7 +1842,9 @@ function Settings.toggle(player, value, id)
     if column == "me" then
         Settings.state[kind].owners[color] = checked
     elseif column == "everyone" then
-        Settings.state[kind].everyone = checked
+        for _, owner in ipairs(Settings.OWNERS) do
+            Settings.state[kind].owners[owner] = checked
+        end
     else
         return
     end
@@ -1846,7 +1871,9 @@ function Settings.toggleAllEveryone(player, value)
     if Settings.playerColor(player) ~= Settings.menuOwner then return end
     local checked = Settings.toBool(value)
     for _, kind in ipairs(Settings.TYPES) do
-        Settings.state[kind].everyone = checked
+        for _, owner in ipairs(Settings.OWNERS) do
+            Settings.state[kind].owners[owner] = checked
+        end
         Settings.applyType(kind, true)
     end
     Settings.persist()
@@ -3472,19 +3499,24 @@ function Equipment.onHover(player_color, obj)
 end
 
 function Equipment.onDrop(player_color, obj)
-    init_card(obj)
     if obj == nil then return end
-    if obj.tag == "Deck" then
-        refresh_deck_later(obj)
-    elseif obj.tag == "Card" then
-        local guid = obj.getGUID()
-        Wait.frames(function()
-            local current = getObjectFromGUID(guid)
-            if current ~= nil and current.tag == "Card" then
-                refresh_equipped_card(current)
-            end
-        end, 2)
-    end
+    local ok, guid, kind = pcall(function()
+        return obj.getGUID(), obj.tag
+    end)
+    if not ok or not guid or (kind ~= "Deck" and kind ~= "Card") then return end
+
+    -- Multiple loose cards dropped on a library are consumed by TTS while
+    -- merging. Avoid sending a destroyed Card reference to Encoder.
+    Wait.frames(function()
+        local current = getObjectFromGUID(guid)
+        if current == nil or current.isDestroyed() then return end
+        if current.tag == "Card" then
+            init_card(current)
+            refresh_equipped_card(current)
+        elseif current.tag == "Deck" then
+            refresh_deck(current)
+        end
+    end, 2)
 end
 
 function Equipment.onEnterZone(zone, obj)
@@ -3534,9 +3566,20 @@ local function rtName(raw)
     return name:gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+-- Decks and loose Cards can disappear while TTS merges a library stack.
+-- Deferred callbacks must not dereference the original Unity object.
+local function rtAlive(obj)
+    if obj == nil then return false end
+    local ok, destroyed = pcall(function() return obj.isDestroyed() end)
+    return ok and destroyed == false
+end
+
 local function rtIsVisual(obj)
-    return obj ~= nil and obj.hasTag ~= nil
-        and obj.hasTag(RevealTop.VISUAL_TAG)
+    if obj == nil then return false end
+    local ok, visual = pcall(function()
+        return obj.hasTag ~= nil and obj.hasTag(RevealTop.VISUAL_TAG)
+    end)
+    return ok and visual == true
 end
 
 function RevealTop.findZone(color)
@@ -3675,11 +3718,11 @@ end
 
 function RevealTop.visualFor(color)
     local obj = RevealTop.visuals[color]
-    if obj and not obj.isDestroyed() and rtIsVisual(obj) then return obj end
+    if rtAlive(obj) and rtIsVisual(obj) then return obj end
     local guid = RevealTop.visualGuids[color]
     if guid then
         obj = getObjectFromGUID(guid)
-        if obj and not obj.isDestroyed() and rtIsVisual(obj) then
+        if rtAlive(obj) and rtIsVisual(obj) then
             RevealTop.visuals[color] = obj
             return obj
         end
@@ -3714,7 +3757,7 @@ end
 
 function RevealTop.follow(color, library)
     local obj = RevealTop.visualFor(color)
-    if not obj or not library then return end
+    if not rtAlive(obj) or not rtAlive(library) then return end
     local newPos = RevealTop.topPosition(library)
     local oldPos = obj.getPosition()
     if math.abs(newPos.x - oldPos.x) > 0.035
@@ -3825,6 +3868,19 @@ function RevealTop.spawnVisual(color, info)
                     pcall(function() obj.destruct() end)
                     return
                 end
+                -- Re-resolve the library after the async spawn. A group of
+                -- loose cards can replace the Deck before this callback runs.
+                local freshOK, fresh = pcall(function()
+                    return RevealTop.inspect(color, false)
+                end)
+                if not freshOK or not fresh
+                    or fresh.signature ~= info.signature
+                    or not rtAlive(fresh.library) then
+                    RevealTop.signatures[color] = nil
+                    RevealTop.errors[color] = "Library changed while visual spawned"
+                    pcall(function() obj.destruct() end)
+                    return
+                end
                 local success, setupErr = pcall(function()
                     obj.addTag(RevealTop.VISUAL_TAG)
                     obj.addTag("LotusRT_" .. color)
@@ -3834,8 +3890,8 @@ function RevealTop.spawnVisual(color, info)
                     obj.tooltip = false
                     obj.sticky = false
                     obj.setLock(true)
-                    obj.setPosition(RevealTop.topPosition(info.library))
-                    obj.setRotation(RevealTop.faceUpRotation(info.library))
+                    obj.setPosition(RevealTop.topPosition(fresh.library))
+                    obj.setRotation(RevealTop.faceUpRotation(fresh.library))
                     -- Components can be available immediately, but some TTS
                     -- spawns initialize physics in the following frame.
                     RevealTop.disableVisualColliders(obj)
@@ -3850,7 +3906,7 @@ function RevealTop.spawnVisual(color, info)
                 -- Reapply collider removal after physics initialization; no
                 -- effect on the real library or any other card.
                 Wait.frames(function()
-                    if RevealTop.visuals[color] == obj and not obj.isDestroyed() then
+                    if RevealTop.visuals[color] == obj and rtAlive(obj) then
                         RevealTop.visualGuids[color] = obj.getGUID()
                         local count = RevealTop.disableVisualColliders(obj)
                         if count == 0 then
@@ -3870,8 +3926,8 @@ function RevealTop.spawnVisual(color, info)
     end
 end
 
-function RevealTop.poll()
-    for _, color in ipairs(RevealTop.COLORS) do
+-- Isolate each seat when physics replaces a library Deck mid-poll.
+function RevealTop.pollOne(color)
         local library = RevealTop.findLibrary(color)
         if library then
             RevealTop.addMenu(library)
@@ -3907,6 +3963,15 @@ function RevealTop.poll()
                     end
                 end
             end
+        end
+end
+
+function RevealTop.poll()
+    for _, color in ipairs(RevealTop.COLORS) do
+        local ok, err = pcall(RevealTop.pollOne, color)
+        if not ok then
+            RevealTop.errors[color] = "Transient library change: " .. tostring(err)
+            RevealTop.signatures[color] = nil -- retry on the next poll
         end
     end
 end
@@ -4009,10 +4074,13 @@ function RevealTop.load(saved)
 end
 
 function RevealTop.onSpawn(obj)
-    if not obj or (obj.type ~= "Deck" and obj.type ~= "Card")
+    if not rtAlive(obj) or (obj.type ~= "Deck" and obj.type ~= "Card")
         or rtIsVisual(obj) then return end
+    local guid = obj.getGUID()
     Wait.frames(function()
-        if obj and not obj.isDestroyed() then RevealTop.addMenu(obj) end
+        -- Re-resolve instead of retaining an object consumed by a new Deck.
+        local current = guid and getObjectFromGUID(guid) or nil
+        if rtAlive(current) then RevealTop.addMenu(current) end
     end, 3)
 end
 

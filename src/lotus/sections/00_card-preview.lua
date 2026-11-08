@@ -1,5 +1,5 @@
 --[[==========================================================================
-    MTG LOTUS HELPER  |  v1.6.1  |  Tabletop Simulator Object Script
+    MTG LOTUS HELPER  |  v1.7.0  |  Tabletop Simulator Object Script
 
     MODULES
       1. Card Preview  - Hand plays and first CommanderZone battlefield entry
@@ -14,7 +14,7 @@
 ==========================================================================]]
 
 local HELPER_NAME = "MTG Lotus Helper"
-local HELPER_VERSION = "1.6.1"
+local HELPER_VERSION = "1.7.0"
 
 -- Patch notes are stored outside Lua in a TTS Notebook page named
 -- LOTUS_PATCH_NOTES, assigned to the Black (GM) seat. The Notes API reads

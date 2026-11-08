@@ -40,6 +40,19 @@ function buildTableButtons()
 	end
 end
 
+-- Use the destination's actual transform rather than a library-relative offset.
+-- Graveyard/exile cards go face-up; empty-library fallback cards go face-down.
+function mtgGetZonePlacement(playerColor, key, height, faceDown)
+    local playerData = data and data[playerColor]
+    local zone = playerData and playerData[key]
+    if zone == nil then return nil, nil end
+    local pos = zone.getPosition()
+    pos.y = height or 3
+    local zoneRot = zone.getRotation()
+    local rot = { x = 0, y = zoneRot.y, z = faceDown and 180 or 0 }
+    return pos, rot
+end
+
 function onObjectNumberTyped(obj, ply, int)
 	local txt = " card"
 	if int > 1 then
@@ -354,10 +367,8 @@ function move2botLib(ply)
 				gr.setRotationSmooth(deck.getRotation(), false, true)
 				deck.setPositionSmooth(deck.getPosition() + Vector(0, 2, 0), false, true)
 			else
-				local rot = gr.getRotation()
-				rot.z = 180
-				local pos = data[ply]["libraryZone"].getPosition()
-				pos[2] = 1
+				local pos, rot = mtgGetZonePlacement(ply, "libraryZone", 1, true)
+				if pos == nil then return end
 				gr.setRotationSmooth(rot, false, true)
 				gr.setPositionSmooth(pos, false, true)
 			end
@@ -396,12 +407,8 @@ function move2grav(ply)
 		if gr.type == "Card" then
 			handTrigger(gr)
 		end
-		local rot = gr.getRotation()
-		rot.z = 0
-		rot.y = data[ply]["libraryZone"].getRotation().y + exileRot
-		local pos = data[ply]["libraryZone"].getPosition()
-			+ data[ply]["libraryZone"].getTransformForward():scale(gravFor)
-		pos[2] = 3
+		local pos, rot = mtgGetZonePlacement(ply, "graveyard", 3, false)
+		if pos == nil then return end
 		gr.setRotationSmooth(rot, false, true)
 		gr.setPositionSmooth(pos, false, true)
 	end, 1)
@@ -433,13 +440,8 @@ function move2exile(ply)
 		if gr.type == "Card" then
 			handTrigger(gr)
 		end
-		-- anchor on the dedicated exile zone so placement survives zone rotation
-		local zone = data[ply]["exileZone"]
-		local rot = gr.getRotation()
-		rot.z = 0
-		rot.y = zone.getRotation().y
-		local pos = zone.getPosition()
-		pos[2] = 3
+		local pos, rot = mtgGetZonePlacement(ply, "exileZone", 3, false)
+		if pos == nil then return end
 		gr.setRotationSmooth(rot, false, true)
 		gr.setPositionSmooth(pos, false, true)
 	end, 1)

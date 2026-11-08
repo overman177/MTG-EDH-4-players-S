@@ -56,8 +56,6 @@ function onLoad(saved)
     revealUp = 15.5
     revealUpS = 3.1
     revealRi = 1.5
-    exileRot = -180
-    gravFor = -4.14
 
     mtgSafeInit("land tracker", spawnLandTrackerText)
     mtgSafeInit("pregame", spawnKeepButtons)
@@ -76,10 +74,10 @@ end
 -- Ensure data structure exists
 function buildDataStructure()
 	data = {
-		White = { deck = nil },
-		Red = { deck = nil },
-		Yellow = { deck = nil },
-		Blue = { deck = nil },
+		White = { deck = nil, tokenZones = {} },
+		Red = { deck = nil, tokenZones = {} },
+		Yellow = { deck = nil, tokenZones = {} },
+		Blue = { deck = nil, tokenZones = {} },
 	}
 end
 
@@ -169,6 +167,37 @@ function registerObjectGUIDs()
 	data["Red"]["commanderDamage"] = { "4bfa09", "95eb63", "d5907a" }
 	data["Yellow"]["commanderDamage"] = { "45331a", "484c38", "906d4b" }
 	data["Blue"]["commanderDamage"] = { "8d172a", "bfcf4a", "f43e61" }
+	-- Physical TokenZone spreaders, retained in each player's data for future
+	-- deckbox/token automation. Prefer color tags, else use nearest playmat.
+	for _, guid in ipairs({ "031b64", "42728f", "51562f", "e6554f" }) do
+		local zone = getObjectFromGUID(guid)
+		if zone ~= nil then
+			local owner
+			for _, color in ipairs({ "White", "Red", "Yellow", "Blue" }) do
+				if zone.hasTag(color) then
+					if owner ~= nil then owner = nil; break end
+					owner = color
+				end
+			end
+			if owner == nil then
+				local pos = zone.getPosition()
+				local nearest = math.huge
+				for color, playerData in pairs(data) do
+					if playerData.playmat ~= nil then
+						local mat = playerData.playmat.getPosition()
+						local dx, dz = pos.x - mat.x, pos.z - mat.z
+						local distanceSq = dx * dx + dz * dz
+						if distanceSq < nearest then
+							owner, nearest = color, distanceSq
+						end
+					end
+				end
+			end
+			if owner ~= nil then
+				table.insert(data[owner].tokenZones, zone)
+			end
+		end
+	end
 end
 
 

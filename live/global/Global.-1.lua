@@ -56,8 +56,6 @@ function onLoad(saved)
     revealUp = 15.5
     revealUpS = 3.1
     revealRi = 1.5
-    exileRot = -180
-    gravFor = -4.14
 
     mtgSafeInit("land tracker", spawnLandTrackerText)
     mtgSafeInit("pregame", spawnKeepButtons)
@@ -76,10 +74,10 @@ end
 -- Ensure data structure exists
 function buildDataStructure()
 	data = {
-		White = { deck = nil },
-		Red = { deck = nil },
-		Yellow = { deck = nil },
-		Blue = { deck = nil },
+		White = { deck = nil, tokenZones = {} },
+		Red = { deck = nil, tokenZones = {} },
+		Yellow = { deck = nil, tokenZones = {} },
+		Blue = { deck = nil, tokenZones = {} },
 	}
 end
 
@@ -169,6 +167,37 @@ function registerObjectGUIDs()
 	data["Red"]["commanderDamage"] = { "4bfa09", "95eb63", "d5907a" }
 	data["Yellow"]["commanderDamage"] = { "45331a", "484c38", "906d4b" }
 	data["Blue"]["commanderDamage"] = { "8d172a", "bfcf4a", "f43e61" }
+	-- Physical TokenZone spreaders, retained in each player's data for future
+	-- deckbox/token automation. Prefer color tags, else use nearest playmat.
+	for _, guid in ipairs({ "031b64", "42728f", "51562f", "e6554f" }) do
+		local zone = getObjectFromGUID(guid)
+		if zone ~= nil then
+			local owner
+			for _, color in ipairs({ "White", "Red", "Yellow", "Blue" }) do
+				if zone.hasTag(color) then
+					if owner ~= nil then owner = nil; break end
+					owner = color
+				end
+			end
+			if owner == nil then
+				local pos = zone.getPosition()
+				local nearest = math.huge
+				for color, playerData in pairs(data) do
+					if playerData.playmat ~= nil then
+						local mat = playerData.playmat.getPosition()
+						local dx, dz = pos.x - mat.x, pos.z - mat.z
+						local distanceSq = dx * dx + dz * dz
+						if distanceSq < nearest then
+							owner, nearest = color, distanceSq
+						end
+					end
+				end
+			end
+			if owner ~= nil then
+				table.insert(data[owner].tokenZones, zone)
+			end
+		end
+	end
 end
 
 
@@ -425,6 +454,19 @@ function buildTableButtons()
             playerData["revealButton"].max_typed_number = 99
         end
 	end
+end
+
+-- Use the destination's actual transform rather than a library-relative offset.
+-- Graveyard/exile cards go face-up; empty-library fallback cards go face-down.
+function mtgGetZonePlacement(playerColor, key, height, faceDown)
+    local playerData = data and data[playerColor]
+    local zone = playerData and playerData[key]
+    if zone == nil then return nil, nil end
+    local pos = zone.getPosition()
+    pos.y = height or 3
+    local zoneRot = zone.getRotation()
+    local rot = { x = 0, y = zoneRot.y, z = faceDown and 180 or 0 }
+    return pos, rot
 end
 
 function onObjectNumberTyped(obj, ply, int)
@@ -741,10 +783,8 @@ function move2botLib(ply)
 				gr.setRotationSmooth(deck.getRotation(), false, true)
 				deck.setPositionSmooth(deck.getPosition() + Vector(0, 2, 0), false, true)
 			else
-				local rot = gr.getRotation()
-				rot.z = 180
-				local pos = data[ply]["libraryZone"].getPosition()
-				pos[2] = 1
+				local pos, rot = mtgGetZonePlacement(ply, "libraryZone", 1, true)
+				if pos == nil then return end
 				gr.setRotationSmooth(rot, false, true)
 				gr.setPositionSmooth(pos, false, true)
 			end
@@ -783,12 +823,8 @@ function move2grav(ply)
 		if gr.type == "Card" then
 			handTrigger(gr)
 		end
-		local rot = gr.getRotation()
-		rot.z = 0
-		rot.y = data[ply]["libraryZone"].getRotation().y + exileRot
-		local pos = data[ply]["libraryZone"].getPosition()
-			+ data[ply]["libraryZone"].getTransformForward():scale(gravFor)
-		pos[2] = 3
+		local pos, rot = mtgGetZonePlacement(ply, "graveyard", 3, false)
+		if pos == nil then return end
 		gr.setRotationSmooth(rot, false, true)
 		gr.setPositionSmooth(pos, false, true)
 	end, 1)
@@ -820,13 +856,8 @@ function move2exile(ply)
 		if gr.type == "Card" then
 			handTrigger(gr)
 		end
-		-- anchor on the dedicated exile zone so placement survives zone rotation
-		local zone = data[ply]["exileZone"]
-		local rot = gr.getRotation()
-		rot.z = 0
-		rot.y = zone.getRotation().y
-		local pos = zone.getPosition()
-		pos[2] = 3
+		local pos, rot = mtgGetZonePlacement(ply, "exileZone", 3, false)
+		if pos == nil then return end
 		gr.setRotationSmooth(rot, false, true)
 		gr.setPositionSmooth(pos, false, true)
 	end, 1)
@@ -1177,18 +1208,17 @@ function playerSerumPowder(button, playerColor, alt)
 
 	-- step 2: exile the current hand (stacked on the dedicated exile zone, which
 	-- keeps placement correct regardless of how the zones are rotated)
-	local zone = data[playerColor]["exileZone"]
-	local exileRotY = zone.getRotation().y
-	local exilePos = zone.getPosition()
+	local exilePos, exileRot = mtgGetZonePlacement(playerColor, "exileZone", 3, false)
+	if exilePos == nil then
+		Player[playerColor].broadcast("Serum Powder: exile zone not found.")
+		return
+	end
 	local i = 0
 	for _, card in pairs(cards) do
 		card.use_hands = false
 		card.use_gravity = true
-		local rot = card.getRotation()
-		rot.z = 0
-		rot.y = exileRotY
-		card.setRotationSmooth(rot, false, true)
-		card.setPositionSmooth({ x = exilePos.x, y = 3 + i * 0.4, z = exilePos.z }, false, true)
+		card.setRotationSmooth(exileRot, false, true)
+		card.setPositionSmooth({ x = exilePos.x, y = exilePos.y + i * 0.4, z = exilePos.z }, false, true)
 		i = i + 1
 	end
 	Wait.time(function()
@@ -3993,11 +4023,9 @@ end
 function mill1(playerColor)
 	local card = getCardFromZone(data[playerColor]["libraryZone"])
 	if card ~= nil then
-		local gravPos = data[playerColor]["graveyard"].getPosition()
-		local targPos = { x = gravPos.x, y = 3, z = gravPos.z }
+		local targPos, cardRot = mtgGetZonePlacement(playerColor, "graveyard", 3, false)
+		if targPos == nil then return end
 		--interactTrigger(card)
-		local cardRot = card.getRotation()
-		cardRot.z = 0
 		card.setRotationSmooth(cardRot, false, true)
 		card.setPositionSmooth(targPos, false, true)
 		Wait.time(function()

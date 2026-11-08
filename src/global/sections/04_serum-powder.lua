@@ -55,18 +55,17 @@ function playerSerumPowder(button, playerColor, alt)
 
 	-- step 2: exile the current hand (stacked on the dedicated exile zone, which
 	-- keeps placement correct regardless of how the zones are rotated)
-	local zone = data[playerColor]["exileZone"]
-	local exileRotY = zone.getRotation().y
-	local exilePos = zone.getPosition()
+	local exilePos, exileRot = mtgGetZonePlacement(playerColor, "exileZone", 3, false)
+	if exilePos == nil then
+		Player[playerColor].broadcast("Serum Powder: exile zone not found.")
+		return
+	end
 	local i = 0
 	for _, card in pairs(cards) do
 		card.use_hands = false
 		card.use_gravity = true
-		local rot = card.getRotation()
-		rot.z = 0
-		rot.y = exileRotY
-		card.setRotationSmooth(rot, false, true)
-		card.setPositionSmooth({ x = exilePos.x, y = 3 + i * 0.4, z = exilePos.z }, false, true)
+		card.setRotationSmooth(exileRot, false, true)
+		card.setPositionSmooth({ x = exilePos.x, y = exilePos.y + i * 0.4, z = exilePos.z }, false, true)
 		i = i + 1
 	end
 	Wait.time(function()

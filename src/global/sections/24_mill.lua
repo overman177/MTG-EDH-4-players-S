@@ -19,11 +19,9 @@ end
 function mill1(playerColor)
 	local card = getCardFromZone(data[playerColor]["libraryZone"])
 	if card ~= nil then
-		local gravPos = data[playerColor]["graveyard"].getPosition()
-		local targPos = { x = gravPos.x, y = 3, z = gravPos.z }
+		local targPos, cardRot = mtgGetZonePlacement(playerColor, "graveyard", 3, false)
+		if targPos == nil then return end
 		--interactTrigger(card)
-		local cardRot = card.getRotation()
-		cardRot.z = 0
 		card.setRotationSmooth(cardRot, false, true)
 		card.setPositionSmooth(targPos, false, true)
 		Wait.time(function()

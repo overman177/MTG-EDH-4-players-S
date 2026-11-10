@@ -1,0 +1,15 @@
+<Panel scale="0.2083333,0.25" width="480" height="400" position="0,0,-51" color="#000000">
+<VerticalLayout childForceExpandHeight	="false">
+    <Text minHeight="136" fontSize="64" color="#FFFFFF">Super Swapper</Text>
+    <GridLayout flexibleHeight="1" spacing="8" childAlignment="MiddleCenter" cellSize="96" color="#404040">
+        <Button onClick="swapPlayerWhite" color="#FFFFFF"/>
+        <Button onClick="swapPlayerRed" color="#da1918"/>
+        <Button onClick="swapPlayerOrange" color="#f4641d"/>
+        <Button onClick="swapPlayerYellow" color="#e7e52c"/>
+        <Button onClick="swapPlayerGreen" color="#31b32b"/>
+        <Button onClick="swapPlayerBlue" color="#1f87ff"/>
+        <Button onClick="swapPlayerPurple" color="#a020f0"/>
+        <Button onClick="swapPlayerPink" color="#f570ce"/>
+    </GridLayout>
+</VerticalLayout>
+</Panel>

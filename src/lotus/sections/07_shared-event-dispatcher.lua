@@ -4,6 +4,7 @@
 
 function onLoad(savedData)
     Playmats.load(savedData)
+    Wait.frames(Playmats.alignExisting, 30)
     Settings.load(savedData)
     Preview.load(savedData)
     DrawRandom.load()

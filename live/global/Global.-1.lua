@@ -6762,7 +6762,7 @@ end
 
 -------------------------------- PATCH NOTES -----------------------------------
 -- Version currently deployed. Bump this when cutting a new release.
-VERSION = "v1.7.0"
+VERSION = "v1.7.1"
 
 -- Transient top-center screen message; reads VERSION so future releases only
 -- need to change the existing version constant. The XML itself is not edited

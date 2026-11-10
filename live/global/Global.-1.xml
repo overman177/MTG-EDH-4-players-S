@@ -487,6 +487,11 @@
                 <Toggle id="counter_rad_me" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="80" minWidth="80" />
                 <Toggle id="counter_rad_everyone" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="100" minWidth="100" />
             </HorizontalLayout>
+            <HorizontalLayout preferredHeight="38" minHeight="38" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
+                <Text preferredWidth="260" minWidth="260" fontSize="17" color="rgb(0.9,0.9,0.9)" alignment="MiddleLeft" text="Mana Counters" />
+                <Toggle id="counter_mana_me" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="80" minWidth="80" />
+                <Toggle id="counter_mana_everyone" isOn="True" onValueChanged="777766/counterToggle" preferredWidth="100" minWidth="100" />
+            </HorizontalLayout>
             <HorizontalLayout preferredHeight="42" minHeight="42" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
                 <Text preferredWidth="260" minWidth="260" fontSize="17" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleLeft" text="ALL COUNTERS" />
                 <Toggle id="counter_all_me" isOn="True" onValueChanged="777766/allMeToggle" preferredWidth="80" minWidth="80" />

@@ -1283,12 +1283,13 @@ Settings = {
     TAG = "MTG_EDH_Settings_Controller",
     OLD_CONTROLLER_GUID = "777766",  -- migration only (can be removed later)
     OWNERS = {"Red", "Blue", "White", "Yellow"},
-    TYPES = {"energy", "poison", "experience", "rad"},
+    TYPES = {"energy", "poison", "experience", "rad", "mana"},
     TAGS = {
         energy = "Counter_Energy",
         poison = "Counter_Poison",
         experience = "Counter_Experience",
-        rad = "Counter_Rad"
+        rad = "Counter_Rad",
+        mana = "Counter_Mana"
     },
     state = {},
     previewOwnEnabled = {},
@@ -2459,6 +2460,69 @@ function Settings.ensureGeneralTab(panel)
     return changed
 end
 
+-- Add the new counter using the same ME / EVERYONE semantics as
+-- Energy, Poison, Experience and Rad. This also migrates an older UI panel
+-- already loaded in the TTS save, without recreating the settings window.
+function Settings.manaCounterRow()
+    return {
+        tag = "HorizontalLayout",
+        attributes = {
+            preferredHeight = "38", minHeight = "38", spacing = "8",
+            childForceExpandWidth = "false",
+            childForceExpandHeight = "false"
+        },
+        children = {
+            {
+                tag = "Text",
+                attributes = {
+                    preferredWidth = "260", minWidth = "260",
+                    fontSize = "17", color = "rgb(0.9,0.9,0.9)",
+                    alignment = "MiddleLeft", text = "Mana Counters"
+                }
+            },
+            {
+                tag = "Toggle",
+                attributes = {
+                    id = "counter_mana_me", isOn = "True",
+                    onValueChanged = self.getGUID() .. "/counterToggle",
+                    preferredWidth = "80", minWidth = "80"
+                }
+            },
+            {
+                tag = "Toggle",
+                attributes = {
+                    id = "counter_mana_everyone", isOn = "True",
+                    onValueChanged = self.getGUID() .. "/counterToggle",
+                    preferredWidth = "100", minWidth = "100"
+                }
+            }
+        }
+    }
+end
+
+function Settings.ensureManaCounterRow(tab)
+    local layout = nil
+    for _, child in ipairs(tab.children or {}) do
+        if child.tag == "VerticalLayout" then
+            layout = child
+            break
+        end
+    end
+    if layout == nil or type(layout.children) ~= "table" then return false end
+    local insertAt = #layout.children + 1
+    for i, row in ipairs(layout.children) do
+        for _, cell in ipairs(row.children or {}) do
+            local id = cell.attributes and cell.attributes.id
+            if id == "counter_mana_me" or id == "counter_mana_everyone" then
+                return false
+            end
+            if id == "counter_all_me" then insertAt = i end
+        end
+    end
+    table.insert(layout.children, insertAt, Settings.manaCounterRow())
+    return true
+end
+
 -- Tabbed panel is also generated as a fallback when no Global XML panel exists.
 -- The installer automatically upgrades the legacy panel on first load.
 function Settings.tabbedPanel()
@@ -2910,6 +2974,12 @@ function Settings.tabbedPanel()
             Settings.previewTab(),
         },
     }
+    for _, child in ipairs(panel.children) do
+        if child.attributes and child.attributes.id == "MTG_Settings_Tab_Counters" then
+            Settings.ensureManaCounterRow(child)
+            break
+        end
+    end
     Settings.ensureGeneralTab(panel)
     return panel
 end
@@ -2992,6 +3062,12 @@ function Settings.installUI()
                     node = nodes[index]
                     changed = true
                     print("MTG Helper: upgraded Patch Notes to the release reader.")
+                end
+                if node.attributes.id == "MTG_Settings_Tab_Counters" then
+                    if Settings.ensureManaCounterRow(node) then
+                        changed = true
+                        print("MTG Helper: added Mana counter visibility settings.")
+                    end
                 end
                 if node.attributes.id == "MTG_Settings_Tab_Preview" then
                     local upgraded = false

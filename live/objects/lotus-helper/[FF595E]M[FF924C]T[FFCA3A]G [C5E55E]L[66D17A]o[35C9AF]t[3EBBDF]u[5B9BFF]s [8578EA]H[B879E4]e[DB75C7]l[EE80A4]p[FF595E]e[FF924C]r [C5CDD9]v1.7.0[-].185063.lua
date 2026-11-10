@@ -843,20 +843,60 @@ local Playmats = {
     ART_TAG = "MTG_Portable_ArtPlaymat",
     guids = {},            -- player color -> spawned playmat GUID
     generations = {},      -- cancel overlapping replacement requests
-    FALLBACK_DECK_DIRS = {
-        White = -1, Red = 1, Yellow = -1, Blue = 1
-    }
+    PLAYER_COLORS = {"White", "Red", "Yellow", "Blue"}
 }
 
 
-function Playmats.getDirection(color)
-    local ok, dirs = pcall(function()
-        return Global.getTable("deckDirs")
-    end)
-    if ok and type(dirs) == "table" and type(dirs[color]) == "number" then
-        return dirs[color]
+-- Battlefield scripting zones, rather than player hands, define the exact
+-- position, rotation and footprint of each artwork playmat.
+function Playmats.getBattlefieldZone(color)
+    local matches = {}
+    for _, zone in ipairs(getObjectsWithTag("Battlefield") or {}) do
+        if zone.type == "Scripting" and zone.hasTag(color) then
+            matches[#matches + 1] = zone
+        end
     end
-    return Playmats.FALLBACK_DECK_DIRS[color] or 1
+    -- Ambiguous zones must never cause a mat to land on the wrong board.
+    if #matches ~= 1 then return nil end
+    return matches[1]
+end
+
+function Playmats.fitToBattlefield(mat, color)
+    local zone = Playmats.getBattlefieldZone(color)
+    if zone == nil or mat == nil or mat.isDestroyed() then return false end
+
+    local zoneScale = zone.getScale()
+    local bounds = mat.getBoundsNormalized()
+    if bounds == nil or bounds.size == nil
+        or bounds.size.x <= 0.001 or bounds.size.z <= 0.001 then
+        return false
+    end
+
+    local current = mat.getScale()
+    mat.setScale({
+        x = current.x * zoneScale.x / bounds.size.x,
+        y = current.y,
+        z = current.z * zoneScale.z / bounds.size.z
+    })
+
+    -- Scripting zones are volumes: use their x/z center, not their y center.
+    -- Keep the artwork on the tabletop, below cards and counters.
+    local position = zone.getPosition()
+    mat.setPosition({position.x, Playmats.CONFIG.height, position.z})
+    local rot = zone.getRotation()
+    mat.setRotation({0, rot.y + Playmats.CONFIG.rotationY, 0})
+    mat.setLock(Playmats.CONFIG.locked)
+    mat.interactable = Playmats.CONFIG.interactable
+    return true
+end
+
+function Playmats.alignExisting()
+    for _, color in ipairs(Playmats.PLAYER_COLORS) do
+        local mat = Playmats.getOwnedMat(color)
+        if mat ~= nil then
+            pcall(function() Playmats.fitToBattlefield(mat, color) end)
+        end
+    end
 end
 
 
@@ -960,22 +1000,18 @@ function Playmats.create(color, imageURL)
     local player = Player[color]
     if player == nil then return end
 
-    local okHand, hand = pcall(function()
-        return player.getHandTransform(1)
-    end)
-    if not okHand or hand == nil then
-        player.broadcast("[FF0000]Playmat: no hand zone found.")
+    local zone = Playmats.getBattlefieldZone(color)
+    if zone == nil then
+        player.broadcast("[FF0000]Playmat: exactly one Battlefield zone tagged "
+            .. color .. " is required.")
         return
     end
 
-    local direction = Playmats.getDirection(color)
     local c = Playmats.CONFIG
-    local matPos = hand.position
-        + hand.forward * c.forwardOffset
-        + hand.right * c.sideOffset * direction
-    matPos.y = c.height
-
-    local matRot = hand.rotation + Vector(0, c.rotationY, 0)
+    local center = zone.getPosition()
+    local matPos = {center.x, c.height, center.z}
+    local zoneRot = zone.getRotation()
+    local matRot = {0, zoneRot.y + c.rotationY, 0}
     local json = Playmats.makeJSON(imageURL)
 
     -- Don't delete the current mat until a replacement was spawned.
@@ -1000,6 +1036,19 @@ function Playmats.create(color, imageURL)
                 obj.addTag(Playmats.ART_TAG)
                 obj.interactable = c.interactable
                 obj.setLock(c.locked)
+
+                -- Wait for TTS to instantiate the custom mesh before measuring
+                -- its actual world-size. Bounds, not scale, determine the fit.
+                Wait.frames(function()
+                    if obj == nil or obj.isDestroyed()
+                        or Playmats.generations[color] ~= generation then return end
+                    local ok, fitted = pcall(function()
+                        return Playmats.fitToBattlefield(obj, color)
+                    end)
+                    if not ok or not fitted then
+                        player.broadcast("[FF0000]Playmat: unable to measure artwork mesh.")
+                    end
+                end, 15)
 
                 -- Save the new GUID BEFORE destroying the old mat.
                 Playmats.guids[color] = obj.getGUID()
@@ -4432,6 +4481,7 @@ end
 
 function onLoad(savedData)
     Playmats.load(savedData)
+    Wait.frames(Playmats.alignExisting, 30)
     Settings.load(savedData)
     Preview.load(savedData)
     DrawRandom.load()

@@ -75,7 +75,11 @@ end
 
 -- manage turns through chat commands
 function onChat(message, pl)
-	if message:lower():match("^security%s+scan%s*$") then
+	if message:lower():match("^security%s+deep%s+scan%s*$") then
+        BL_securityScanAll(pl.color, true)
+        return false
+    end
+    if message:lower():match("^security%s+scan%s*$") then
 		BL_securityScanAll(pl.color)
 		return false
 	end

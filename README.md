@@ -32,7 +32,7 @@ More details: [Combat targeting](docs/COMBAT_TARGETING.md).
 
 ## One-click updates (Windows)
 
-Once the latest files are on your PC, **double-click `UPDATE_TABLE.bat`** in the repository root. Or in VS Code choose **Terminal > Run Task > MTG: Update from GitHub + Deploy**. The updater:
+Once the latest files are on your PC, **double-click `UPDATE_TABLE.bat`** in the repository root. In VS Code press **Ctrl+Shift+B** (the default update task), or run `\.\UPDATE_TABLE.bat` in the terminal. **Do not use Code Runner's `Run Code` button:** it may execute `tempCodeRunnerFile.bat` containing only the selected text instead of the real launcher. You can also choose **Terminal > Run Task > MTG: Update from GitHub + Deploy**. The updater:
 
 1. Moves any old `.tts-backups/` folder outside the repository to stop Smart Import duplicate GUID errors.
 2. Stashes local code edits and new files safely, while keeping `savegame.json`, `.vscode/settings.json` and incoming `New/` files in place.

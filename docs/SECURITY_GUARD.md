@@ -8,7 +8,7 @@ Both 4-player and 6-player tables include a non-destructive Global Lua monitor i
 
 - A very light initial scan runs in small batches after loading. Only scripts with worm-like capabilities are reported.
 - `onObjectSpawn` and `onObjectStateChange` check newly visible objects.
-- Ordinary scans use light container and alternate-state metadata without serializing entire decks or cards. Use `security deep scan` if nested bags/decks need further inspection.
+- Normal scans keep `getObjects()` inspection for real decks and bags. Known Black Lotus keyword dispensers and utility props are exempt from that method by GUID/name because TTS rejects the call on them. Their own Lua remains inspected. `security deep scan` uses `getData()` to inspect nested contents, including those of exempt props, when explicitly requested.
 - Official bundled GUIDs are exempted from heuristic warnings. GUID presence is not cryptographic verification.
   Their scripts are compared against the first code observed during that session.
 - Only high-signal script replacement, remote-code execution, and script-bearing spawn patterns are reported. Innocuous unknown scripts are not counted as infections.

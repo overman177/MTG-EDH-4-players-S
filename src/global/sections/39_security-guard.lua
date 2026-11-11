@@ -69,9 +69,17 @@ local function blSecurityInspectSaved(node, path, depth, budget)
     end
 end
 
+-- IMPORTANT: TTS obj.tag can describe generic/custom objects that DO NOT
+-- implement getObjects(). Only real Deck/Bag/Infinite container object types
+-- support that API. getQuantity() also returns -1 for non-containers.
+-- Checking only tags caused red script errors on ordinary keyword tokens.
 local function blSecurityIsContainer(obj)
-    return obj.tag == "Deck" or obj.tag == "Bag" or obj.tag == "Container"
-        or obj.type == "Infinite"
+    local t = obj.type
+    if t ~= "Deck" and t ~= "Bag" and t ~= "Infinite"
+        and t ~= "Custom_Model_Bag" and t ~= "Custom_Bag" then
+        return false
+    end
+    return obj.getQuantity ~= nil and obj.getQuantity() > 0
 end
 
 -- Fast path: use TTS metadata; DO NOT serialize the object via getData().

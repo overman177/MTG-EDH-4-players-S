@@ -25,17 +25,14 @@ jobs:
         run: python tools/audit_objects.py .
       - name: Verify lossless source assembly
         run: python tools/build.py --check
-      - name: Test anti-worm guard and safe card import validation
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y lua5.2
-          lua5.2 tests/security_guard_test.lua
       - name: Check Lua 5.2 syntax of assembled scripts
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y lua5.2
           luac5.2 -p .build/Global.lua
           luac5.2 -p .build/LotusHelper.lua
+      - name: Test anti-worm guard and safe card import validation
+        run: lua5.2 tests/security_guard_test.lua
       - name: Test preview pipeline and asset cache
         run: lua5.2 tests/preview_pipeline_test.lua
       - name: Test independent four-seat counter visibility

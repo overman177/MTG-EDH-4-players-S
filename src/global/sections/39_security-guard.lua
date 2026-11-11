@@ -87,6 +87,17 @@ local blSecurityUninspectableGUIDs = {
     ["feadfa"] = true, -- Haste
     ["60df73"] = true, -- d6
     ["de6012"] = true, -- Renowned
+    ["b35666"] = true, -- Krark's Coin Flipper
+    ["cf8328"] = true, -- Red Commander Damage
+    ["d658b5"] = true, -- White Commander Damage
+    ["e3ecb3"] = true, -- d12
+    ["e7428d"] = true, -- Goaded
+    ["fb57bd"] = true, -- Alcove Flip Deck Box (White)
+    ["fc4c68"] = true, -- MTG Treachery
+    ["cfdfd9"] = true, -- d8
+    ["080e23"] = true, -- Blue Commander Damage
+    ["0cebc6"] = true, -- Red Commander Damage
+    ["140a9c"] = true, -- Yellow Commander Damage
 }
 local blSecurityUninspectableNames = {
     ["Turn Skipper Puck"] = true,
@@ -103,10 +114,11 @@ local blSecurityUninspectableNames = {
 
 local function blSecurityIsContainer(obj)
     local t = obj.type
-    if t ~= "Deck" and t ~= "Bag" and t ~= "Infinite"
-        and t ~= "Custom_Model_Bag" and t ~= "Custom_Bag" then
-        return false
-    end
+    -- Only real Deck and Bag types support getObjects() reliably here.
+    -- An Infinite or custom bag-like prop may reject the call even when it
+    -- reports a nonzero quantity; pcall cannot suppress TTS's red error UI.
+    -- The own Lua script is still scanned, and explicit deep scans use getData().
+    if t ~= "Deck" and t ~= "Bag" then return false end
 
     local guid = obj.getGUID()
     -- Explicit GUID exceptions cover exceptional built-in props.

@@ -6,21 +6,18 @@ Both 4-player and 6-player tables include a non-destructive Global Lua monitor i
 
 ## Behavior
 
-- An initial, batched scan starts after the table has loaded.
+- A very light initial scan runs in small batches after loading. Only scripts with worm-like capabilities are reported.
 - `onObjectSpawn` and `onObjectStateChange` check newly visible objects.
-- The monitor reads Lua scripts and recursively inspects serialized
-  `ContainedObjects` and `States`, to identify scripted deck cards and
-  alternate states.
-- Official bundled object GUIDs are exempted from **unexpected-script** warnings.
+- Ordinary scans use light container and alternate-state metadata without serializing entire decks or cards. Use `security deep scan` if nested bags/decks need further inspection.
+- Official bundled GUIDs are exempted from heuristic warnings. GUID presence is not cryptographic verification.
   Their scripts are compared against the first code observed during that session.
-- Unknown scripts are reported, with indicators such as `setLuaScript`,
-  `script_code =`, `spawnObjectJSON`, and `WebRequest`.
+- Only high-signal script replacement, remote-code execution, and script-bearing spawn patterns are reported. Innocuous unknown scripts are not counted as infections.
 - **No objects are deleted, locked, modified, reloaded, or quarantined.**
   A finding is a warning, not proof of malware. No card names are broadcast.
 - The built-in `scryfall <card>` command validates downloaded JSON *before*
   spawning it, blocking non-Card/Deck payloads or JSON with embedded Lua/UI.
   Valid card JSON is spawned byte-for-byte as before, preserving DFC states.
-- Type `security scan` in TTS chat to trigger a fresh batched scan; a summary
+- Type `security scan` in chat for a lightweight manual scan; `security deep scan` performs slower recursive checks. A summary
   is sent privately to the requesting seat. To avoid abuse, scans have a short
   cooldown.
 - To run the offline regression tests: `lua5.2 tests/security_guard_test.lua`.
@@ -32,8 +29,7 @@ TTS may execute an imported object's `onLoad` before `onObjectSpawn` detects it;
 objects imported through third-party scripts are **not** pre-sanitized by this
 guard. A malicious host can edit/disable Global or forge the reports.
 
-Official GUID membership is not cryptographic authentication. A script already
-modified before the initial scan may be accepted as the session baseline.
+Official GUID membership is not cryptographic authentication. Known bundled scripts are not hashed against a release manifest. The scanner is heuristic and may miss obfuscated worms.
 Future work: release-pinned script hashes, third-party importer hardening, and
 removing automatic player promotions and unrestricted third-party updater commands.
 

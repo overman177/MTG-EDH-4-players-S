@@ -156,7 +156,16 @@ ordinaryBag.getObjects = function()
 end
 onObjectSpawn(deckWithThreat)
 onObjectSpawn(ordinaryBag)
-assert(actualDeckScan == 1 and actualBagScan == 1,
+local savedBefore = dataCalls
+getAllObjects = function() return {renamed, deckWithThreat, ordinaryBag} end
+BL_securityScanAll(nil, true)
+assert(dataCalls > savedBefore,
+    "Deep scan must still serialize exempt keyword dispensers")
+assert(invalidContainerCalls == 0,
+    "Deep scan must not call getObjects on exempt objects")
+assert(actualDeckScan > 1 and actualBagScan > 1,
+    "Real container inspection must remain enabled during deep scan")
+assert(actualDeckScan == 2 and actualBagScan == 2,
     "Real decks and bags must still receive getObjects() checks")
 assert(invalidContainerCalls == 0,
     "Exempt props must not trigger any unsupported getObjects() calls")

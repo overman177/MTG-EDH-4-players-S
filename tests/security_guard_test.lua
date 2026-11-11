@@ -102,6 +102,22 @@ assert(invalidContainerCalls == 0, "Manual scan must skip noncontainer getObject
 -- Deep mode deliberately performs serialization and detects nested payloads.
 BL_securityScanAll(nil, true)
 assert(dataCalls > 0, "Deep scan should inspect nested saved data")
+-- Newly observed errors occur on otherwise ordinary Infinite/custom props.
+-- They are NOT real containers even when getQuantity() is positive.
+local unsupportedCalls = 0
+for _, objType in ipairs({"Infinite", "Custom_Model_Bag", "Custom_Bag"}) do
+    local prop = fake("bd0001", "function onLoad() end", {{guid="bd0002"}})
+    prop.type = objType
+    prop.getName = function() return "Unknown " .. objType end
+    prop.getObjects = function()
+        unsupportedCalls = unsupportedCalls + 1
+        error("unsupported getObjects on " .. objType)
+    end
+    onObjectSpawn(prop)
+end
+assert(unsupportedCalls == 0,
+    "Unknown Infinite/custom props must not receive getObjects()")
+
 -- Exceptions for bundled keyword dispensers and utility pieces.
 -- They MUST remain script-inspected, but must never receive getObjects().
 local exceptions = {

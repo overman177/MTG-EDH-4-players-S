@@ -45,10 +45,11 @@
         "src/global/sections/35_search-filter.lua",
         "src/global/sections/36_player-panel.lua",
         "src/global/sections/37_host-panel.lua",
-        "src/global/sections/38_bug-reports.lua"
+        "src/global/sections/38_bug-reports.lua",
+        "src/global/sections/39_security-guard.lua"
       ],
       "source_git_blob": "5749bcd3751f4f36d6ffaf1771efbf24c868bb82",
-      "section_count": 39
+      "section_count": 40
     },
     {
       "id": "lotus",

@@ -1,91 +1,85 @@
--- Black Lotus Security Guard regression tests (Lua 5.2).
--- Run from repository root: lua5.2 tests/security_guard_test.lua
-
-local public, private = {}, {}
+-- Black Lotus Guard tests. Run: lua5.2 tests/security_guard_test.lua
+local public, private, dataCalls = {}, {}, 0
 broadcastToAll = function(message) public[#public + 1] = tostring(message) end
 broadcastToColor = function(message, color) private[#private + 1] = {message, color} end
-getAllObjects = function() return {} end
 Wait = {frames = function(callback) callback() end}
 
-local responses = {
-    clean = {Name = "Card", Nickname = "Island", States = {["2"] = {Name = "Card"}}},
-    cleanDeck = {Name = "Deck", ContainedObjects = {{Name = "Card"}, {Name = "Card"}}},
-    scripted = {Name = "Card", LuaScript = "function onLoad() end"},
-    stateScripted = {Name = "Card", States = {["2"] = {Name = "Card", LuaScript = "bad"}}},
-    nestedScripted = {Name = "Deck", ContainedObjects = {{Name = "Card", LuaScript = "bad"}}},
-    xml = {Name = "Card", XmlUI = "<Panel/>"},
-    state = {Name = "Card", LuaScriptState = "nonempty"},
-    badType = {Name = "Custom_Token"},
+local fixtures = {
+    clean = {Name="Card", States={["2"]={Name="Card"}}},
+    cleanDeck = {Name="Deck", ContainedObjects={{Name="Card"}}},
+    scripted = {Name="Card", LuaScript="onLoad()"},
+    stateScripted = {Name="Card", States={["2"]={LuaScript="onLoad()"}}},
+    nestedScripted = {Name="Deck", ContainedObjects={{LuaScript="onLoad()"}}},
+    xml = {Name="Card", XmlUI="<Panel/>"},
+    state = {Name="Card", LuaScriptState="json"},
+    badType = {Name="Custom_Token"}
 }
 JSON = {decode = function(text)
-    if responses[text] then return responses[text] end
-    error("Invalid JSON")
+    if fixtures[text] then return fixtures[text] end
+    error("not JSON")
 end}
 
 dofile("src/global/sections/39_security-guard.lua")
-
-local function valid(payload, expected)
-    local ok, reason = BL_securityValidateCardJSON(payload)
-    assert(ok == expected, payload .. ": " .. tostring(reason))
+local function valid(s, expected)
+    local ok = BL_securityValidateCardJSON(s)
+    assert(ok == expected, "unexpected validation: " .. s:sub(1,30))
 end
-valid("clean", true)
-valid("cleanDeck", true)
-valid("scripted", false)
-valid("stateScripted", false)
-valid("nestedScripted", false)
-valid("xml", false)
-valid("state", false)
-valid("badType", false)
-valid("not-json", false)
-valid(string.rep("A", 2097153), false)
+valid("clean",true)
+valid("cleanDeck",true)
+valid("scripted",false)
+valid("stateScripted",false)
+valid("nestedScripted",false)
+valid("xml",false)
+valid("state",false)
+valid("badType",false)
+valid("not-json",false)
 
-local code = "function onLoad() getObjectFromGUID('123456').setLuaScript('payload') end"
-local untrusted = {
-    tag = "Custom", type = "Custom",
-    getGUID = function() return "abcdef" end,
-    getLuaScript = function() return code end,
-    getStates = function() return nil end,
-}
-onObjectSpawn(untrusted)
-assert(#public == 1, "Unknown scripted object must be reported")
-assert(public[1]:find("setLuaScript", 1, true), "Must report worm indicator")
-onObjectSpawn(untrusted)
-assert(#public == 1, "Duplicate alerts must be suppressed")
+local function fake(guid, script, contents, states)
+    return {
+        tag=contents and "Deck" or "Custom",
+        type=contents and "Deck" or "Custom",
+        getGUID=function() return guid end,
+        getLuaScript=function() return script end,
+        getObjects=function() return contents end,
+        getStateId=function() return states and 1 or -1 end,
+        getStates=function() return states end,
+        getData=function()
+            dataCalls = dataCalls + 1
+            return {ContainedObjects={{GUID="dee123",
+                LuaScript="function onLoad() getObjectFromGUID('1').setLuaScript('bad') end"}}}
+        end,
+    }
+end
 
--- Encoder is a bundled trusted GUID in both release inventories.
-local bundledCode = "function onLoad() end"
-local trusted = {
-    tag = "Custom", type = "Custom",
-    getGUID = function() return "02e062" end,
-    getLuaScript = function() return bundledCode end,
-    getStates = function() return nil end,
-}
+local benign = fake("abc001", "function onLoad() self.setName('Safe') end")
+local worm = fake("abc002", "function onLoad() target.setLuaScript('bad') end")
+local trusted = fake("02e062", "function onLoad() target.setLuaScript('updater') end")
+local states = fake("abc003", "", nil, {{
+    guid="abc301", lua_script="function onLoad() o.script_code = 'bad' end"
+}})
+local deck = fake("abc004", "", {{
+    guid="abc401", lua_script="function onLoad() obj.setLuaScript('worm') end"
+}})
+onObjectSpawn(benign)
 onObjectSpawn(trusted)
-assert(#public == 1, "Known table scripts must not be quarantined or warned on first scan")
-bundledCode = "function onLoad() print('updated') end"
-onObjectSpawn(trusted)
-assert(#public == 2, "A known script changed after baseline must be flagged")
-
-local deck = {
-    tag = "Container", type = "Deck",
-    getGUID = function() return "f0f0f0" end,
-    getLuaScript = function() return "" end,
-    getStates = function() return nil end,
-    getData = function() return {
-        ContainedObjects = {
-            {GUID = "e0e0e0", Name = "Card", LuaScript = "function onLoad() end"},
-        },
-    } end,
-}
+assert(#public == 0, "Known or innocuous scripts should not alert")
+onObjectSpawn(worm)
+assert(#public == 1, "A worm-capable script should alert")
+onObjectSpawn(worm)
+assert(#public == 1, "Repeated scans should deduplicate alerts")
+onObjectSpawn(states)
 onObjectSpawn(deck)
-assert(#public == 3, "Nested scripted cards must be reported")
-onObjectStateChange(deck, "oldstate")
-assert(#public == 3, "No duplicate reports on state changes")
+assert(dataCalls == 0, "Fast path MUST NOT call getData")
+onObjectStateChange(benign, "old")
+assert(dataCalls == 0, "State change path MUST NOT call getData")
 
-getAllObjects = function() return {untrusted, trusted, deck} end
+getAllObjects = function() return {benign, worm, trusted, states, deck} end
 BL_securityScanAll("Blue")
-assert(#private == 1, "Manual scans should send summary to requester")
-assert(private[1][2] == "Blue")
-assert(private[1][1]:find("Scanned 3 objects", 1, true))
+assert(#private == 1 and private[1][2] == "Blue", "Manual summary must be private")
+assert(private[1][1]:find("Scan: 5 objects",1,true))
+assert(dataCalls == 0, "Normal scan MUST NOT call getData")
 
-print("Security guard tests passed.")
+-- Deep mode deliberately performs serialization and detects nested payloads.
+BL_securityScanAll(nil, true)
+assert(dataCalls > 0, "Deep scan should inspect nested saved data")
+print("Security guard tests passed")

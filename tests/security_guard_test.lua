@@ -102,4 +102,63 @@ assert(invalidContainerCalls == 0, "Manual scan must skip noncontainer getObject
 -- Deep mode deliberately performs serialization and detects nested payloads.
 BL_securityScanAll(nil, true)
 assert(dataCalls > 0, "Deep scan should inspect nested saved data")
+-- Exceptions for bundled keyword dispensers and utility pieces.
+-- They MUST remain script-inspected, but must never receive getObjects().
+local exceptions = {
+    {guid = "b653d2", name = "Turn Skipper Puck"},
+    {guid = "feadfa", name = "Haste"},
+    {guid = "de6012", name = "Renowned"},
+    {guid = "b9f545", name = "Menace"},
+    {guid = "c1840d", name = "Vigilance"},
+    {guid = "c3ca32", name = "Double Strike"},
+    {guid = "c36338", name = "First Strike"},
+    {guid = "bc8aef", name = "Rhystic Block Bag"},
+    {guid = "beb998", name = "+X/+Y Counter"},
+    {guid = "60df73", name = "d6"},
+    {guid = "cbcea4", name = "d4"},
+}
+for _, pair in ipairs(exceptions) do
+    local obj = fake(pair.guid, "", {{guid = "child"}})
+    obj.tag = "Bag"
+    obj.type = "Infinite"
+    obj.getName = function() return pair.name end
+    obj.getObjects = keywordToken.getObjects
+    onObjectSpawn(obj)
+end
+-- Name-based exception survives reimported infinite-bag GUID changes.
+local renamed = fake("abcdef", "", {{guid = "child"}})
+renamed.type = "Infinite"
+renamed.getName = function() return "Haste" end
+renamed.getObjects = keywordToken.getObjects
+onObjectSpawn(renamed)
+assert(invalidContainerCalls == 0,
+    "Known uninspectable props must never be passed to getObjects")
+
+-- Valid imported decks and ordinary bags MUST still be scanned.
+local actualDeckScan, actualBagScan = 0, 0
+local deckWithThreat = fake("bac001", "", {{
+    guid="bac002", lua_script="function onLoad() obj.setLuaScript('bad') end"
+}})
+deckWithThreat.type = "Deck"
+deckWithThreat.getName = function() return "Haste" end
+deckWithThreat.getObjects = function()
+    actualDeckScan = actualDeckScan + 1
+    return {{guid="bac002",lua_script="function onLoad() obj.setLuaScript('bad') end"}}
+end
+local ordinaryBag = fake("bac003", "", {{
+    guid="bac004", lua_script="function onLoad() x.setLuaScript('worm') end"
+}})
+ordinaryBag.type = "Bag"
+ordinaryBag.getName = function() return "Imported Bag" end
+ordinaryBag.getObjects = function()
+    actualBagScan = actualBagScan + 1
+    return {{guid="bac004",lua_script="function onLoad() x.setLuaScript('worm') end"}}
+end
+onObjectSpawn(deckWithThreat)
+onObjectSpawn(ordinaryBag)
+assert(actualDeckScan == 1 and actualBagScan == 1,
+    "Real decks and bags must still receive getObjects() checks")
+assert(invalidContainerCalls == 0,
+    "Exempt props must not trigger any unsupported getObjects() calls")
+
 print("Security guard tests passed")

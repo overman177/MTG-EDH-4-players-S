@@ -7952,9 +7952,13 @@ function BL_securityInspectObject(obj, deep)
         end
     end
 
-    -- Expensive full serialization is ONLY available on explicit deep scans.
-    -- It is needed for objects inside other objects inside bags/decks.
-    if deep and (blSecurityIsContainer(obj) or
+    -- Only explicit deep scans serialize objects. Unlike getObjects(), getData()
+    -- is available for these keyword dispensers, so their nested card scripts
+    -- remain inspectable even though they cannot safely use getObjects().
+    local t = obj.type
+    local nestedPossible = t == "Deck" or t == "Bag" or t == "Infinite"
+        or t == "Custom_Model_Bag" or t == "Custom_Bag"
+    if deep and (nestedPossible or
             (obj.getStateId and obj.getStateId() ~= -1)) then
         local data = obj.getData()
         if type(data) == "table" then

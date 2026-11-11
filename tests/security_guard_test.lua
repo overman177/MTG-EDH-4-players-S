@@ -40,6 +40,7 @@ local function fake(guid, script, contents, states)
         type=contents and "Deck" or "Custom",
         getGUID=function() return guid end,
         getLuaScript=function() return script end,
+        getQuantity=function() return contents and #contents or -1 end,
         getObjects=function() return contents end,
         getStateId=function() return states and 1 or -1 end,
         getStates=function() return states end,
@@ -60,6 +61,24 @@ local states = fake("abc003", "", nil, {{
 local deck = fake("abc004", "", {{
     guid="abc401", lua_script="function onLoad() obj.setLuaScript('worm') end"
 }})
+-- Regression: keyword tokens / custom counters can be tagged as Bag/Container,
+-- but do NOT implement getObjects(). Never invoke it on these objects.
+local invalidContainerCalls = 0
+local keywordToken = fake("bacdad", "function onLoad() end")
+keywordToken.tag = "Bag"
+keywordToken.type = "Custom_Token"
+keywordToken.getQuantity = function() return 5 end
+keywordToken.getObjects = function()
+    invalidContainerCalls = invalidContainerCalls + 1
+    error("getObjects unsupported on keyword token")
+end
+local customCounter = fake("c0c0c0", "function onLoad() end")
+customCounter.tag = "Container"
+customCounter.type = "Custom_Model"
+customCounter.getObjects = keywordToken.getObjects
+onObjectSpawn(keywordToken)
+onObjectSpawn(customCounter)
+assert(invalidContainerCalls == 0, "Must never call getObjects on keyword tokens/counters")
 onObjectSpawn(benign)
 onObjectSpawn(trusted)
 assert(#public == 0, "Known or innocuous scripts should not alert")
@@ -73,11 +92,12 @@ assert(dataCalls == 0, "Fast path MUST NOT call getData")
 onObjectStateChange(benign, "old")
 assert(dataCalls == 0, "State change path MUST NOT call getData")
 
-getAllObjects = function() return {benign, worm, trusted, states, deck} end
+getAllObjects = function() return {benign, worm, trusted, states, deck, keywordToken, customCounter} end
 BL_securityScanAll("Blue")
 assert(#private == 1 and private[1][2] == "Blue", "Manual summary must be private")
-assert(private[1][1]:find("Scan: 5 objects",1,true))
+assert(private[1][1]:find("Scan: 7 objects",1,true))
 assert(dataCalls == 0, "Normal scan MUST NOT call getData")
+assert(invalidContainerCalls == 0, "Manual scan must skip noncontainer getObjects")
 
 -- Deep mode deliberately performs serialization and detects nested payloads.
 BL_securityScanAll(nil, true)

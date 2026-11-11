@@ -57,8 +57,13 @@ function rikrassenBuildDone(resp, color, query)
 			local ok, data = pcall(JSON.decode, line)
 			table.insert(issues, (ok and data and data.error) or "unknown error")
 		else
-			spawnObjectJSON({ json = line })
-			spawned = spawned + 1
+			local safe, why = BL_securityValidateCardJSON(line)
+			if safe then
+				spawnObjectJSON({ json = line })
+				spawned = spawned + 1
+			else
+				table.insert(issues, "Blocked imported object: " .. tostring(why))
+			end
 		end
 	end
 	if #issues > 0 then
@@ -70,6 +75,10 @@ end
 
 -- manage turns through chat commands
 function onChat(message, pl)
+	if message:lower():match("^security%s+scan%s*$") then
+		BL_securityScanAll(pl.color)
+		return false
+	end
 	-- "scryfall <query>" loads a single card via rikrassen's importer. Parse the
 	-- raw message first so card names keep their case and punctuation.
 	local query = message:match("^[Ss]cryfall%s+(.+)")

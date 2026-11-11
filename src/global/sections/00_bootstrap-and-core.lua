@@ -70,6 +70,8 @@ function onLoad(saved)
         mtgSafeInit("context menu refresh", addZoneContextMenus)
         Wait.time(mtgPollZoneSnapshots, 0.50, -1)
     end, 12)
+    -- Non-destructive background scan after all table components have loaded.
+    Wait.frames(BL_securityScanAll, 60)
 end
 
 -- Ensure data structure exists

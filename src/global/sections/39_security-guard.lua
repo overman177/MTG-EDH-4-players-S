@@ -69,16 +69,56 @@ local function blSecurityInspectSaved(node, path, depth, budget)
     end
 end
 
--- IMPORTANT: TTS obj.tag can describe generic/custom objects that DO NOT
--- implement getObjects(). Only real Deck/Bag/Infinite container object types
--- support that API. getQuantity() also returns -1 for non-containers.
--- Checking only tags caused red script errors on ordinary keyword tokens.
+-- Some built-in table props are infinite token dispensers, counters, or
+-- utility objects that look like containers but reject getObjects(). The TTS
+-- engine logs red errors even if such calls are caught with pcall().
+-- Keep getObjects() scanning for actual Deck/Bag containers; exempt ONLY the
+-- known affected table props. Their own Lua is still scanned normally.
+local blSecurityUninspectableGUIDs = {
+    ["b653d2"] = true, -- Turn Skipper Puck
+    ["b8b9ed"] = true, -- d6
+    ["b9f545"] = true, -- Menace
+    ["bc8aef"] = true, -- Rhystic Block Bag
+    ["beb998"] = true, -- +X/+Y Counter
+    ["c1840d"] = true, -- Vigilance
+    ["c36338"] = true, -- First Strike
+    ["c3ca32"] = true, -- Double Strike
+    ["cbcea4"] = true, -- d4
+    ["feadfa"] = true, -- Haste
+    ["60df73"] = true, -- d6
+    ["de6012"] = true, -- Renowned
+}
+local blSecurityUninspectableNames = {
+    ["Turn Skipper Puck"] = true,
+    ["d6"] = true, ["d4"] = true,
+    ["Rhystic Block Bag"] = true, ["+X/+Y Counter"] = true,
+    -- Keyword-token dispensers keep their names if their GUID changes.
+    ["Frozen"] = true, ["Deathtouch"] = true, ["Defender"] = true,
+    ["Double Strike"] = true, ["First Strike"] = true, ["Flying"] = true,
+    ["Haste"] = true, ["Hexproof"] = true, ["Indestructible"] = true,
+    ["Lifelink"] = true, ["Menace"] = true, ["Monstrous"] = true,
+    ["Reach"] = true, ["Renowned"] = true, ["Trample"] = true,
+    ["Vigilance"] = true, ["Stun"] = true, ["Exerted"] = true,
+}
+
 local function blSecurityIsContainer(obj)
     local t = obj.type
     if t ~= "Deck" and t ~= "Bag" and t ~= "Infinite"
         and t ~= "Custom_Model_Bag" and t ~= "Custom_Bag" then
         return false
     end
+
+    local guid = obj.getGUID()
+    -- Explicit GUID exceptions cover exceptional built-in props.
+    if blSecurityUninspectableGUIDs[guid] then return false end
+
+    -- Do not let a player evade deck scanning by naming a deck "Haste".
+    -- Only exempt the listed table props, never regular card decks.
+    if t ~= "Deck" and obj.getName ~= nil
+        and blSecurityUninspectableNames[obj.getName()] then
+        return false
+    end
+
     return obj.getQuantity ~= nil and obj.getQuantity() > 0
 end
 

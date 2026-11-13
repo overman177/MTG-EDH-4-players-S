@@ -22,7 +22,7 @@ self = {
     setPosition = function(pos) currentPosition = pos end,
     setRotation = function(rot) currentRotation = rot end
 }
-assert(loadstring(ringSource))()
+assert(load(ringSource))()
 onLoad()
 assert(locked and self.interactable == false and self.tooltip == false)
 onUpdate()

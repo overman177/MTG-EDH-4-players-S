@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
   One-click safe update for MTG EDH / Tabletop Simulator (Windows PowerShell).
-  - Keep savegame.json, .vscode/settings.json and New/ on disk.
+  - Keep savegame.json and .vscode/settings.json; preserve changed New/ in external backups and Git stash.
   - Stash other Git changes, including new files, before a fast-forward pull.
   - Move old .tts-backups OUT of the Smart Import project tree.
   - Rebuild/deploy and check all GUID targets.
@@ -48,9 +48,28 @@ try {
         Write-Host "     $oldBackupDest"
     }
 
+    # Changed incoming Smart Import scripts could block the removal of old
+    # cross-table GUID exports. Preserve them outside the Smart Import workdir.
+    $incomingChanges = @(& git status --porcelain -- New)
+    if ($LASTEXITCODE -ne 0) { throw "Cannot inspect incoming New/ changes." }
+    if ($incomingChanges.Count -gt 0) {
+        $incomingFolder = Join-Path $repoRoot "New"
+        if (Test-Path -LiteralPath $incomingFolder -PathType Container) {
+            New-Item -ItemType Directory -Path $backupBase -Force | Out-Null
+            $incomingBackup = Join-Path $backupBase ("incoming-New-" + $timestamp)
+            Copy-Item -LiteralPath $incomingFolder -Destination $incomingBackup -Recurse -Force
+            Write-Host "[OK] Incoming Smart Import scripts backed up outside the repository."
+            Write-Host "     $incomingBackup"
+        }
+        & git stash push --include-untracked -m ("MTG incoming imports " + $timestamp) -- New
+        if ($LASTEXITCODE -ne 0) { throw "Could not stash incoming New/ edits." }
+        $stashedChanges = $true
+        Write-Host "[OK] Changed New/ exports preserved in Git stash."
+    }
+
     Write-Host "[1/4] Protecting local edits..."
-    # Keep personal table saves, VS Code connection settings and incoming
-    # TTS objects in place. Git fails safely if a remote update conflicts.
+    # Keep personal table saves and VS Code settings in place.
+    # Changes in New/ have already been backed up above.
     $stashMessage = "MTG auto-backup before update " + $timestamp
     $stashOutput = & git stash push --include-untracked -m $stashMessage -- . ":(exclude)savegame.json" ":(exclude).vscode/settings.json" ":(exclude)New/**"
     if ($LASTEXITCODE -ne 0) { throw "Could not back up local edits with git stash." }
@@ -87,7 +106,7 @@ try {
         Write-Host "      Ask for help restoring specific edits; do NOT blindly pop old Lotus code."
     }
     if (Test-Path -LiteralPath (Join-Path $repoRoot "savegame.json")) {
-        Write-Host "Local savegame.json, .vscode/settings.json and New/ were not stashed by the updater."
+        Write-Host "Local savegame.json and .vscode/settings.json were not stashed; changed New/ imports were preserved separately."
     }
     $exitCode = 0
 }

@@ -145,7 +145,7 @@
       "files": {
         "lua": {
           "path": "live/objects/lotus-helper/[FF595E]M[FF924C]T[FFCA3A]G [C5E55E]L[66D17A]o[35C9AF]t[3EBBDF]u[5B9BFF]s [8578EA]H[B879E4]e[DB75C7]l[EE80A4]p[FF595E]e[FF924C]r [C5CDD9]v1.7.1[-].185063.lua",
-          "bytes": 178708
+          "bytes": 178707
         }
       }
     },
@@ -256,6 +256,17 @@
         "lua": {
           "path": "live/objects/mana/Green Mana.2b5ee7.lua",
           "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "2d70e1",
+      "name": "THE ONE RING",
+      "category": "unclassified",
+      "files": {
+        "lua": {
+          "path": "live/objects/unclassified/THE ONE RING.2d70e1.lua",
+          "bytes": 0
         }
       }
     },

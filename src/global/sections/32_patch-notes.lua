@@ -5,16 +5,92 @@ VERSION = "v1.7.1"
 -- Transient top-center screen message; reads VERSION so future releases only
 -- need to change the existing version constant. The XML itself is not edited
 -- at runtime and the banner never intercepts tabletop clicks.
+-- Cinematic startup prototype. Purely visual: the percentage is a timed intro
+-- sequence, not a measurement of actual TTS scene/network loading.
+local mtgSplashEpoch = 0
+local MTG_SPLASH_ASSET = "MTG_Cinematic_Logo"
+
+function mtgSkipLoadingScreen()
+    mtgSplashEpoch = mtgSplashEpoch + 1
+    UI.hide("MTG_CinematicSplash")
+end
+
 function mtgShowVersionBanner()
-    UI.setAttribute("MTG_VersionBannerText", "text", "MTG EDH 4-Player  |  " .. VERSION)
-    -- UI.show/hide run Unity UI animations. Changing 'active' directly does not.
-    UI.show("MTG_VersionBanner")
-    Wait.time(function()
-        UI.show("MTG_VersionBannerSubtitle")
-    end, 0.45)
-    Wait.time(function()
-        UI.hide("MTG_VersionBanner")
-    end, 5.2)
+    mtgSplashEpoch = mtgSplashEpoch + 1
+    local token = mtgSplashEpoch
+    local function later(seconds, fn)
+        Wait.time(function()
+            if token == mtgSplashEpoch then fn() end
+        end, seconds)
+    end
+
+    local haveArt = false
+    if type(UI.getCustomAssets) == "function" then
+        local ok, assets = pcall(UI.getCustomAssets)
+        if ok and type(assets) == "table" then
+            for _, asset in ipairs(assets) do
+                if asset.name == MTG_SPLASH_ASSET then
+                    haveArt = true
+                    break
+                end
+            end
+        end
+    end
+
+    UI.setAttribute("MTG_SplashVersion", "text",
+        "MTG EDH 4-PLAYER   /   " .. tostring(VERSION))
+    UI.setAttribute("MTG_SplashProgress", "percentage", "0")
+    UI.setAttribute("MTG_SplashPercent", "text", "00%")
+    UI.setAttribute("MTG_SplashStatus", "text", "AWAKENING THE MULTIVERSE")
+    UI.setAttribute("MTG_SplashArtwork", "active", "false")
+    UI.setAttribute("MTG_SplashFallback", "active", haveArt and "false" or "true")
+    UI.setAttribute("MTG_SplashReady", "active", "false")
+    UI.setAttribute("MTG_SplashHaloOuter", "active", "false")
+    UI.setAttribute("MTG_SplashHaloInner", "active", "false")
+    UI.setAttribute("MTG_SplashHeader", "active", "false")
+    UI.setAttribute("MTG_SplashFootnote", "active", "false")
+    UI.setAttribute("MTG_SplashHaloOuter", "rotation", "0 0 0")
+    UI.setAttribute("MTG_SplashHaloInner", "rotation", "0 0 0")
+    UI.show("MTG_CinematicSplash")
+
+    later(0.3, function() UI.show("MTG_SplashHeader") end)
+    later(0.5, function() UI.show("MTG_SplashHaloOuter") end)
+    later(0.8, function() UI.show("MTG_SplashHaloInner") end)
+    if haveArt then
+        later(1.1, function() UI.show("MTG_SplashArtwork") end)
+    end
+    later(1.4, function() UI.show("MTG_SplashFootnote") end)
+
+    for i = 1, 24 do
+        local step = i
+        later(0.65 + i * 0.30, function()
+            local percent = math.floor(step * 100 / 24)
+            local label = "AWAKENING THE MULTIVERSE"
+            if percent >= 85 then
+                label = "PREPARING COMMANDERS"
+            elseif percent >= 60 then
+                label = "ALIGNING THE SIGILS"
+            elseif percent >= 35 then
+                label = "SUMMONING THE BATTLEFIELD"
+            elseif percent >= 14 then
+                label = "GATHERING MANA"
+            end
+            UI.setAttribute("MTG_SplashProgress", "percentage", tostring(percent))
+            UI.setAttribute("MTG_SplashPercent", "text", tostring(percent) .. "%")
+            UI.setAttribute("MTG_SplashStatus", "text", label)
+            UI.setAttribute("MTG_SplashHaloOuter", "rotation",
+                "0 0 " .. tostring(step * 13))
+            UI.setAttribute("MTG_SplashHaloInner", "rotation",
+                "0 0 " .. tostring(-step * 9))
+            UI.setAttribute("MTG_SplashBloom", "scale",
+                step % 2 == 0 and "1.06 1.06 1" or "0.97 0.97 1")
+        end)
+    end
+    later(8.15, function()
+        UI.setAttribute("MTG_SplashStatus", "text", "READY TO PLAY")
+        UI.show("MTG_SplashReady")
+    end)
+    later(9.15, function() UI.hide("MTG_CinematicSplash") end)
 end
 
 local PATCH_NOTES_TAG = "patchNotesButton"

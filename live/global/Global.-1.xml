@@ -185,28 +185,6 @@
 </Panel>
 
 
-<!-- Animated, non-interactive Black Lotus startup signature. -->
-<Panel id="MTG_VersionBanner" rectAlignment="UpperCenter" offsetXY="0 -22"
-    width="466" height="83" color="rgba(0.055,0.065,0.09,0.95)"
-    outline="#AB9062" outlineSize="2 -2"
-    showAnimation="SlideIn_Top" hideAnimation="FadeOut"
-    animationDuration="0.55" active="false" raycastTarget="false">
-    <Panel rectAlignment="MiddleLeft" offsetXY="7 0" width="4" height="54"
-        color="#C3A46F" raycastTarget="false" />
-    <Panel rectAlignment="MiddleRight" offsetXY="-7 0" width="4" height="54"
-        color="#C3A46F" raycastTarget="false" />
-    <Text rectAlignment="UpperCenter" offsetXY="0 -8"
-        width="430" height="21" fontSize="16" fontStyle="Bold"
-        alignment="MiddleCenter" color="#D4B47B" raycastTarget="false"
-        text="BLACK LOTUS   /   COMMANDER" />
-    <Text id="MTG_VersionBannerText" rectAlignment="MiddleCenter" offsetXY="0 -1"
-        width="430" height="30" fontSize="23" fontStyle="Bold"
-        alignment="MiddleCenter" color="#F5F0E9" raycastTarget="false" text="" />
-    <Text id="MTG_VersionBannerSubtitle" rectAlignment="LowerCenter" offsetXY="0 7"
-        width="430" height="20" fontSize="13" fontStyle="Bold"
-        alignment="MiddleCenter" color="#A9C4C0" raycastTarget="false"
-        text="READY TO PLAY" active="false" showAnimation="FadeIn" animationDuration="0.6" />
-</Panel>
 <!-- SETTINGS -->
 <!-- always-on gear button; each player opens their own private settings panel -->
 <Button id="settingsGear" onClick="openSettings" text="&#9881;" textAlignment="MiddleCenter" padding="0 0 0 0"
@@ -596,4 +574,73 @@
         </HorizontalLayout>
     </VerticalLayout>
     <Text rectAlignment="LowerLeft" offsetXY="3 8" width="230" height="15" fontSize="11" color="#ACB7C5" raycastTarget="false" text="* Selected cards or hovered card" />
+</Panel>
+<!-- Full-screen cinematic startup experiment; last in Global UI to cover overlays. -->
+<Panel id="MTG_CinematicSplash" width="100%" height="100%" rectAlignment="MiddleCenter"
+    color="rgba(0.014,0.008,0.033,0.985)" active="false" raycastTarget="true"
+    showAnimation="FadeIn" hideAnimation="FadeOut" animationDuration="1.05">
+    <Panel width="100%" height="3" rectAlignment="UpperCenter" offsetXY="0 -3"
+        color="#522A85" raycastTarget="false" />
+    <Panel width="100%" height="3" rectAlignment="LowerCenter" offsetXY="0 3"
+        color="#301751" raycastTarget="false" />
+    <Panel id="MTG_SplashBloom" rectAlignment="MiddleCenter" offsetXY="0 18"
+        width="380" height="380" color="rgba(0.13,0.04,0.30,0.50)"
+        raycastTarget="false" />
+    <Panel id="MTG_SplashHaloOuter" rectAlignment="MiddleCenter" offsetXY="0 18"
+        width="494" height="494" outline="#8360BA" outlineSize="2 -2"
+        color="rgba(0,0,0,0)" raycastTarget="false" active="false"
+        showAnimation="Grow" animationDuration="1.2" />
+    <Panel id="MTG_SplashHaloInner" rectAlignment="MiddleCenter" offsetXY="0 18"
+        width="420" height="420" outline="#489DC3" outlineSize="2 -2"
+        color="rgba(0,0,0,0)" raycastTarget="false" active="false"
+        showAnimation="FadeIn" animationDuration="1.5" />
+    <Image id="MTG_SplashArtwork" rectAlignment="MiddleCenter" offsetXY="0 18"
+        image="MTG_Cinematic_Logo" width="420" height="420"
+        preserveAspect="true" raycastTarget="false" active="false"
+        showAnimation="Grow" animationDuration="1.6" />
+    <Text id="MTG_SplashFallback" rectAlignment="MiddleCenter" offsetXY="0 16"
+        width="370" height="110" text="B L A C K   L O T U S" color="#C69CFF"
+        alignment="MiddleCenter" fontSize="31" fontStyle="Bold"
+        active="false" raycastTarget="false" />
+    <Panel id="MTG_SplashHeader" rectAlignment="UpperCenter" offsetXY="0 -43"
+        width="680" height="78" active="false" raycastTarget="false"
+        showAnimation="SlideIn_Top" animationDuration="0.75"
+        color="rgba(0,0,0,0)">
+        <Text rectAlignment="UpperCenter" offsetXY="0 0" width="670"
+            height="32" text="B L A C K   L O T U S   /   C O M M A N D E R"
+            color="#D3B9F3" alignment="MiddleCenter" fontSize="19"
+            fontStyle="Bold" raycastTarget="false" />
+        <Panel rectAlignment="LowerCenter" offsetXY="0 8" width="260" height="2"
+            color="#A06DE6" raycastTarget="false" />
+    </Panel>
+    <Panel id="MTG_SplashFootnote" rectAlignment="LowerCenter" offsetXY="0 89"
+        width="600" height="156" color="rgba(0,0,0,0)" active="false"
+        showAnimation="SlideIn_Bottom" animationDuration="0.75"
+        raycastTarget="false">
+        <Text rectAlignment="UpperCenter" offsetXY="0 -5" width="590" height="32"
+            text="A W A K E N   T H E   L O T U S" color="#EEE1FF"
+            fontSize="23" fontStyle="Bold" alignment="MiddleCenter" raycastTarget="false" />
+        <Text id="MTG_SplashVersion" rectAlignment="UpperCenter" offsetXY="0 -40"
+            width="590" height="23" text="" color="#A58DBD"
+            fontSize="14" alignment="MiddleCenter" raycastTarget="false" />
+        <Text id="MTG_SplashStatus" rectAlignment="LowerLeft" offsetXY="0 45"
+            width="490" height="24" text="AWAKENING THE MULTIVERSE"
+            color="#C8A4E5" fontSize="13" alignment="MiddleLeft" raycastTarget="false" />
+        <Text id="MTG_SplashPercent" rectAlignment="LowerRight" offsetXY="0 45"
+            width="95" height="24" text="00%" color="#E6D2FF"
+            fontSize="14" alignment="MiddleRight" raycastTarget="false" />
+        <ProgressBar id="MTG_SplashProgress" rectAlignment="LowerCenter"
+            offsetXY="0 24" width="585" height="6" percentage="0"
+            showPercentageText="false" color="#271638"
+            fillImageColor="#AD74EE" raycastTarget="false" />
+        <Text id="MTG_SplashReady" rectAlignment="LowerCenter" offsetXY="0 -15"
+            width="580" height="22" text="THE BATTLEFIELD AWAITS"
+            color="#85DCE6" fontSize="14" fontStyle="Bold"
+            alignment="MiddleCenter" active="false"
+            showAnimation="FadeIn" animationDuration="0.7" raycastTarget="false" />
+    </Panel>
+    <Button id="MTG_SplashSkip" rectAlignment="UpperRight" offsetXY="-26 -22"
+        width="99" height="33" text="SKIP  >>" fontSize="13"
+        textColor="#C1A5E1" color="rgba(0.17,0.09,0.28,0.8)"
+        onClick="mtgSkipLoadingScreen" />
 </Panel>

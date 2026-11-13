@@ -36,9 +36,9 @@ assert(currentPosition.x == -7 and currentPosition.z == 8 and currentPosition.y 
 assert(currentRotation.y > 81)
 card = nil
 onUpdate() -- missing card is harmless, including on a new scene load
-local showCalls, hideCalls, changed = {}, {}, {}
-local scheduled = {}
+local showCalls, hideCalls, changed, scheduled = {}, {}, {}, {}
 UI = {
+    getCustomAssets = function() return {{name="MTG_Cinematic_Logo",url="https://example.invalid/logo.png"}} end,
     setAttribute = function(id, attribute, value)
         changed[id .. ":" .. attribute] = value
     end,
@@ -48,17 +48,28 @@ UI = {
 Wait = {time = function(fn, delay) table.insert(scheduled, {fn=fn, delay=delay}) end}
 dofile("src/global/sections/32_patch-notes.lua")
 mtgShowVersionBanner()
-assert(showCalls[1] == "MTG_VersionBanner")
-assert(changed["MTG_VersionBannerText:text"]:find(VERSION, 1, true))
-assert(changed["MTG_VersionBanner:active"] == nil)
-assert(#scheduled == 2)
-scheduled[1].fn()
-scheduled[2].fn()
-assert(showCalls[2] == "MTG_VersionBannerSubtitle")
-assert(hideCalls[1] == "MTG_VersionBanner")
-local x = assert(io.open("src/ui/sections/04_patch-notes.xml", "rb"))
+assert(showCalls[1] == "MTG_CinematicSplash")
+assert(changed["MTG_SplashVersion:text"]:find(VERSION, 1, true))
+assert(changed["MTG_SplashArtwork:active"] == "false")
+assert(#scheduled >= 28)
+local original = scheduled
+for _,task in ipairs(original) do task.fn() end
+assert(changed["MTG_SplashProgress:percentage"] == "100")
+assert(changed["MTG_SplashStatus:text"] == "READY TO PLAY")
+assert(hideCalls[#hideCalls] == "MTG_CinematicSplash")
+-- A rerun invalidates queued work from the previous intro.
+scheduled = {}
+mtgShowVersionBanner()
+local first = scheduled[1].fn
+mtgSkipLoadingScreen()
+local before = #showCalls
+first()
+assert(#showCalls == before)
+assert(hideCalls[#hideCalls] == "MTG_CinematicSplash")
+local x = assert(io.open("src/ui/sections/08_lotus-settings.xml", "rb"))
 local xmlText = x:read("*a")
 x:close()
-assert(xmlText:find('showAnimation="SlideIn_Top"', 1, true))
-assert(xmlText:find('id="MTG_VersionBannerSubtitle"', 1, true))
-print("Ring follow, missing-card recovery and animated startup tests passed.")
+assert(xmlText:find('id="MTG_CinematicSplash"', 1, true))
+assert(xmlText:find('onClick="mtgSkipLoadingScreen"', 1, true))
+assert(xmlText:find('image="MTG_Cinematic_Logo"', 1, true))
+print("Ring follow and cinematic startup tests passed.")

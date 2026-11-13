@@ -6779,7 +6779,7 @@ VERSION = "v1.7.1"
 -- need to change the existing version constant. The XML itself is not edited
 -- at runtime and the banner never intercepts tabletop clicks.
 function mtgShowVersionBanner()
-    UI.setAttribute("MTG_VersionBannerText", "text", "4-PLAYER  |  " .. VERSION)
+    UI.setAttribute("MTG_VersionBannerText", "text", "MTG EDH 4-Player  |  " .. VERSION)
     -- UI.show/hide run Unity UI animations. Changing 'active' directly does not.
     UI.show("MTG_VersionBanner")
     Wait.time(function()

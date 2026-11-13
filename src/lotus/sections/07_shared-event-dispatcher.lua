@@ -13,7 +13,7 @@ function onLoad(savedData)
     Combat.load()
     -- Deferred until Global and the other script objects have loaded.
     Wait.frames(Settings.ready, 20)
-    print("MTG Portable Helper: Playmat module ready.")
+    log("MTG Portable Helper: Playmat module ready.")
 end
 
 function onSave()

@@ -815,7 +815,7 @@ function Preview.load(savedData)
         Preview.loadPreferences()
     end, 12)
 
-    print(HELPER_NAME .. " " .. HELPER_VERSION .. " loaded (Card Preview).")
+    log(HELPER_NAME .. " " .. HELPER_VERSION .. " loaded (Card Preview).")
 end
 
 -- =============================================================
@@ -1272,7 +1272,7 @@ function DrawRandom.load()
     DrawRandom.registered = {}
     Wait.frames(DrawRandom.scan, 5)
     Wait.time(DrawRandom.scan, DrawRandom.SCAN_INTERVAL, -1)
-    print("MTG Portable Helper: Draw Random module ready.")
+    log("MTG Portable Helper: Draw Random module ready.")
 end
 
 -- =============================================================
@@ -1502,7 +1502,7 @@ function Settings.load(savedData)
             if ok and type(stored) == "string" and stored ~= "" then
                 local decodedOK, decoded = pcall(JSON.decode, stored)
                 if decodedOK and Settings.import(decoded) then
-                    print("MTG Helper: previous EDH settings imported from old controller.")
+                    log("MTG Helper: previous EDH settings imported from old controller.")
                 end
             end
         end
@@ -1756,7 +1756,7 @@ function Settings.ensureNotebookTab()
     if not ok or index == -1 then
         print("MTG Helper: failed to create LOTUS_PATCH_NOTES Notebook page.")
     else
-        print("MTG Helper: created private Black Notebook page LOTUS_PATCH_NOTES.")
+        log("MTG Helper: created private Black Notebook page LOTUS_PATCH_NOTES.")
     end
 end
 
@@ -3039,11 +3039,11 @@ function Settings.installUI()
                     nodes[index] = Settings.tabbedPanel()
                     node = nodes[index]
                     changed = true
-                    print("MTG Helper: legacy settings panel upgraded to tabs.")
+                    log("MTG Helper: legacy settings panel upgraded to tabs.")
                 end
                 if Settings.ensureGeneralTab(node) then
                     changed = true
-                    print("MTG Helper: installed General settings tab.")
+                    log("MTG Helper: installed General settings tab.")
                 end
             end
             if type(node.attributes) == "table" then
@@ -3061,12 +3061,12 @@ function Settings.installUI()
                     nodes[index] = Settings.patchNotesReader()
                     node = nodes[index]
                     changed = true
-                    print("MTG Helper: upgraded Patch Notes to the release reader.")
+                    log("MTG Helper: upgraded Patch Notes to the release reader.")
                 end
                 if node.attributes.id == "MTG_Settings_Tab_Counters" then
                     if Settings.ensureManaCounterRow(node) then
                         changed = true
-                        print("MTG Helper: added Mana counter visibility settings.")
+                        log("MTG Helper: added Mana counter visibility settings.")
                     end
                 end
                 if node.attributes.id == "MTG_Settings_Tab_Preview" then
@@ -3082,7 +3082,7 @@ function Settings.installUI()
                         nodes[index] = Settings.previewTab()
                         node = nodes[index]
                         changed = true
-                        print("MTG Helper: updated compact Card Preview settings.")
+                        log("MTG Helper: updated compact Card Preview settings.")
                     end
                 end
                 if node.attributes.id == "MTG_Settings_PatchNotesHint" then
@@ -3125,7 +3125,7 @@ function Settings.installUI()
     if not found then
         table.insert(xml, Settings.tabbedPanel())
         changed = true
-        print("MTG Helper: created tabbed EDH Settings UI.")
+        log("MTG Helper: created tabbed EDH Settings UI.")
     end
     if changed then UI.setXmlTable(xml) end
     -- Runtime UI may be rebuilding after setXmlTable; defer panel reset.
@@ -3142,7 +3142,7 @@ function Settings.ready()
     Settings.applyPreview()
     Settings.applyAll(true)
     Wait.time(function() Settings.applyAll(false) end, 3.0, -1)
-    print("MTG Portable Helper: EDH Settings module ready.")
+    log("MTG Portable Helper: EDH Settings module ready.")
 end
 
 -- =============================================================
@@ -4566,7 +4566,7 @@ function onLoad(savedData)
     Combat.load()
     -- Deferred until Global and the other script objects have loaded.
     Wait.frames(Settings.ready, 20)
-    print("MTG Portable Helper: Playmat module ready.")
+    log("MTG Portable Helper: Playmat module ready.")
 end
 
 function onSave()

@@ -2,15 +2,19 @@
 -- Compatible with Portable Helper: zone role/color tags are metadata, not
 -- requirements for cards/decks. Never remove or automatically retag cards.
 
+local mtgStartupFailureCount = 0
+
 local function mtgSafeInit(name, callback)
     local ok, err = pcall(callback)
     if not ok then
-        print("[MTG Global] Init " .. name .. " failed: " .. tostring(err))
+        mtgStartupFailureCount = mtgStartupFailureCount + 1
+        print("[MTG] Startup error (" .. name .. "): " .. tostring(err))
     end
 end
 
 -- TTS event names are case-sensitive: onLoad, not onload.
 function onLoad(saved)
+    mtgStartupFailureCount = 0
     mtgSafeInit("settings", function() restoreSettings(saved) end)
     -- Display a non-blocking version notice after Global/Lotus UI initializes.
     mtgSafeInit("version banner", function()
@@ -70,6 +74,13 @@ function onLoad(saved)
         mtgSafeInit("context menu refresh", addZoneContextMenus)
         Wait.time(mtgPollZoneSnapshots, 0.50, -1)
     end, 12)
+
+    -- One succinct chat notice; successful module diagnostics go to the console.
+    Wait.frames(function()
+        local status = mtgStartupFailureCount == 0 and "ready"
+            or ("startup warnings: " .. mtgStartupFailureCount)
+        print("[MTG EDH] " .. tostring(VERSION or "") .. " | 4-player | " .. status)
+    end, 120)
 end
 
 -- Ensure data structure exists

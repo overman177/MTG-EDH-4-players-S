@@ -134,12 +134,10 @@ function onLoad(_state)
     self.addContextMenuItem("Toggle Land Tracking", ToggleLandTracking)
     self.addContextMenuItem("Toggle Debug Logs", ToggleDebugLogging)
 	
-	printToAll(PREFIX_PLS_DONT .. "Loaded [b]MTG Helper[/b]", "White")
-	if(TRACK_LAND_PLAYS == true) then
-		printToAll(PREFIX_PLS_DONT .. "Land Tracking " .. COLOR_WHITE .. "is " .. COLOR_GREEN .. "enabled\n" .. HELP_MESSAGE_LANDS, "White")
-	else
-		printToAll(PREFIX_PLS_DONT .. "Land Tracking " .. COLOR_WHITE .. "is " .. COLOR_RED .. "disabled", "White")
-	end
+	-- Routine startup information belongs in the host console, not player chat.
+	log("[darbs] MTG Helper ready | Land Tracking "
+		.. (TRACK_LAND_PLAYS and "enabled" or "disabled")
+		.. " | Use land-1 / land+1 to correct counts")
 end
 function onDestroy()
 	if(ERROR_FLAGGED == true) then

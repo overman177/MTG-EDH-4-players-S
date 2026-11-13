@@ -185,16 +185,27 @@
 </Panel>
 
 
-<!-- Brief, non-interactive version label shown on table load. -->
-<Panel id="MTG_VersionBanner" rectAlignment="UpperCenter" offsetXY="0 -28"
-    width="410" height="58" color="rgba(0.08,0.09,0.12,0.92)"
-    outline="#506B8A" outlineSize="1 -1"
-    showAnimation="FadeIn" hideAnimation="FadeOut"
-    active="false" raycastTarget="false">
-    <Text id="MTG_VersionBannerText" rectAlignment="MiddleCenter"
-        width="388" height="44" fontSize="21" fontStyle="Bold"
-        alignment="MiddleCenter" color="#E6EEF8" raycastTarget="false"
-        text="" />
+<!-- Animated, non-interactive Black Lotus startup signature. -->
+<Panel id="MTG_VersionBanner" rectAlignment="UpperCenter" offsetXY="0 -22"
+    width="466" height="83" color="rgba(0.055,0.065,0.09,0.95)"
+    outline="#AB9062" outlineSize="2 -2"
+    showAnimation="SlideIn_Top" hideAnimation="FadeOut"
+    animationDuration="0.55" active="false" raycastTarget="false">
+    <Panel rectAlignment="MiddleLeft" offsetXY="7 0" width="4" height="54"
+        color="#C3A46F" raycastTarget="false" />
+    <Panel rectAlignment="MiddleRight" offsetXY="-7 0" width="4" height="54"
+        color="#C3A46F" raycastTarget="false" />
+    <Text rectAlignment="UpperCenter" offsetXY="0 -8"
+        width="430" height="21" fontSize="16" fontStyle="Bold"
+        alignment="MiddleCenter" color="#D4B47B" raycastTarget="false"
+        text="BLACK LOTUS   /   COMMANDER" />
+    <Text id="MTG_VersionBannerText" rectAlignment="MiddleCenter" offsetXY="0 -1"
+        width="430" height="30" fontSize="23" fontStyle="Bold"
+        alignment="MiddleCenter" color="#F5F0E9" raycastTarget="false" text="" />
+    <Text id="MTG_VersionBannerSubtitle" rectAlignment="LowerCenter" offsetXY="0 7"
+        width="430" height="20" fontSize="13" fontStyle="Bold"
+        alignment="MiddleCenter" color="#A9C4C0" raycastTarget="false"
+        text="READY TO PLAY" active="false" showAnimation="FadeIn" animationDuration="0.6" />
 </Panel>
 <!-- SETTINGS -->
 <!-- always-on gear button; each player opens their own private settings panel -->

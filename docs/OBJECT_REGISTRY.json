@@ -262,11 +262,11 @@
     {
       "guid": "2d70e1",
       "name": "THE ONE RING",
-      "category": "unclassified",
+      "category": "game-mechanics",
       "files": {
         "lua": {
-          "path": "live/objects/unclassified/THE ONE RING.2d70e1.lua",
-          "bytes": 0
+          "path": "live/objects/game-mechanics/THE ONE RING.2d70e1.lua",
+          "bytes": 1424
         }
       }
     },

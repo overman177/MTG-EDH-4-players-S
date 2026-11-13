@@ -39,6 +39,10 @@ python tools/register_new_objects.py --apply --publish --save "C:\path\to\curren
 
 For newly scripted objects, supply `--save` (without `--guid`) to include their object type, nickname and tags in the registry. Save-derived metadata is a **snapshot** and does not prove the object's current in-game state. The importer does not assign gameplay tags or integrate callbacks automatically; those require a feature-specific review.
 
+## In-game ornament and boot UI
+
+The One Ring ornament `2d70e1` floats and rotates above The Ring card `d9fcbc`, using the Monarch-style follow animation. The startup banner slides in and fades out, while routine initialization reports go to the TTS console; errors remain visible in chat.
+
 ## Combat targeting (Lotus Helper)
 
 In **Table Settings > General**, combat targeting has **two bindable hotkeys**:

@@ -2,15 +2,19 @@
 -- Compatible with Portable Helper: zone role/color tags are metadata, not
 -- requirements for cards/decks. Never remove or automatically retag cards.
 
+local mtgStartupFailureCount = 0
+
 local function mtgSafeInit(name, callback)
     local ok, err = pcall(callback)
     if not ok then
-        print("[MTG Global] Init " .. name .. " failed: " .. tostring(err))
+        mtgStartupFailureCount = mtgStartupFailureCount + 1
+        print("[MTG] Startup error (" .. name .. "): " .. tostring(err))
     end
 end
 
 -- TTS event names are case-sensitive: onLoad, not onload.
 function onLoad(saved)
+    mtgStartupFailureCount = 0
     mtgSafeInit("settings", function() restoreSettings(saved) end)
     -- Display a non-blocking version notice after Global/Lotus UI initializes.
     mtgSafeInit("version banner", function()
@@ -70,6 +74,13 @@ function onLoad(saved)
         mtgSafeInit("context menu refresh", addZoneContextMenus)
         Wait.time(mtgPollZoneSnapshots, 0.50, -1)
     end, 12)
+
+    -- One succinct chat notice; successful module diagnostics go to the console.
+    Wait.frames(function()
+        local status = mtgStartupFailureCount == 0 and "ready"
+            or ("startup warnings: " .. mtgStartupFailureCount)
+        print("[MTG EDH] " .. tostring(VERSION or "") .. " | 4-player | " .. status)
+    end, 120)
 end
 
 -- Ensure data structure exists
@@ -6768,12 +6779,15 @@ VERSION = "v1.7.1"
 -- need to change the existing version constant. The XML itself is not edited
 -- at runtime and the banner never intercepts tabletop clicks.
 function mtgShowVersionBanner()
-    UI.setAttribute("MTG_VersionBannerText", "text",
-        "MTG EDH 4-Player  |  " .. VERSION)
-    UI.setAttribute("MTG_VersionBanner", "active", "true")
+    UI.setAttribute("MTG_VersionBannerText", "text", "4-PLAYER  |  " .. VERSION)
+    -- UI.show/hide run Unity UI animations. Changing 'active' directly does not.
+    UI.show("MTG_VersionBanner")
     Wait.time(function()
-        UI.setAttribute("MTG_VersionBanner", "active", "false")
-    end, 6)
+        UI.show("MTG_VersionBannerSubtitle")
+    end, 0.45)
+    Wait.time(function()
+        UI.hide("MTG_VersionBanner")
+    end, 5.2)
 end
 
 local PATCH_NOTES_TAG = "patchNotesButton"

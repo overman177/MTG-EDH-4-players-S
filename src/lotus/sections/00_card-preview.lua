@@ -815,6 +815,6 @@ function Preview.load(savedData)
         Preview.loadPreferences()
     end, 12)
 
-    print(HELPER_NAME .. " " .. HELPER_VERSION .. " loaded (Card Preview).")
+    log(HELPER_NAME .. " " .. HELPER_VERSION .. " loaded (Card Preview).")
 end
 

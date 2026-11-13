@@ -180,6 +180,6 @@ function DrawRandom.load()
     DrawRandom.registered = {}
     Wait.frames(DrawRandom.scan, 5)
     Wait.time(DrawRandom.scan, DrawRandom.SCAN_INTERVAL, -1)
-    print("MTG Portable Helper: Draw Random module ready.")
+    log("MTG Portable Helper: Draw Random module ready.")
 end
 

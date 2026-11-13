@@ -1,6 +1,7 @@
 """Offline new-object registration checks (no network or TTS process)."""
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 import tempfile
 import unittest
@@ -99,6 +100,28 @@ class RegisterNewObjectsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not found"):
             reg.register(self.root, apply=True, save=save, guids=["aaaaaa"])
         self.assertFalse((self.root / reg.REGISTRY).exists())
+
+    def test_publish_bracketed_filename_with_local_remote(self):
+        def run(*args, cwd=None):
+            return subprocess.run(["git", *args], cwd=cwd or self.root,
+                                  capture_output=True, check=True, text=True).stdout.strip()
+
+        run("init", "-b", "main")
+        run("config", "user.name", "Test Bot")
+        run("config", "user.email", "test@example.invalid")
+        self.file("New/.gitkeep", b"")
+        run("add", "-A")
+        run("commit", "-m", "initial")
+        with tempfile.TemporaryDirectory() as remote_dir:
+            remote = Path(remote_dir) / "origin.git"
+            run("init", "--bare", str(remote))
+            run("remote", "add", "origin", str(remote))
+            run("push", "-u", "origin", "main")
+            self.file("New/[b]Some Counter[b].abc123.lua", b"function onLoad() end")
+            self.assertEqual(reg.register(self.root, apply=True, publish=True), 0)
+            self.assertTrue((self.root / "live/objects/counters-and-trackers/[b]Some Counter[b].abc123.lua").exists())
+            self.assertEqual(run("rev-parse", "HEAD"), run("rev-parse", "origin/main"))
+            self.assertEqual(run("status", "--porcelain"), "")
 
     def test_other_script_name_unclassified_not_guessed(self):
         self.file("New/Custom Object.654321.lua", b"script")

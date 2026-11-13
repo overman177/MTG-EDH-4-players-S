@@ -204,7 +204,7 @@ def register(root, apply=False, publish=False, save=None, guids=()):
         else:
             source.unlink()
         # Register removed incoming paths too, if they were ever tracked.
-        if subprocess.run(["git", "ls-files", "--error-unmatch", "--", str(source.relative_to(root))],
+        if subprocess.run(["git", "ls-files", "--error-unmatch", "--", ":(literal)" + str(source.relative_to(root))],
                           cwd=root, capture_output=True).returncode == 0:
             changed.append(source.relative_to(root).as_posix())
     index = make_registry(root, requested, metadata)
@@ -214,7 +214,7 @@ def register(root, apply=False, publish=False, save=None, guids=()):
         index_path.write_text(index, encoding="utf-8")
         changed.append(REGISTRY.as_posix())
     if publish and changed:
-        git(root, "add", "-A", "--", *sorted(set(changed)))
+        git(root, "add", "-A", "--", *[":(literal)" + path for path in sorted(set(changed))])
         # preflight_publish guarantees no unrelated paths were staged.
         git(root, "commit", "-m", "Register TTS objects and refresh GUID registry")
         git(root, "push", "origin", "main")

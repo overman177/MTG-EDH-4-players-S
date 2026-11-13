@@ -23,6 +23,34 @@ jobs:
           }
       - name: Validate GUID inventory
         run: python tools/audit_objects.py .
+      - name: Reject unclassified Smart Import scripts in Git
+        run: |
+          if git ls-files New | grep -E '^New/.*\.(lua|xml)
+        run: python tools/build.py --check
+      - name: Check Lua 5.2 syntax of assembled scripts
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y lua5.2
+          luac5.2 -p .build/Global.lua
+          luac5.2 -p .build/LotusHelper.lua
+      - name: Test preview pipeline and asset cache
+        run: lua5.2 tests/preview_pipeline_test.lua
+      - name: Test independent four-seat counter visibility
+        run: lua5.2 tests/counter_visibility_test.lua
+      - name: Test Reveal Top during library deck merges
+        run: lua5.2 tests/reveal_top_deck_merge_test.lua
+      - name: Test per-seat combat hold settings and General tab
+        run: lua5.2 tests/combat_settings_test.lua
+      - name: Test combat targeting interactions
+        run: lua5.2 tests/combat_hotkey_test.lua
+      - name: Test Lotus keybind menu routing
+        run: lua5.2 tests/lotus_hotkey_config_test.lua
+      - name: Test multi-defender arrows, legacy cleanup and no FIGHT UI
+        run: lua5.2 tests/combat_arrows_test.lua
+; then
+            echo "Move or discard unclassified New/ scripts before committing." >&2
+            exit 1
+          fi
       - name: Verify lossless source assembly
         run: python tools/build.py --check
       - name: Check Lua 5.2 syntax of assembled scripts

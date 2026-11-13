@@ -2,7 +2,7 @@
 
 **Maintained source architecture with GUID-safe Smart Import v3 deployment.**
 
-The table's imported object scripts have been organized from `New/` into functional folders. Existing TTS GUID filenames and Lua/XML contents are preserved. `savegame.json` remains at the repository root.
+The table's active object scripts live in `live/objects/`, with their original GUID filenames and contents preserved. The tracked `New/` folder is deliberately empty: imports from the six-player table were removed from this four-player repository. `savegame.json` stays at the repository root.
 
 ## Where to work
 
@@ -14,7 +14,7 @@ The table's imported object scripts have been organized from `New/` into functio
 | `src/manifest.json` | Authoritative concatenation order and deployment targets |
 | `live/global/` | Existing GUID `Global.-1.lua` + `Global.-1.xml` |
 | `live/objects/` | Other GUID-named TTS objects grouped by functionality |
-| `New/` | Only objects not yet classified after Smart Import |
+| `New/` | Temporary inbox for newly discovered Smart Import scripts; classify them into `live/objects/` before committing |
 | `tools/` | Build, deployment, and GUID inventory validation |
 | `docs/` | Architecture and migration/feature guidance |
 | `.build/` | Generated non-GUID build outputs (ignored by Git) |

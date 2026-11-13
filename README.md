@@ -19,6 +19,26 @@ The table's active object scripts live in `live/objects/`, with their original G
 | `docs/` | Architecture and migration/feature guidance |
 | `.build/` | Generated non-GUID build outputs (ignored by Git) |
 
+## Register newly added TTS objects
+
+**Add a scripted object to TTS, then use Smart Import > Get Lua Scripts** with this repository root as the workdir. This exports new GUID-named Lua/XML files into `New/`. **Before running UPDATE_TABLE.bat**, double-click **REGISTER_NEW_OBJECTS.bat**.
+
+Registration:
+1. Rejects duplicate GUIDs with different contents, and prevents automatic replacement of Global or Lotus source files.
+2. Moves new Lua/XML unchanged into appropriate `live/objects/` folders; unknown names go to `unclassified/`.
+3. Refreshes `docs/OBJECT_REGISTRY.json` with GUID, name, category and linked script paths.
+4. Commits **only those imported scripts and the registry**, then pushes to GitHub `main` so the scripts are accessible for collaboration.
+
+No stashes, backup copies, tag mutations or TTS runtime modifications are made. The command checks that local `main` matches GitHub **before** modifying imports. If it is behind, update first and re-export from TTS; never run the destructive updater while unregistered `New/` exports are present.
+
+**Scriptless props and tags:** Smart Import cannot extract a script that doesn't exist. Export your current TTS table as JSON and register a known GUID with:
+
+```powershell
+python tools/register_new_objects.py --apply --publish --save "C:\path\to\current-table.json" --guid abc123
+```
+
+For newly scripted objects, supply `--save` (without `--guid`) to include their object type, nickname and tags in the registry. Save-derived metadata is a **snapshot** and does not prove the object's current in-game state. The importer does not assign gameplay tags or integrate callbacks automatically; those require a feature-specific review.
+
 ## Combat targeting (Lotus Helper)
 
 In **Table Settings > General**, combat targeting has **two bindable hotkeys**:

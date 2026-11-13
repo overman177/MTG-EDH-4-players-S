@@ -1,0 +1,1499 @@
+{
+  "schema": 1,
+  "description": "Index of TTS GUID scripts; savegame metadata is a snapshot, not live table state.",
+  "objects": [
+    {
+      "guid": "-1",
+      "name": "Global",
+      "category": "global",
+      "files": {
+        "lua": {
+          "path": "live/global/Global.-1.lua",
+          "bytes": 254955
+        },
+        "xml": {
+          "path": "live/global/Global.-1.xml",
+          "bytes": 65129
+        }
+      }
+    },
+    {
+      "guid": "02e062",
+      "name": "Encoder",
+      "category": "third-party",
+      "files": {
+        "lua": {
+          "path": "live/objects/third-party/Encoder.02e062.lua",
+          "bytes": 45688
+        }
+      }
+    },
+    {
+      "guid": "031b64",
+      "name": "TokenZone",
+      "category": "zones-and-hand",
+      "files": {
+        "lua": {
+          "path": "live/objects/zones-and-hand/TokenZone.031b64.lua",
+          "bytes": 1288
+        }
+      }
+    },
+    {
+      "guid": "06926c",
+      "name": "Red Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Red Mana.06926c.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "0af44c",
+      "name": "Hand Counter (Self)",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter (Self).0af44c.lua",
+          "bytes": 1879
+        }
+      }
+    },
+    {
+      "guid": "0b7776",
+      "name": "White Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/White Mana.0b7776.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "0beb07",
+      "name": "Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Counter.0beb07.lua",
+          "bytes": 321
+        }
+      }
+    },
+    {
+      "guid": "0c0a0a",
+      "name": "Poison Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Poison Counter.0c0a0a.lua",
+          "bytes": 1994
+        }
+      }
+    },
+    {
+      "guid": "0c0c5e",
+      "name": "Commander Zone",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Zone.0c0c5e.lua",
+          "bytes": 2064
+        }
+      }
+    },
+    {
+      "guid": "0e2b03",
+      "name": "Energy Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Energy Counter.0e2b03.lua",
+          "bytes": 1963
+        }
+      }
+    },
+    {
+      "guid": "0f6598",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.0f6598.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "16aed3",
+      "name": "Commander Zone",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Zone.16aed3.lua",
+          "bytes": 2064
+        }
+      }
+    },
+    {
+      "guid": "185063",
+      "name": "MTG Lotus Helper v1.7.1",
+      "category": "lotus-helper",
+      "files": {
+        "lua": {
+          "path": "live/objects/lotus-helper/[FF595E]M[FF924C]T[FFCA3A]G [C5E55E]L[66D17A]o[35C9AF]t[3EBBDF]u[5B9BFF]s [8578EA]H[B879E4]e[DB75C7]l[EE80A4]p[FF595E]e[FF924C]r [C5CDD9]v1.7.1[-].185063.lua",
+          "bytes": 178708
+        }
+      }
+    },
+    {
+      "guid": "1a649e",
+      "name": "Red Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Red Mana.1a649e.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "1c657c",
+      "name": "Experience Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Experience Counter.1c657c.lua",
+          "bytes": 1946
+        }
+      }
+    },
+    {
+      "guid": "21ac95",
+      "name": "Blue Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Blue Mana.21ac95.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "222541",
+      "name": "rikrassen'sMTG DeckDraftCube Importer",
+      "category": "third-party",
+      "files": {
+        "lua": {
+          "path": "live/objects/third-party/[b]rikrassen's[b]MTG DeckDraftCube Importer.222541.lua",
+          "bytes": 33399
+        }
+      }
+    },
+    {
+      "guid": "23e485",
+      "name": "Life Tracker",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Life Tracker.23e485.lua",
+          "bytes": 8185
+        }
+      }
+    },
+    {
+      "guid": "24fc8d",
+      "name": "Poison Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Poison Counter.24fc8d.lua",
+          "bytes": 1994
+        }
+      }
+    },
+    {
+      "guid": "25f80a",
+      "name": "Hand Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter.25f80a.lua",
+          "bytes": 1814
+        }
+      }
+    },
+    {
+      "guid": "29d31b",
+      "name": "+X+Y Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/+X+Y Counter.29d31b.lua",
+          "bytes": 324
+        }
+      }
+    },
+    {
+      "guid": "29f427",
+      "name": "Timer",
+      "category": "automation",
+      "files": {
+        "lua": {
+          "path": "live/objects/automation/Timer.29f427.lua",
+          "bytes": 5330
+        }
+      }
+    },
+    {
+      "guid": "2b5ee7",
+      "name": "Green Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Green Mana.2b5ee7.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "2db63a",
+      "name": "Undercity",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/[b]Undercity[b].2db63a.lua",
+          "bytes": 6325
+        }
+      }
+    },
+    {
+      "guid": "2e1ed6",
+      "name": "+X+Y Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/+X+Y Counter.2e1ed6.lua",
+          "bytes": 324
+        }
+      }
+    },
+    {
+      "guid": "2e2fe6",
+      "name": "Poison Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Poison Counter.2e2fe6.lua",
+          "bytes": 1994
+        }
+      }
+    },
+    {
+      "guid": "2f714c",
+      "name": "Hand Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter.2f714c.lua",
+          "bytes": 1814
+        }
+      }
+    },
+    {
+      "guid": "33b0a3",
+      "name": "Colorless Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Colorless Mana.33b0a3.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "37e533",
+      "name": "Life Tracker",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Life Tracker.37e533.lua",
+          "bytes": 8185
+        }
+      }
+    },
+    {
+      "guid": "395037",
+      "name": "Life Tracker",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Life Tracker.395037.lua",
+          "bytes": 8185
+        }
+      }
+    },
+    {
+      "guid": "3a8a34",
+      "name": "Radiation Helper",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Radiation Helper.3a8a34.lua",
+          "bytes": 14357
+        }
+      }
+    },
+    {
+      "guid": "3b2d18",
+      "name": "Commander Zone",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Zone.3b2d18.lua",
+          "bytes": 2064
+        }
+      }
+    },
+    {
+      "guid": "3d7324",
+      "name": "Hand Counter Screen",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter Screen.3d7324.lua",
+          "bytes": 493
+        }
+      }
+    },
+    {
+      "guid": "3da318",
+      "name": "Poison Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Poison Counter.3da318.lua",
+          "bytes": 1994
+        }
+      }
+    },
+    {
+      "guid": "40b95f",
+      "name": "Highlight Mat",
+      "category": "zones-and-hand",
+      "files": {
+        "lua": {
+          "path": "live/objects/zones-and-hand/Highlight Mat.40b95f.lua",
+          "bytes": 460
+        }
+      }
+    },
+    {
+      "guid": "42728f",
+      "name": "TokenZone",
+      "category": "zones-and-hand",
+      "files": {
+        "lua": {
+          "path": "live/objects/zones-and-hand/TokenZone.42728f.lua",
+          "bytes": 1288
+        }
+      }
+    },
+    {
+      "guid": "448880",
+      "name": "Life Tracker",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Life Tracker.448880.lua",
+          "bytes": 8185
+        }
+      }
+    },
+    {
+      "guid": "45331a",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.45331a.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "4563bf",
+      "name": "Hand Counter Screen",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter Screen.4563bf.lua",
+          "bytes": 493
+        }
+      }
+    },
+    {
+      "guid": "47dc63",
+      "name": "Radiation Helper",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Radiation Helper.47dc63.lua",
+          "bytes": 14357
+        }
+      }
+    },
+    {
+      "guid": "484c38",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.484c38.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "4bfa09",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.4bfa09.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "4db5e0",
+      "name": "White Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/White Mana.4db5e0.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "4e8c7b",
+      "name": "Day",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/[b]Day[b].4e8c7b.lua",
+          "bytes": 1119
+        }
+      }
+    },
+    {
+      "guid": "5006a4",
+      "name": "Deck Lister",
+      "category": "automation",
+      "files": {
+        "lua": {
+          "path": "live/objects/automation/Deck Lister.5006a4.lua",
+          "bytes": 2797
+        }
+      }
+    },
+    {
+      "guid": "50cc93",
+      "name": "Green Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Green Mana.50cc93.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "5137aa",
+      "name": "Hand Counter Screen",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter Screen.5137aa.lua",
+          "bytes": 493
+        }
+      }
+    },
+    {
+      "guid": "51562f",
+      "name": "TokenZone",
+      "category": "zones-and-hand",
+      "files": {
+        "lua": {
+          "path": "live/objects/zones-and-hand/TokenZone.51562f.lua",
+          "bytes": 1288
+        }
+      }
+    },
+    {
+      "guid": "540e21",
+      "name": "Pirate Cannon",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/Pirate Cannon.540e21.lua",
+          "bytes": 11739
+        }
+      }
+    },
+    {
+      "guid": "56a44e",
+      "name": "Notecard",
+      "category": "interface",
+      "files": {
+        "lua": {
+          "path": "live/objects/interface/Notecard.56a44e.lua",
+          "bytes": 367
+        }
+      }
+    },
+    {
+      "guid": "57b8f3",
+      "name": "Timer",
+      "category": "automation",
+      "files": {
+        "lua": {
+          "path": "live/objects/automation/Timer.57b8f3.lua",
+          "bytes": 5330
+        }
+      }
+    },
+    {
+      "guid": "5b0cc8",
+      "name": "Hand Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter.5b0cc8.lua",
+          "bytes": 1816
+        }
+      }
+    },
+    {
+      "guid": "5cb175",
+      "name": "Highlight Mat",
+      "category": "zones-and-hand",
+      "files": {
+        "lua": {
+          "path": "live/objects/zones-and-hand/Highlight Mat.5cb175.lua",
+          "bytes": 460
+        }
+      }
+    },
+    {
+      "guid": "5ce447",
+      "name": "Energy Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Energy Counter.5ce447.lua",
+          "bytes": 1967
+        }
+      }
+    },
+    {
+      "guid": "6a0c37",
+      "name": "Red Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Red Mana.6a0c37.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "6b6e1f",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.6b6e1f.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "6f8227",
+      "name": "Radiation Helper",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Radiation Helper.6f8227.lua",
+          "bytes": 14357
+        }
+      }
+    },
+    {
+      "guid": "70339e",
+      "name": "White Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/White Mana.70339e.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "7071ce",
+      "name": "Drop-On-Card Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/[b]Drop-On-Card Counter[b].7071ce.lua",
+          "bytes": 1324
+        }
+      }
+    },
+    {
+      "guid": "716ee6",
+      "name": "Is it a token",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/Is it a token.716ee6.lua",
+          "bytes": 2259
+        }
+      }
+    },
+    {
+      "guid": "7a0067",
+      "name": "πNotepad",
+      "category": "interface",
+      "files": {
+        "lua": {
+          "path": "live/objects/interface/πNotepad.7a0067.lua",
+          "bytes": 8958
+        }
+      }
+    },
+    {
+      "guid": "7cf430",
+      "name": "Custom Tile",
+      "category": "utilities",
+      "files": {
+        "lua": {
+          "path": "live/objects/utilities/Custom Tile.7cf430.lua",
+          "bytes": 1430
+        }
+      }
+    },
+    {
+      "guid": "7d5edc",
+      "name": "Black Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Black Mana.7d5edc.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "7de799",
+      "name": "Super Swapper",
+      "category": "automation",
+      "files": {
+        "lua": {
+          "path": "live/objects/automation/Super Swapper.7de799.lua",
+          "bytes": 1917
+        },
+        "xml": {
+          "path": "live/objects/automation/Super Swapper.7de799.xml",
+          "bytes": 848
+        }
+      }
+    },
+    {
+      "guid": "809133",
+      "name": "Timer",
+      "category": "automation",
+      "files": {
+        "lua": {
+          "path": "live/objects/automation/Timer.809133.lua",
+          "bytes": 5330
+        }
+      }
+    },
+    {
+      "guid": "82bf98",
+      "name": "Piece Pack Crowns",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/Piece Pack Crowns.82bf98.lua",
+          "bytes": 2457
+        }
+      }
+    },
+    {
+      "guid": "8963ec",
+      "name": "Monarch",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/Monarch.8963ec.lua",
+          "bytes": 1827
+        }
+      }
+    },
+    {
+      "guid": "8d172a",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.8d172a.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "906d4b",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.906d4b.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "908f60",
+      "name": "Commander Zone",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Zone.908f60.lua",
+          "bytes": 2064
+        }
+      }
+    },
+    {
+      "guid": "91aaed",
+      "name": "Tomb of Annihilation",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/[b]Tomb of Annihilation[b].91aaed.lua",
+          "bytes": 5326
+        }
+      }
+    },
+    {
+      "guid": "9243e9",
+      "name": "Hand Counter (Self)",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter (Self).9243e9.lua",
+          "bytes": 1877
+        }
+      }
+    },
+    {
+      "guid": "93894a",
+      "name": "darbs MTG Helpers",
+      "category": "third-party",
+      "files": {
+        "lua": {
+          "path": "live/objects/third-party/darbs MTG Helpers.93894a.lua",
+          "bytes": 22632
+        }
+      }
+    },
+    {
+      "guid": "94d36f",
+      "name": "Blue Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Blue Mana.94d36f.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "95eb63",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.95eb63.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "96c4e8",
+      "name": "Experience Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Experience Counter.96c4e8.lua",
+          "bytes": 1946
+        }
+      }
+    },
+    {
+      "guid": "988e5e",
+      "name": "Card Importer 6.6",
+      "category": "third-party",
+      "files": {
+        "lua": {
+          "path": "live/objects/third-party/[854FD9]Card Importer [49D54F]6.6.988e5e.lua",
+          "bytes": 139582
+        }
+      }
+    },
+    {
+      "guid": "9c9b5d",
+      "name": "Green Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Green Mana.9c9b5d.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "9d380e",
+      "name": "Commander Zone",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Zone.9d380e.lua",
+          "bytes": 2064
+        }
+      }
+    },
+    {
+      "guid": "9d9dda",
+      "name": "Hand Counter (Self)",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter (Self).9d9dda.lua",
+          "bytes": 1879
+        }
+      }
+    },
+    {
+      "guid": "9df6a3",
+      "name": "Timer",
+      "category": "automation",
+      "files": {
+        "lua": {
+          "path": "live/objects/automation/Timer.9df6a3.lua",
+          "bytes": 5330
+        }
+      }
+    },
+    {
+      "guid": "9ea771",
+      "name": "Promoted access",
+      "category": "automation",
+      "files": {
+        "lua": {
+          "path": "live/objects/automation/Promoted access.9ea771.lua",
+          "bytes": 4993
+        }
+      }
+    },
+    {
+      "guid": "9f351a",
+      "name": "Energy Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Energy Counter.9f351a.lua",
+          "bytes": 1965
+        }
+      }
+    },
+    {
+      "guid": "a2ce10",
+      "name": "Black Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Black Mana.a2ce10.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "a42baa",
+      "name": "Highlight Mat",
+      "category": "zones-and-hand",
+      "files": {
+        "lua": {
+          "path": "live/objects/zones-and-hand/Highlight Mat.a42baa.lua",
+          "bytes": 460
+        }
+      }
+    },
+    {
+      "guid": "a5fa7f",
+      "name": "Colorless Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Colorless Mana.a5fa7f.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "ad044a",
+      "name": "Morphin' Time",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/Morphin' Time.ad044a.lua",
+          "bytes": 15813
+        }
+      }
+    },
+    {
+      "guid": "ad84fe",
+      "name": "Blue Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Blue Mana.ad84fe.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "ade398",
+      "name": "Green Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Green Mana.ade398.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "ae12d3",
+      "name": "πKeywords",
+      "category": "interface",
+      "files": {
+        "lua": {
+          "path": "live/objects/interface/πKeywords.ae12d3.lua",
+          "bytes": 23670
+        }
+      }
+    },
+    {
+      "guid": "af4074",
+      "name": "Radiation Helper",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Radiation Helper.af4074.lua",
+          "bytes": 14357
+        }
+      }
+    },
+    {
+      "guid": "b364b4",
+      "name": "rikrassen'sMTG DeckDraftCube Importer",
+      "category": "third-party",
+      "files": {
+        "lua": {
+          "path": "live/objects/third-party/[b]rikrassen's[b]MTG DeckDraftCube Importer.b364b4.lua",
+          "bytes": 33399
+        }
+      }
+    },
+    {
+      "guid": "b3ec0b",
+      "name": "Red Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Red Mana.b3ec0b.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "b40ce7",
+      "name": "Hand Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter.b40ce7.lua",
+          "bytes": 1816
+        }
+      }
+    },
+    {
+      "guid": "b4f29e",
+      "name": "Black Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Black Mana.b4f29e.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "b748df",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.b748df.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "b7ccfb",
+      "name": "Planechase",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/Planechase.b7ccfb.lua",
+          "bytes": 18018
+        }
+      }
+    },
+    {
+      "guid": "b8b8df",
+      "name": "Color Module",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Color Module.b8b8df.lua",
+          "bytes": 5208
+        }
+      }
+    },
+    {
+      "guid": "b93b40",
+      "name": "TyrantNomad'sEasy Modules Unified",
+      "category": "third-party",
+      "files": {
+        "lua": {
+          "path": "live/objects/third-party/[FFCC00]TyrantNomad's[-]Easy Modules Unified.b93b40.lua",
+          "bytes": 116391
+        }
+      }
+    },
+    {
+      "guid": "ba4431",
+      "name": "Blue Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Blue Mana.ba4431.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "baffa9",
+      "name": "Commander Zone",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Zone.baffa9.lua",
+          "bytes": 2064
+        }
+      }
+    },
+    {
+      "guid": "bfcf4a",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.bfcf4a.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "c2df33",
+      "name": "Phasing",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/Phasing.c2df33.lua",
+          "bytes": 3391
+        }
+      }
+    },
+    {
+      "guid": "c369d7",
+      "name": "πMenu",
+      "category": "interface",
+      "files": {
+        "lua": {
+          "path": "live/objects/interface/πMenu.c369d7.lua",
+          "bytes": 8108
+        }
+      }
+    },
+    {
+      "guid": "c5ea55",
+      "name": "Sticker Encoder",
+      "category": "third-party",
+      "files": {
+        "lua": {
+          "path": "live/objects/third-party/Sticker Encoder.c5ea55.lua",
+          "bytes": 6542
+        }
+      }
+    },
+    {
+      "guid": "cd457d",
+      "name": "Experience Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Experience Counter.cd457d.lua",
+          "bytes": 1973
+        }
+      }
+    },
+    {
+      "guid": "cd83de",
+      "name": "Auto Player Promoter",
+      "category": "automation",
+      "files": {
+        "lua": {
+          "path": "live/objects/automation/Auto Player Promoter.cd83de.lua",
+          "bytes": 6948
+        }
+      }
+    },
+    {
+      "guid": "ce8ea5",
+      "name": "Commander Zone",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Zone.ce8ea5.lua",
+          "bytes": 2064
+        }
+      }
+    },
+    {
+      "guid": "d075c6",
+      "name": "Dungeon of the Mad Mage",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/[b]Dungeon of the Mad Mage[b].d075c6.lua",
+          "bytes": 6233
+        }
+      }
+    },
+    {
+      "guid": "d1ae7b",
+      "name": "Highlight Mat",
+      "category": "zones-and-hand",
+      "files": {
+        "lua": {
+          "path": "live/objects/zones-and-hand/Highlight Mat.d1ae7b.lua",
+          "bytes": 460
+        }
+      }
+    },
+    {
+      "guid": "d29299",
+      "name": "Hand Counter (Self)",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter (Self).d29299.lua",
+          "bytes": 1877
+        }
+      }
+    },
+    {
+      "guid": "d3959e",
+      "name": "Baldur's Gate Wilderness",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/[b]Baldur's Gate Wilderness[b].d3959e.lua",
+          "bytes": 9396
+        }
+      }
+    },
+    {
+      "guid": "d5907a",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.d5907a.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "d9bd81",
+      "name": "Notecard",
+      "category": "interface",
+      "files": {
+        "lua": {
+          "path": "live/objects/interface/Notecard.d9bd81.lua",
+          "bytes": 367
+        }
+      }
+    },
+    {
+      "guid": "d9fcbc",
+      "name": "The Ring",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/[b]The Ring[b].d9fcbc.lua",
+          "bytes": 2699
+        }
+      }
+    },
+    {
+      "guid": "dc9c6d",
+      "name": "Commander Zone",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Zone.dc9c6d.lua",
+          "bytes": 2064
+        }
+      }
+    },
+    {
+      "guid": "dcbe3a",
+      "name": "Colorless Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Colorless Mana.dcbe3a.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "de4346",
+      "name": "πScry",
+      "category": "interface",
+      "files": {
+        "lua": {
+          "path": "live/objects/interface/πScry.de4346.lua",
+          "bytes": 9659
+        }
+      }
+    },
+    {
+      "guid": "def0af",
+      "name": "πCounter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/πCounter.def0af.lua",
+          "bytes": 3682
+        }
+      }
+    },
+    {
+      "guid": "df09d5",
+      "name": "Lost Mine of Phandelver",
+      "category": "game-mechanics",
+      "files": {
+        "lua": {
+          "path": "live/objects/game-mechanics/[b]Lost Mine of Phandelver[b].df09d5.lua",
+          "bytes": 5656
+        }
+      }
+    },
+    {
+      "guid": "e0d9cc",
+      "name": "Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Counter.e0d9cc.lua",
+          "bytes": 321
+        }
+      }
+    },
+    {
+      "guid": "e2c813",
+      "name": "Text + Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Text + Counter.e2c813.lua",
+          "bytes": 619
+        }
+      }
+    },
+    {
+      "guid": "e40450",
+      "name": "Table Instructions",
+      "category": "interface",
+      "files": {
+        "lua": {
+          "path": "live/objects/interface/Table Instructions.e40450.lua",
+          "bytes": 2283
+        }
+      }
+    },
+    {
+      "guid": "e6554f",
+      "name": "TokenZone",
+      "category": "zones-and-hand",
+      "files": {
+        "lua": {
+          "path": "live/objects/zones-and-hand/TokenZone.e6554f.lua",
+          "bytes": 1288
+        }
+      }
+    },
+    {
+      "guid": "e76686",
+      "name": "Text + Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Text + Counter.e76686.lua",
+          "bytes": 619
+        }
+      }
+    },
+    {
+      "guid": "eb9703",
+      "name": "Experience Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Experience Counter.eb9703.lua",
+          "bytes": 1946
+        }
+      }
+    },
+    {
+      "guid": "ee33ec",
+      "name": "goes first!",
+      "category": "automation",
+      "files": {
+        "lua": {
+          "path": "live/objects/automation/goes first!.ee33ec.lua",
+          "bytes": 5112
+        }
+      }
+    },
+    {
+      "guid": "f29c09",
+      "name": "Colorless Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Colorless Mana.f29c09.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "f43e61",
+      "name": "Commander Damage",
+      "category": "commander",
+      "files": {
+        "lua": {
+          "path": "live/objects/commander/Commander Damage.f43e61.lua",
+          "bytes": 4114
+        }
+      }
+    },
+    {
+      "guid": "f62d00",
+      "name": "Drop-On-Card Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/[b]Drop-On-Card Counter[b].f62d00.lua",
+          "bytes": 1324
+        }
+      }
+    },
+    {
+      "guid": "fb138f",
+      "name": "White Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/White Mana.fb138f.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "fb6538",
+      "name": "hold alt",
+      "category": "interface",
+      "files": {
+        "lua": {
+          "path": "live/objects/interface/hold alt.fb6538.lua",
+          "bytes": 368
+        }
+      }
+    },
+    {
+      "guid": "fb701a",
+      "name": "Energy Counter",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Energy Counter.fb701a.lua",
+          "bytes": 1961
+        }
+      }
+    },
+    {
+      "guid": "fbe823",
+      "name": "Black Mana",
+      "category": "mana",
+      "files": {
+        "lua": {
+          "path": "live/objects/mana/Black Mana.fbe823.lua",
+          "bytes": 1472
+        }
+      }
+    },
+    {
+      "guid": "fcb7b5",
+      "name": "Hand Counter Screen",
+      "category": "counters-and-trackers",
+      "files": {
+        "lua": {
+          "path": "live/objects/counters-and-trackers/Hand Counter Screen.fcb7b5.lua",
+          "bytes": 493
+        }
+      }
+    }
+  ]
+}

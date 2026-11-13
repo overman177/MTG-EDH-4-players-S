@@ -23,6 +23,8 @@ jobs:
           }
       - name: Verify shared one-way updater and no-backup deploy
         run: python tests/update_workflow_test.py
+      - name: Test new TTS object registration and conflict protection
+        run: python tests/register_new_objects_test.py
       - name: Validate GUID inventory
         run: python tools/audit_objects.py .
       - name: Reject unclassified Smart Import scripts in Git

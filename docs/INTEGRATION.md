@@ -21,5 +21,9 @@ Edit their GUID-named file directly in `live/objects/`. Third-party bundles shou
 ## Get Lua Scripts
 New TTS object GUIDs are imported to `New/`. Move reviewed objects into functional folders. Existing GUIDs update in place through Smart Import. If Global or Lotus was changed inside TTS, reconcile the updated live code with source sections **before redeploying** or the TTS edits may be overwritten.
 
+## Registering new objects
+
+After **Smart Import > Get Lua Scripts**, run `REGISTER_NEW_OBJECTS.bat` to classify scripts from `New/`, refresh `docs/OBJECT_REGISTRY.json`, and commit/push just the registered scripts to GitHub. A conflicting existing GUID is rejected rather than overwritten; Global and Lotus Helper need manual source reconciliation. Scriptless props require an explicitly supplied fresh savegame and GUID. Run this **before** the destructive updater.
+
 ## Recovery
 GitHub history retains previously committed versions. `UPDATE_TABLE.bat` intentionally discards local tracked edits, unpublished `main` commits, and untracked TTS files in `New/` and `live/`. The updater and deploy tool do not create backups or stashes.

@@ -13,24 +13,26 @@
 
 
 <!-- Animated, non-interactive Black Lotus startup signature. -->
-<Panel id="MTG_VersionBanner" rectAlignment="UpperCenter" offsetXY="0 -22"
-    width="466" height="83" color="rgba(0.055,0.065,0.09,0.95)"
-    outline="#AB9062" outlineSize="2 -2"
+<Panel id="MTG_VersionBanner" rectAlignment="UpperCenter" offsetXY="0 -28"
+    width="610" height="116" color="rgba(0.055,0.025,0.105,0.96)"
+    outline="#8348D0" outlineSize="2 -2"
     showAnimation="SlideIn_Top" hideAnimation="FadeOut"
     animationDuration="0.55" active="false" raycastTarget="false">
-    <Panel rectAlignment="MiddleLeft" offsetXY="7 0" width="4" height="54"
-        color="#C3A46F" raycastTarget="false" />
-    <Panel rectAlignment="MiddleRight" offsetXY="-7 0" width="4" height="54"
-        color="#C3A46F" raycastTarget="false" />
-    <Text rectAlignment="UpperCenter" offsetXY="0 -8"
-        width="430" height="21" fontSize="16" fontStyle="Bold"
-        alignment="MiddleCenter" color="#D4B47B" raycastTarget="false"
+    <Panel rectAlignment="MiddleLeft" offsetXY="9 0" width="4" height="82"
+        color="#B077F5" raycastTarget="false" />
+    <Panel rectAlignment="MiddleRight" offsetXY="-9 0" width="4" height="82"
+        color="#64C6E7" raycastTarget="false" />
+    <Text rectAlignment="UpperCenter" offsetXY="0 -12"
+        width="566" height="26" fontSize="19" fontStyle="Bold"
+        alignment="MiddleCenter" color="#B993FF" raycastTarget="false"
         text="BLACK LOTUS   /   COMMANDER" />
+    <Panel rectAlignment="UpperCenter" offsetXY="0 -42" width="380" height="2"
+        color="#6349A3" raycastTarget="false" />
     <Text id="MTG_VersionBannerText" rectAlignment="MiddleCenter" offsetXY="0 -1"
-        width="430" height="30" fontSize="23" fontStyle="Bold"
-        alignment="MiddleCenter" color="#F5F0E9" raycastTarget="false" text="" />
-    <Text id="MTG_VersionBannerSubtitle" rectAlignment="LowerCenter" offsetXY="0 7"
-        width="430" height="20" fontSize="13" fontStyle="Bold"
-        alignment="MiddleCenter" color="#A9C4C0" raycastTarget="false"
+        width="565" height="39" fontSize="29" fontStyle="Bold"
+        alignment="MiddleCenter" color="#F3ECFF" raycastTarget="false" text="" />
+    <Text id="MTG_VersionBannerSubtitle" rectAlignment="LowerCenter" offsetXY="0 10"
+        width="565" height="25" fontSize="16" fontStyle="Bold"
+        alignment="MiddleCenter" color="#7DD7F0" raycastTarget="false"
         text="READY TO PLAY" active="false" showAnimation="FadeIn" animationDuration="0.6" />
 </Panel>

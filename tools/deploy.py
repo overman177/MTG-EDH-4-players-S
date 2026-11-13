@@ -1,23 +1,17 @@
 #!/usr/bin/env python3
-"""Deploy built Global, Lotus and XML files to their existing GUID locations.
+"""Deploy built Global, Lotus, and XML to their existing TTS GUID targets.
 
-Safety:
-- Dry run unless --apply is supplied.
-- Rebuilds source first.
-- Creates a timestamped backup of every changed target OUTSIDE the repo.
-- Never creates a second GUID script path.
-- No TTS or GitHub communication; use Smart Import Save & Play afterwards.
+Dry run unless --apply is specified. Changes are written atomically in place,
+without creating backups or introducing duplicate GUID-named files.
 """
 import argparse
-from datetime import datetime, timezone
 import json
 import os
-from pathlib import Path
-import shutil
 import sys
 import tempfile
 
 from build import build, ROOT, MANIFEST, OUTPUT
+
 
 def deploy(apply=False):
     if build() != 0:
@@ -36,18 +30,13 @@ def deploy(apply=False):
         print("All live targets already match the assembled sources.")
         return 0
     for system, target, _ in updates:
-        print(("APPLY" if apply else "DRY RUN") + ": " + system + " -> " + str(target.relative_to(ROOT)))
+        print(("APPLY" if apply else "DRY RUN") + ": " + system +
+              " -> " + str(target.relative_to(ROOT)))
     if not apply:
         print("No live files changed. Run: python tools/deploy.py --apply")
         return 0
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    # Smart Import v3 recursively scans the project directory for GUID scripts.
-    # Keep deploy backups OUTSIDE that directory to avoid duplicate GUIDs.
-    backup_root = ROOT.parent / (ROOT.name + "-backups") / stamp
+
     for system, target, source in updates:
-        backup = backup_root / target.relative_to(ROOT)
-        backup.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(target, backup)
         fd, temp = tempfile.mkstemp(prefix=".tts-deploy-", dir=target.parent)
         try:
             with os.fdopen(fd, "wb") as handle:
@@ -56,12 +45,14 @@ def deploy(apply=False):
         finally:
             if os.path.exists(temp):
                 os.unlink(temp)
-        print("Updated " + system + " (backup: " + str(backup) + ")")
-    print("Deployment complete. Review diff before running TTS Save & Play.")
+        print("Updated " + system + " (no backup)")
+    print("Deployment complete. Run TTS Smart Import / Save & Play to apply.")
     return 0
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--apply", action="store_true", help="Update GUID targets after writing backups")
+    parser.add_argument("--apply", action="store_true",
+                        help="Write built scripts to existing GUID targets")
     args = parser.parse_args()
     sys.exit(deploy(args.apply))

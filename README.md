@@ -32,25 +32,27 @@ More details: [Combat targeting](docs/COMBAT_TARGETING.md).
 
 ## One-click updates (Windows)
 
-Once the latest files are on your PC, **double-click `UPDATE_TABLE.bat`** in the repository root. Or in VS Code choose **Terminal > Run Task > MTG: Update from GitHub + Deploy**. The updater:
+Both the 4-player and 6-player repositories use **exactly the same** `UPDATE_TABLE.bat` and `tools/update-and-deploy.ps1`. Double-click the BAT file or use **Terminal > Run Task > MTG: Update from GitHub + Deploy** in VS Code.
 
-1. Moves any old `.tts-backups/` folder outside the repository to stop Smart Import duplicate GUID errors.
-2. Backs up any changed incoming `New/` scripts outside the repository and preserves them in a Git stash; `savegame.json` and `.vscode/settings.json` remain untouched.
-3. Stashes other local edits, then runs `git pull --ff-only origin main`.
-4. Runs `python tools/deploy.py --apply` and `python tools/build.py --check`.
-5. Stops with an error if any step fails. It never force-resets or deletes your code.
+**This is a destructive, one-way download from GitHub.** It does not upload files, create Git stashes, or make backups.
 
-After a successful update, **Smart Import > Save & Play** in TTS is still required; the launcher cannot click inside TTS.
+1. `git fetch --prune origin main` downloads the latest GitHub version.
+2. `git reset --hard origin/main` discards local changes to tracked files **including `savegame.json`**, and discards unpublished local commits on `main`.
+3. `git clean -fd -- New live` deletes untracked files in the two TTS import folders. Legacy `.tts-backups/` and `.tts-smart-backup/` directories inside the repository are also deleted to avoid duplicate GUID imports.
+4. `python tools/deploy.py --apply` updates the existing GUID files without making backups.
+5. `python tools/build.py --check` and `python tools/audit_objects.py .` verify the result.
 
-**First-time setup when your current `git pull` is blocked:** run these commands once in the VS Code terminal to fetch the launcher safely:
+Untracked files elsewhere in the repo (such as `.vscode/settings.json`) are not cleaned. Any tracked changes anywhere in the repo are overwritten. The updater does not export the running TTS game; `savegame.json` always comes **from GitHub**, including in the 6-player repository.
+
+**First-time transition:** older local versions of the BAT file still launch the old updater. Before using the BAT for the first time after this change, run the following once in your repository's VS Code terminal:
 
 ```powershell
-git stash push -u -m "Protect incoming New exports" -- New
-git stash push -u -m "Before one-click updater" -- . ":(exclude)savegame.json" ":(exclude).vscode/settings.json" ":(exclude)New/**"
-git pull --ff-only origin main
+git fetch origin main
+git reset --hard origin/main
+git clean -fd -- New live
 ```
 
-Your stashed edits are **preserved**, not automatically reapplied. In particular, do not blindly `git stash pop` old GUID scripts over the new code. To review them, run `git stash list`. The updater will show a notice when it creates a new stash. Personal `savegame.json` and `.vscode/settings.json` stay on disk; modified `New/` files are backed up and stashed before pulling.
+After that, double-click `UPDATE_TABLE.bat` for future updates. TTS still requires **Smart Import > Save & Play** to apply scripts in-game.
 
 ## Everyday workflow
 
@@ -59,7 +61,7 @@ Your stashed edits are **preserved**, not automatically reapplied. In particular
 3. Preview the assembled scripts: `python tools/build.py`.
 4. Review differences versus live GUID files: `git diff` (or `python tools/build.py --check`; this check intentionally fails after real edits).
 5. Preview deployment: `python tools/deploy.py`.
-6. Deploy with automatic backups **outside the repository**, in its sibling `MTG-EDH-4-players-S-backups/` directory: `python tools/deploy.py --apply`.
+6. Deploy to the existing GUID files without backups: `python tools/deploy.py --apply`.
 7. Use TTS Lua **Save & Play** only after reviewing changes, testing on a copy of the TTS table.
 8. Commit and push the source sections and updated GUID target files together.
 
@@ -69,11 +71,11 @@ When **Get Lua Scripts** imports changes from TTS, the existing GUID-named files
 
 - Do not rename/remove the final `.GUID.lua` / `.GUID.xml` suffixes.
 - Do not copy compiled GUID filenames into `src/` or `.build/`. Recursive Smart Import would see duplicates.
-- **Never keep `.lua` GUID backup copies under the repository root.** Smart Import v3 discovers scripts recursively even in Git-ignored directories such as `.tts-backups/`. If old `.tts-backups/` exists, move it to a sibling folder outside the project before using Smart Import.
+- Keep backup GUID scripts outside this repository. The updater deletes legacy in-repository `.tts-backups/` and `.tts-smart-backup/` directories.
 - Keep bundled third-party scripts complete; **do not** replace them with `require("import")`.
 - Source sections concatenate **byte-for-byte**; avoid turning them into runtime Lua modules, renaming handlers, or changing their order without testing.
 - Git push does not deploy to TTS, and Save & Play does not commit to GitHub.
-- Backup your table save before changing or deploying scripts.
+- The updater does not export the current TTS scene or upload `savegame.json`.
 
 ## Validation
 

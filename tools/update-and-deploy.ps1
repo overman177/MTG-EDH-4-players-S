@@ -1,122 +1,84 @@
 #requires -Version 5.1
 <#
-  One-click safe update for MTG EDH / Tabletop Simulator (Windows PowerShell).
-  - Keep savegame.json and .vscode/settings.json; preserve changed New/ in external backups and Git stash.
-  - Stash other Git changes, including new files, before a fast-forward pull.
-  - Move old .tts-backups OUT of the Smart Import project tree.
-  - Rebuild/deploy and check all GUID targets.
-  - Do not automatically restore old Lotus files from stash.
+  Shared 4-player / 6-player Tabletop Simulator updater.
+  One-way sync from GitHub main. Local edits are intentionally discarded.
+  No stash, no upload, and no backups are created.
 #>
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$repoName = Split-Path $repoRoot -Leaf
-$backupBase = Join-Path (Split-Path $repoRoot -Parent) ($repoName + "-backups")
-$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$stashedChanges = $false
 $exitCode = 1
 
 Write-Host ""
-Write-Host "=== MTG TABLE: UPDATE FROM GITHUB + DEPLOY ==="
+Write-Host "=== MTG TABLE: REPLACE LOCAL FILES FROM GITHUB ==="
 Write-Host "Repository: $repoRoot"
+Write-Host "WARNING: Local tracked edits and untracked scripts in New/ and live/ will be deleted."
 Write-Host ""
 
 Push-Location -LiteralPath $repoRoot
 try {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-        throw "Git was not found. Install Git or use a VS Code terminal with Git available."
+        throw "Git is required."
     }
     if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-        throw "Python was not found. Install Python or use a VS Code terminal with Python available."
+        throw "Python is required."
     }
+
+    $gitRoot = (& git rev-parse --show-toplevel)
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($gitRoot)) {
+        throw "This folder is not a Git repository."
+    }
+    $gitRoot = (Resolve-Path -LiteralPath $gitRoot.Trim()).Path
+    if (-not [string]::Equals($gitRoot, $repoRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Run the updater from the repository root, not a nested checkout."
+    }
+
     $branch = (& git branch --show-current).Trim()
-    if ($LASTEXITCODE -ne 0) { throw "Could not read Git branch." }
-    if ($branch -ne "main") {
-        throw "Current Git branch is '$branch', not 'main'. Switch to main before using this updater."
+    if ($LASTEXITCODE -ne 0 -or $branch -ne "main") {
+        throw "This updater only runs on the main branch. Current branch: $branch"
     }
 
-    # Smart Import scans even Git-ignored .lua files. Moving this directory
-    # outside the repository prevents duplicate TTS GUID discoveries.
-    $legacyBackups = Join-Path $repoRoot ".tts-backups"
-    if (Test-Path -LiteralPath $legacyBackups -PathType Container) {
-        New-Item -ItemType Directory -Path $backupBase -Force | Out-Null
-        $oldBackupDest = Join-Path $backupBase ("legacy-" + $timestamp)
-        if (Test-Path -LiteralPath $oldBackupDest) {
-            $oldBackupDest = Join-Path $backupBase ("legacy-" + $timestamp + "-" + [guid]::NewGuid().ToString("N").Substring(0,8))
+    Write-Host "[1/5] Fetching origin/main..."
+    & git fetch --prune origin main
+    if ($LASTEXITCODE -ne 0) { throw "Git fetch failed. Local files were not reset." }
+
+    Write-Host "[2/5] Replacing all tracked local files (including savegame.json)..."
+    & git reset --hard origin/main
+    if ($LASTEXITCODE -ne 0) { throw "Git reset failed." }
+
+    Write-Host "[3/5] Removing untracked Smart Import scripts..."
+    & git clean -fd -- New live
+    if ($LASTEXITCODE -ne 0) { throw "Git clean failed." }
+
+    # Old backup folders within the Smart Import root cause duplicate GUID imports.
+    # Remove them; no new backups are produced by this workflow.
+    foreach ($folder in @(".tts-backups", ".tts-smart-backup")) {
+        $path = Join-Path $repoRoot $folder
+        if (Test-Path -LiteralPath $path -PathType Container) {
+            Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Stop
+            Write-Host "Removed old $folder directory."
         }
-        Move-Item -LiteralPath $legacyBackups -Destination $oldBackupDest -ErrorAction Stop
-        Write-Host "[OK] Old Smart Import-conflicting backups moved to:"
-        Write-Host "     $oldBackupDest"
     }
 
-    # Changed incoming Smart Import scripts could block the removal of old
-    # cross-table GUID exports. Preserve them outside the Smart Import workdir.
-    $incomingChanges = @(& git status --porcelain -- New)
-    if ($LASTEXITCODE -ne 0) { throw "Cannot inspect incoming New/ changes." }
-    if ($incomingChanges.Count -gt 0) {
-        $incomingFolder = Join-Path $repoRoot "New"
-        if (Test-Path -LiteralPath $incomingFolder -PathType Container) {
-            New-Item -ItemType Directory -Path $backupBase -Force | Out-Null
-            $incomingBackup = Join-Path $backupBase ("incoming-New-" + $timestamp)
-            Copy-Item -LiteralPath $incomingFolder -Destination $incomingBackup -Recurse -Force
-            Write-Host "[OK] Incoming Smart Import scripts backed up outside the repository."
-            Write-Host "     $incomingBackup"
-        }
-        & git stash push --include-untracked -m ("MTG incoming imports " + $timestamp) -- New
-        if ($LASTEXITCODE -ne 0) { throw "Could not stash incoming New/ edits." }
-        $stashedChanges = $true
-        Write-Host "[OK] Changed New/ exports preserved in Git stash."
-    }
-
-    Write-Host "[1/4] Protecting local edits..."
-    # Keep personal table saves and VS Code settings in place.
-    # Changes in New/ have already been backed up above.
-    $stashMessage = "MTG auto-backup before update " + $timestamp
-    $stashOutput = & git stash push --include-untracked -m $stashMessage -- . ":(exclude)savegame.json" ":(exclude).vscode/settings.json" ":(exclude)New/**"
-    if ($LASTEXITCODE -ne 0) { throw "Could not back up local edits with git stash." }
-    $stashText = $stashOutput -join [Environment]::NewLine
-    if ($stashText -notmatch "No local changes to save") {
-        $stashedChanges = $true
-        Write-Host "[OK] Local edits safely saved in Git stash: $stashMessage"
-        Write-Host "     They were NOT deleted. Do not automatically run 'git stash pop'."
-    } else {
-        Write-Host "[OK] No other local edits to stash."
-    }
-
-    Write-Host "[2/4] Downloading latest GitHub code (main)..."
-    & git pull --ff-only origin main
-    if ($LASTEXITCODE -ne 0) {
-        throw "Git pull failed. No scripts were deployed. Your saved edits remain in the stash."
-    }
-
-    Write-Host "[3/4] Deploying the current source into live GUID files..."
+    Write-Host "[4/5] Deploying built sources to existing GUID scripts..."
     & python tools/deploy.py --apply
-    if ($LASTEXITCODE -ne 0) { throw "Deployment failed. Review the error above." }
+    if ($LASTEXITCODE -ne 0) { throw "Deployment failed." }
 
-    Write-Host "[4/4] Verifying source and live scripts match..."
+    Write-Host "[5/5] Checking the build and GUID inventory..."
     & python tools/build.py --check
-    if ($LASTEXITCODE -ne 0) { throw "Build check failed. Do not run Save & Play until resolved." }
+    if ($LASTEXITCODE -ne 0) { throw "Source and live scripts do not match." }
+    & python tools/audit_objects.py .
+    if ($LASTEXITCODE -ne 0) { throw "Duplicate TTS GUID files found." }
 
-    & git log -1 --format="Current GitHub version: %h %s"
+    & git log -1 --format="GitHub version: %h %s"
     Write-Host ""
-    Write-Host "[SUCCESS] Your table scripts are updated and match their source."
-    Write-Host "NEXT: In Tabletop Simulator, use Smart Import / Save & Play."
-    if ($stashedChanges) {
-        Write-Host ""
-        Write-Host "NOTE: Pre-update changes are in Git stash, not discarded."
-        Write-Host "      Ask for help restoring specific edits; do NOT blindly pop old Lotus code."
-    }
-    if (Test-Path -LiteralPath (Join-Path $repoRoot "savegame.json")) {
-        Write-Host "Local savegame.json and .vscode/settings.json were not stashed; changed New/ imports were preserved separately."
-    }
+    Write-Host "[SUCCESS] Updated from GitHub without creating backups."
+    Write-Host "NEXT: In TTS use Smart Import / Save & Play."
     $exitCode = 0
 }
 catch {
     Write-Host ""
     Write-Host ("[FAILED] " + $_.Exception.Message)
-    Write-Host "Do not use Smart Import until the error above is addressed."
-    if ($stashedChanges) {
-        Write-Host "Your pre-update edits are safe in Git stash."
-    }
+    Write-Host "Resolve the error before using Smart Import / Save & Play."
     $exitCode = 1
 }
 finally {

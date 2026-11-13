@@ -30,7 +30,7 @@ The first refactor is intentionally **lossless concatenation**, not independent 
 
 Use `python tools/build.py --check` to verify the baseline. Build outputs use plain `Global.lua`, `LotusHelper.lua` and `Global.xml` to avoid duplicate GUID identities.
 
-When a legitimate source change is made, `--check` will report that it differs from the deployed live code. Run `python tools/deploy.py --apply` to update the original GUID target, with backups, then test with TTS.
+When a legitimate source change is made, `--check` will report that it differs from the deployed live code. Run `python tools/deploy.py --apply` to update the original GUID target without making backups, then test with TTS.
 
 ## Work not yet automated
 

@@ -25,8 +25,6 @@ jobs:
         run: python tests/update_workflow_test.py
       - name: Test new TTS object registration and conflict protection
         run: python tests/register_new_objects_test.py
-      - name: Test Ring ornament and animated startup banner
-        run: lua5.2 tests/ring_startup_test.lua
       - name: Validate GUID inventory
         run: python tools/audit_objects.py .
       - name: Reject unclassified Smart Import scripts in Git
@@ -43,6 +41,8 @@ jobs:
           sudo apt-get install -y lua5.2
           luac5.2 -p .build/Global.lua
           luac5.2 -p .build/LotusHelper.lua
+      - name: Test Ring ornament and animated startup banner
+        run: lua5.2 tests/ring_startup_test.lua
       - name: Test preview pipeline and asset cache
         run: lua5.2 tests/preview_pipeline_test.lua
       - name: Test independent four-seat counter visibility

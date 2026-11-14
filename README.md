@@ -62,7 +62,7 @@ Both the 4-player and 6-player repositories use **exactly the same** `UPDATE_TAB
 
 1. `git fetch --prune origin main` downloads the latest GitHub version.
 2. `git reset --hard origin/main` discards local changes to tracked files **including `savegame.json`**, and discards unpublished local commits on `main`.
-3. `git clean -fd -- New live` deletes untracked files in the two TTS import folders. Legacy `.tts-backups/` and `.tts-smart-backup/` directories inside the repository are also deleted to avoid duplicate GUID imports.
+3. `git clean -fd -- New live` deletes untracked files in the two TTS import folders. Legacy `.tts-backups/` and `.tts-smart-backup/` directories are ignored and left untouched; they cannot interrupt the update.
 4. `python tools/deploy.py --apply` updates the existing GUID files without making backups.
 5. `python tools/build.py --check` and `python tools/audit_objects.py .` verify the result.
 
@@ -95,7 +95,7 @@ When **Get Lua Scripts** imports changes from TTS, the existing GUID-named files
 
 - Do not rename/remove the final `.GUID.lua` / `.GUID.xml` suffixes.
 - Do not copy compiled GUID filenames into `src/` or `.build/`. Recursive Smart Import would see duplicates.
-- Keep backup GUID scripts outside this repository. The updater deletes legacy in-repository `.tts-backups/` and `.tts-smart-backup/` directories.
+- Old ignored `.tts-backups/` and `.tts-smart-backup/` directories are left untouched. They are excluded from GUID auditing, and no new backups are created.
 - Keep bundled third-party scripts complete; **do not** replace them with `require("import")`.
 - Source sections concatenate **byte-for-byte**; avoid turning them into runtime Lua modules, renaming handlers, or changing their order without testing.
 - Git push does not deploy to TTS, and Save & Play does not commit to GitHub.

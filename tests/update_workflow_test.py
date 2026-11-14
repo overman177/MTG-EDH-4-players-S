@@ -25,6 +25,10 @@ for forbidden in (r"&\s*git\s+stash\b", r"&\s*git\s+push\b",
     assert not re.search(forbidden, ps, flags=re.IGNORECASE), forbidden
 
 assert "savegame.json" not in ps or "git reset --hard origin/main" in ps
+# Historical backups are ignored, not traversed or deleted by the updater.
+assert "Remove-Item" not in ps
+assert "Get-ChildItem" not in ps
+assert "git clean -fd -- New live" in ps
 assert "backup_root" not in deploy
 assert "shutil.copy" not in deploy
 assert "datetime" not in deploy

@@ -49,15 +49,10 @@ try {
     & git clean -fd -- New live
     if ($LASTEXITCODE -ne 0) { throw "Git clean failed." }
 
-    # Old backup folders within the Smart Import root cause duplicate GUID imports.
-    # Remove them; no new backups are produced by this workflow.
-    foreach ($folder in @(".tts-backups", ".tts-smart-backup")) {
-        $path = Join-Path $repoRoot $folder
-        if (Test-Path -LiteralPath $path -PathType Container) {
-            Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction Stop
-            Write-Host "Removed old $folder directory."
-        }
-    }
+    # Ignore legacy .tts-backups/ and .tts-smart-backup/ folders.
+    # Git already ignores them and tools/audit_objects.py skips them.
+    # Never recursively traverse old .bak files; Windows PowerShell can
+    # fail on long historical object filenames, aborting the update.
 
     Write-Host "[4/5] Deploying built sources to existing GUID scripts..."
     & python tools/deploy.py --apply

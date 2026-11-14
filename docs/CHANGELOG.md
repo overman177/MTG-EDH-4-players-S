@@ -1,5 +1,13 @@
 # Lotus Helper release history
 
+## Version 1.8.0 — Ring ornament and Black Lotus quality-of-life
+- Added an animated One Ring ornament that floats and follows The Ring card.
+- Enlarged and restyled the startup banner with Black Lotus purple/cyan colors.
+- Reduced startup chat clutter; routine initialization messages now go to the system console.
+- Added a one-click workflow to register and publish newly imported TTS objects.
+- Simplified updates across both tables and fixed problems caused by legacy backup files and self-updating scripts.
+- Organized repository scripts and strengthened automated validation.
+
 ## Version 1.7.0 — Counter visibility and deck stacking
 
 - Fixed occasional Lua errors while multiple loose cards merge onto a library.

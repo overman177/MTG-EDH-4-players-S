@@ -52,7 +52,7 @@
     },
     {
       "id": "lotus",
-      "target": "live/objects/lotus-helper/[FF595E]M[FF924C]T[FFCA3A]G [C5E55E]L[66D17A]o[35C9AF]t[3EBBDF]u[5B9BFF]s [8578EA]H[B879E4]e[DB75C7]l[EE80A4]p[FF595E]e[FF924C]r [C5CDD9]v1.7.1[-].185063.lua",
+      "target": "live/objects/lotus-helper/[FF595E]M[FF924C]T[FFCA3A]G [C5E55E]L[66D17A]o[35C9AF]t[3EBBDF]u[5B9BFF]s [8578EA]H[B879E4]e[DB75C7]l[EE80A4]p[FF595E]e[FF924C]r [C5CDD9]v1.8.0[-].185063.lua",
       "output": "LotusHelper.lua",
       "parts": [
         "src/lotus/sections/00_card-preview.lua",

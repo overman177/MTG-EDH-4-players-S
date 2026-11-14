@@ -1,5 +1,7 @@
 # MTG EDH — Tabletop Simulator scripting
 
+**Current scripted release: v1.8.0** (four-player table).
+
 **Maintained source architecture with GUID-safe Smart Import v3 deployment.**
 
 The table's active object scripts live in `live/objects/`, with their original GUID filenames and contents preserved. The tracked `New/` folder is deliberately empty: imports from the six-player table were removed from this four-player repository. `savegame.json` stays at the repository root.

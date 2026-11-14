@@ -533,6 +533,48 @@ local function mtgMetadataHasType(types, wanted)
     return false
 end
 
+
+-- Only intrinsic keywords at the START of the first printed rules-text line.
+-- Not a word search: ignores triggered/conditional grants such as
+-- "Target creature gains flying" and plane-wide keyword effects.
+local mtgPrintedKeywordIDs = {
+    ["deathtouch"] = "mtg_deathtouchcounter",
+    ["defender"] = "mtg_defendercounter",
+    ["double strike"] = "mtg_doublestrikecounter",
+    ["first strike"] = "mtg_firststrikecounter",
+    ["flying"] = "mtg_flyingcounter",
+    ["haste"] = "mtg_hastecounter",
+    ["hexproof"] = "mtg_hexproofcounter",
+    ["indestructible"] = "mtg_indestructiblecounter",
+    ["lifelink"] = "mtg_lifelinkcounter",
+    ["menace"] = "mtg_menacecounter",
+    ["reach"] = "mtg_reachcounter",
+    ["trample"] = "mtg_tramplecounter",
+    ["vigilance"] = "mtg_vigilancecounter"
+}
+
+local function mtgMetadataPrintedKeywords(rawDescription)
+    if type(rawDescription) ~= "string" then return {} end
+    local first = rawDescription:match("^([^\r\n]*)") or ""
+    -- Strip ordinary MTG reminder text and TTS rich-text tags. Do not
+    -- extract words from parentheses or from later rules-text lines.
+    first = first:gsub("%b()", ""):gsub("%[[^%]]+%]", "")
+        :lower():gsub(",%s*and%s+", ", ")
+        :gsub("%s+and%s+", ", ")
+        :gsub("[%s%.]+$", "")
+    local result, seen = {}, {}
+    for item in (first .. ","):gmatch("(.-),") do
+        local name = item:gsub("^%s+", ""):gsub("%s+$", "")
+        local id = mtgPrintedKeywordIDs[name]
+        if id == nil then break end
+        if not seen[id] then
+            seen[id] = true
+            result[#result + 1] = id
+        end
+    end
+    return result
+end
+
 -- GUID identifies this TTS object, not the underlying printed MTG card.
 function mtgCardMetadata(params)
     local guid = type(params) == "table" and params.guid or params
@@ -601,6 +643,7 @@ function mtgCardMetadata(params)
         typeLine = typeLine or notesType,
         types = types, isLand = isLand, manaValue = manaValue,
         owner = owner,
+        printedKeywords = mtgMetadataPrintedKeywords(descRaw),
         scryfallId = notes.scryfall_id or notes.scryfallId
             or nested.scryfall_id or nested.scryfallId,
         oracleId = notes.oracle_id or notes.oracleId
@@ -4019,6 +4062,63 @@ function applyKeywordUnder(token)
 	end
 	token.destruct()
 end
+
+
+-- AUTO-PRINTED KEYWORDS -------------------------------------------------
+-- Only run when a face-up card settles onto a player's Battlefield zone.
+-- Uses the existing πKeywords Encoder property and renders the normal
+-- keyword decals/buttons. Cards outside battlefield zones are never touched.
+-- The Keywords module stores a per-card "already applied" value so moving
+-- cards back and forth cannot add another keyword counter.
+local mtgPrintedKeywordPending = {}
+
+function mtgQueuePrintedKeywordEquip(zone, obj)
+    if obj == nil or obj.type ~= "Card" or obj.is_face_down then return end
+    if zone == nil or zone.type ~= "Scripting" then return end
+    if obj.hasTag("FetchPreview")
+        or obj.hasTag("MTG_Lotus_RevealTop_VisualOnly") then return end
+
+    local battlefield = false
+    for _, color in ipairs(mtgPlayerColors) do
+        if data[color] ~= nil and data[color].playmat == zone then
+            battlefield = true
+            break
+        end
+    end
+    if not battlefield then return end
+
+    local guid = obj.getGUID()
+    if guid == nil or mtgPrintedKeywordPending[guid] then return end
+    local info = mtgCardMetadata({guid = guid})
+    if info == nil or type(info.printedKeywords) ~= "table"
+        or #info.printedKeywords == 0 then return end
+
+    mtgPrintedKeywordPending[guid] = true
+    -- Avoid encoding cards that only pass through the battlefield while
+    -- drawn/moved. Reuse the same settled-in-zone guard as the land tracker.
+    Wait.condition(function()
+        mtgPrintedKeywordPending[guid] = nil
+        if obj == nil or obj.isDestroyed() or obj.is_face_down
+            or not zoneContains(zone, obj) then return end
+        local encoder = Global.getVar("Encoder")
+        if encoder == nil then return end
+        local ok, prop = pcall(function()
+            return encoder.call("APIgetProp", {propID = "πKeywords"})
+        end)
+        if not ok or prop == nil or prop.funcOwner == nil then return end
+        local applied, err = pcall(function()
+            prop.funcOwner.call("applyPrintedKeywords", {
+                obj = obj, keywords = info.printedKeywords
+            })
+        end)
+        if not applied then
+            print("[MTG Keywords] Auto-equip failed: " .. tostring(err))
+        end
+    end, function()
+        return obj == nil or obj.isDestroyed()
+            or obj.resting or not zoneContains(zone, obj)
+    end)
+end
 ------------------------------------- UNTAP ------------------------------------
 -- when each player last pressed their own untap-all button (os.time seconds).
 -- A draw within skipDrawWindow seconds of this is treated as the turn's draw
@@ -4896,6 +4996,7 @@ function mtgHandleZoneEnter(zone, obj)
     stampOwnershipOnEnter(zone, obj)
     if obj.type == "Card" then mtgInvalidateCardMetadata({guid = obj.getGUID()}) end
     ownershipMatEnter(zone, obj)
+    mtgQueuePrintedKeywordEquip(zone, obj)
     mtgRefreshContextMenus(obj)
 end
 

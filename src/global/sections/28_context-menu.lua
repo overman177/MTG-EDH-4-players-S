@@ -118,6 +118,7 @@ function mtgHandleZoneEnter(zone, obj)
     stampOwnershipOnEnter(zone, obj)
     if obj.type == "Card" then mtgInvalidateCardMetadata({guid = obj.getGUID()}) end
     ownershipMatEnter(zone, obj)
+    mtgQueuePrintedKeywordEquip(zone, obj)
     mtgRefreshContextMenus(obj)
 end
 

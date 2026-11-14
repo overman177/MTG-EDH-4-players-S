@@ -124,7 +124,7 @@ function registerModule(obj,ply)
     enc.call("APIregisterValue",value)
     value = {valueID='iconMenuOn',validType='boolean',desc='',default=false}
     enc.call("APIregisterValue",value)
-    value = {valueID='iconLayout',validType='string',desc='',default='art'}
+    value = {valueID='iconLayout',validType='string',desc='',default='above'}
     enc.call("APIregisterValue",value)
 
     for k,v in pairs(KeywordList) do
@@ -138,7 +138,10 @@ function registerModule(obj,ply)
       _G['toggleStatus'..k] = function(obj,ply,alt) toggleStatus(obj,ply,alt,k) end
     end
 
-    values={'activeIcons','iconMenuOn','iconLayout'}
+    value = {valueID='autoPrintedKeywordsApplied',validType='boolean',desc='',default=false}
+    enc.call('APIregisterValue',value)
+
+    values={'activeIcons','iconMenuOn','iconLayout','autoPrintedKeywordsApplied'}
     for k,v in pairs(KeywordList) do
       table.insert(values,k)
     end
@@ -153,6 +156,76 @@ function registerModule(obj,ply)
     }
     enc.call("APIregisterProperty",properties)
   end
+end
+
+
+-- Apply inherent keywords in one batch, rebuilding buttons/decals only once.
+-- Does not increment pre-existing manual counters or overwrite a player's
+-- chosen layout. Marker is stored with the encoded card for persistence.
+function applyPrintedKeywords(args)
+  if type(args) ~= 'table' or args.obj == nil
+      or type(args.keywords) ~= 'table' or #args.keywords == 0 then
+    return false
+  end
+  local obj = args.obj
+  if obj.isDestroyed() then return false end
+  local encoder = Global.getVar('Encoder')
+  if encoder == nil or not encoder.call('APIpropertyExists',{propID=pID}) then
+    return false
+  end
+  if encoder.call('APIobjectExists',{obj=obj}) ~= true then
+    encoder.call('APIencodeObject',{obj=obj})
+  end
+  if encoder.call('APIobjectExists',{obj=obj}) ~= true then return false end
+  if encoder.call('APIobjIsPropEnabled',{obj=obj,propID=pID}) ~= true then
+    encoder.call('APIobjEnableProp',{obj=obj,propID=pID})
+  end
+  local data = encoder.call('APIobjGetPropData',{obj=obj,propID=pID})
+  if data == nil or data.autoPrintedKeywordsApplied == true then
+    return false
+  end
+
+  -- Clone activeIcons instead of mutating the Encoder's shared default table.
+  local active, seen = {}, {}
+  for _, key in ipairs(data.activeIcons or {}) do
+    if not seen[key] then
+      seen[key] = true
+      active[#active+1] = key
+    end
+  end
+
+  local changed = false
+  for _, key in ipairs(args.keywords) do
+    local keyword = KeywordList[key]
+    if keyword ~= nil then
+      if keyword.val == 'number' then
+        if type(data[key]) ~= 'number' or data[key] < 1 then
+          data[key] = 1
+          changed = true
+        end
+      elseif keyword.val == 'boolean' then
+        if data[key] ~= true then
+          data[key] = true
+          changed = true
+        end
+      end
+      if (data[key] == true or (type(data[key]) == 'number' and data[key] > 0))
+          and not seen[key] then
+        seen[key] = true
+        active[#active+1] = key
+        changed = true
+      end
+    end
+  end
+
+  data.activeIcons = active
+  data.autoPrintedKeywordsApplied = true
+  encoder.call('APIobjSetPropData',{obj=obj,propID=pID,data=data})
+  if changed then
+    updateDecals = true
+    encoder.call('APIrebuildButtons',{obj=obj})
+  end
+  return true
 end
 
 function toggleKeywordsMenu(obj,ply)

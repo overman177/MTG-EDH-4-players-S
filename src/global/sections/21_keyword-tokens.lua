@@ -136,3 +136,60 @@ function applyKeywordUnder(token)
 	end
 	token.destruct()
 end
+
+
+-- AUTO-PRINTED KEYWORDS -------------------------------------------------
+-- Only run when a face-up card settles onto a player's Battlefield zone.
+-- Uses the existing πKeywords Encoder property and renders the normal
+-- keyword decals/buttons. Cards outside battlefield zones are never touched.
+-- The Keywords module stores a per-card "already applied" value so moving
+-- cards back and forth cannot add another keyword counter.
+local mtgPrintedKeywordPending = {}
+
+function mtgQueuePrintedKeywordEquip(zone, obj)
+    if obj == nil or obj.type ~= "Card" or obj.is_face_down then return end
+    if zone == nil or zone.type ~= "Scripting" then return end
+    if obj.hasTag("FetchPreview")
+        or obj.hasTag("MTG_Lotus_RevealTop_VisualOnly") then return end
+
+    local battlefield = false
+    for _, color in ipairs(mtgPlayerColors) do
+        if data[color] ~= nil and data[color].playmat == zone then
+            battlefield = true
+            break
+        end
+    end
+    if not battlefield then return end
+
+    local guid = obj.getGUID()
+    if guid == nil or mtgPrintedKeywordPending[guid] then return end
+    local info = mtgCardMetadata({guid = guid})
+    if info == nil or type(info.printedKeywords) ~= "table"
+        or #info.printedKeywords == 0 then return end
+
+    mtgPrintedKeywordPending[guid] = true
+    -- Avoid encoding cards that only pass through the battlefield while
+    -- drawn/moved. Reuse the same settled-in-zone guard as the land tracker.
+    Wait.condition(function()
+        mtgPrintedKeywordPending[guid] = nil
+        if obj == nil or obj.isDestroyed() or obj.is_face_down
+            or not zoneContains(zone, obj) then return end
+        local encoder = Global.getVar("Encoder")
+        if encoder == nil then return end
+        local ok, prop = pcall(function()
+            return encoder.call("APIgetProp", {propID = "πKeywords"})
+        end)
+        if not ok or prop == nil or prop.funcOwner == nil then return end
+        local applied, err = pcall(function()
+            prop.funcOwner.call("applyPrintedKeywords", {
+                obj = obj, keywords = info.printedKeywords
+            })
+        end)
+        if not applied then
+            print("[MTG Keywords] Auto-equip failed: " .. tostring(err))
+        end
+    end, function()
+        return obj == nil or obj.isDestroyed()
+            or obj.resting or not zoneContains(zone, obj)
+    end)
+end

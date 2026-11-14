@@ -30,6 +30,7 @@
         "src/global/sections/19_fetchlands.lua",
         "src/global/sections/20_double-faced-cards.lua",
         "src/global/sections/21_keyword-tokens.lua",
+        "src/global/sections/21a_flying-hover.lua",
         "src/global/sections/22_untap.lua",
         "src/global/sections/23_draw.lua",
         "src/global/sections/24_mill.lua",
@@ -49,7 +50,7 @@
         "src/global/sections/38_bug-reports.lua"
       ],
       "source_git_blob": "5749bcd3751f4f36d6ffaf1771efbf24c868bb82",
-      "section_count": 40
+      "section_count": 41
     },
     {
       "id": "lotus",

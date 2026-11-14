@@ -119,6 +119,7 @@ function mtgHandleZoneEnter(zone, obj)
     if obj.type == "Card" then mtgInvalidateCardMetadata({guid = obj.getGUID()}) end
     ownershipMatEnter(zone, obj)
     mtgQueuePrintedKeywordEquip(zone, obj)
+    mtgFlyingHoverEnter(zone, obj)
     mtgRefreshContextMenus(obj)
 end
 
@@ -129,6 +130,7 @@ function mtgHandleZoneLeave(zone, obj)
         fetchlandLeave(zone, obj)
     end
     ownershipMatLeave(zone, obj)
+    mtgFlyingHoverLeave(zone, obj)
     mtgRefreshContextMenus(obj)
 end
 

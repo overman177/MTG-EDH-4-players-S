@@ -164,6 +164,15 @@ end
 -- Apply inherent keywords in one batch, rebuilding buttons/decals only once.
 -- Does not increment pre-existing manual counters or overwrite a player's
 -- chosen layout. Marker is stored with the encoded card for persistence.
+-- Notify optional table effects without changing the Encoder UI.
+function notifyFlyingHover(obj)
+  if obj ~= nil and obj.type == "Card" then
+    pcall(function()
+      Global.call("mtgFlyingHoverRequest",{guid=obj.getGUID()})
+    end)
+  end
+end
+
 function applyPrintedKeywords(args)
   if type(args) ~= 'table' or args.obj == nil
       or type(args.keywords) ~= 'table' or #args.keywords == 0 then
@@ -230,6 +239,7 @@ function applyPrintedKeywords(args)
     updateDecals = true
     encoder.call('APIrebuildButtons',{obj=obj})
   end
+  notifyFlyingHover(obj)
   return true
 end
 
@@ -256,6 +266,7 @@ function toggleKeywordsMenu(obj,ply)
       enc.call("APIobjSetPropData",{obj=obj,propID=pID,data=data})
     end
     enc.call("APIrebuildButtons",{obj=obj})
+    notifyFlyingHover(obj)
   end
 end
 
@@ -336,6 +347,7 @@ function toggleStatus(obj,ply,alt,key)
     data['activeIcons'] = activeIcons
     enc.call("APIobjSetPropData",{obj=obj,propID=pID,data=data})
     enc.call("APIrebuildButtons",{obj=obj})
+    if key == "mtg_flyingcounter" then notifyFlyingHover(obj) end
   end
 end
 

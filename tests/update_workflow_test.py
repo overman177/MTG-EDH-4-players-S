@@ -24,6 +24,11 @@ for forbidden in (r"&\s*git\s+stash\b", r"&\s*git\s+push\b",
                   r"\bMove-Item\b"):
     assert not re.search(forbidden, ps, flags=re.IGNORECASE), forbidden
 
+# Reload the updater from disk after a hard reset; never continue stale code.
+assert "param([switch]$AfterSync)" in ps
+assert "powershell.exe -NoProfile -ExecutionPolicy Bypass -File $updatedScript -AfterSync" in ps
+assert ps.index("git reset --hard origin/main") < ps.index("powershell.exe -NoProfile -ExecutionPolicy Bypass -File $updatedScript -AfterSync")
+assert "if (-not $AfterSync)" in ps and "else {" in ps
 assert "savegame.json" not in ps or "git reset --hard origin/main" in ps
 # Historical backups are ignored, not traversed or deleted by the updater.
 assert "Remove-Item" not in ps

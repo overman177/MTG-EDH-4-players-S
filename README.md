@@ -56,7 +56,7 @@ More details: [Combat targeting](docs/COMBAT_TARGETING.md).
 
 ## One-click updates (Windows)
 
-Both the 4-player and 6-player repositories use **exactly the same** `UPDATE_TABLE.bat` and `tools/update-and-deploy.ps1`. Double-click the BAT file or use **Terminal > Run Task > MTG: Update from GitHub + Deploy** in VS Code.
+Both the 4-player and 6-player repositories use **exactly the same** `UPDATE_TABLE.bat` and `tools/update-and-deploy.ps1`. Double-click the BAT file or use **Terminal > Run Task > MTG: Update from GitHub + Deploy** in VS Code. **After resetting from GitHub, the updater relaunches itself in a fresh PowerShell process** so outdated in-memory code cannot run the remaining steps.
 
 **This is a destructive, one-way download from GitHub.** It does not upload files, create Git stashes, or make backups.
 

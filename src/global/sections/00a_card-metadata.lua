@@ -95,22 +95,41 @@ local mtgPrintedKeywordIDs = {
 
 local function mtgMetadataPrintedKeywords(rawDescription)
     if type(rawDescription) ~= "string" then return {} end
-    local first = rawDescription:match("^([^\r\n]*)") or ""
-    -- Strip ordinary MTG reminder text and TTS rich-text tags. Do not
-    -- extract words from parentheses or from later rules-text lines.
-    first = first:gsub("%b()", ""):gsub("%[[^%]]+%]", "")
-        :lower():gsub(",%s*and%s+", ", ")
-        :gsub("%s+and%s+", ", ")
-        :gsub("[%s%.]+$", "")
     local result, seen = {}, {}
-    for item in (first .. ","):gmatch("(.-),") do
-        local name = item:gsub("^%s+", ""):gsub("%s+$", "")
-        local id = mtgPrintedKeywordIDs[name]
-        if id == nil then break end
-        if not seen[id] then
-            seen[id] = true
-            result[#result + 1] = id
+    local start = 1
+    -- Oracle text can list printed keywords on consecutive lines:
+    -- "Flying\nLifelink\nWhenever ..." is two inherent keywords.
+    -- Bound work per card: never run a lazy wildcard across an entire
+    -- ability line (TTS Lua reports "pattern too complex" on long text).
+    for _ = 1, 8 do
+        if start > #rawDescription then break end
+        local lineEnd = rawDescription:find("\n", start, true)
+        local line = rawDescription:sub(start, (lineEnd or (#rawDescription + 1)) - 1)
+        start = lineEnd and lineEnd + 1 or #rawDescription + 1
+        if #line > 240 then line = line:sub(1, 240) end
+        line = line:gsub("\r", ""):gsub("%b()", "")
+            :gsub("%[[^%]]+%]", ""):lower()
+            :gsub(",%s*and%s+", ", "):gsub("%s+and%s+", ", ")
+            :gsub("^%s+", ""):gsub("%s+$", "")
+        if line == "" then break end
+        local position, foundOnLine = 1, false
+        for _ = 1, 10 do
+            -- Plain-string delimiter avoids the old quadratic (.-), pattern.
+            local comma = line:find(",", position, true)
+            local item = line:sub(position, comma and comma - 1 or #line)
+            item = item:gsub("^%s+", ""):gsub("[%.%s]+$", "")
+            local id = mtgPrintedKeywordIDs[item]
+            if id == nil then return result end
+            if not seen[id] then
+                seen[id] = true
+                result[#result + 1] = id
+            end
+            foundOnLine = true
+            if not comma then break end
+            position = comma + 1
+            if position > #line then break end
         end
+        if not foundOnLine or not lineEnd then break end
     end
     return result
 end

@@ -140,8 +140,10 @@ function registerModule(obj,ply)
 
     value = {valueID='autoPrintedKeywordsApplied',validType='boolean',desc='',default=false}
     enc.call('APIregisterValue',value)
+    value = {valueID='autoPrintedKeywordsVersion',validType='number',desc='',default=0}
+    enc.call('APIregisterValue',value)
 
-    values={'activeIcons','iconMenuOn','iconLayout','autoPrintedKeywordsApplied'}
+    values={'activeIcons','iconMenuOn','iconLayout','autoPrintedKeywordsApplied','autoPrintedKeywordsVersion'}
     for k,v in pairs(KeywordList) do
       table.insert(values,k)
     end
@@ -181,7 +183,9 @@ function applyPrintedKeywords(args)
     encoder.call('APIobjEnableProp',{obj=obj,propID=pID})
   end
   local data = encoder.call('APIobjGetPropData',{obj=obj,propID=pID})
-  if data == nil or data.autoPrintedKeywordsApplied == true then
+  -- Version 1 only read the first line. Give those cards one repair pass.
+  -- Version 2 is idempotent, preserving later manual keyword changes.
+  if data == nil or (tonumber(data.autoPrintedKeywordsVersion) or 0) >= 2 then
     return false
   end
 
@@ -220,6 +224,7 @@ function applyPrintedKeywords(args)
 
   data.activeIcons = active
   data.autoPrintedKeywordsApplied = true
+  data.autoPrintedKeywordsVersion = 2
   encoder.call('APIobjSetPropData',{obj=obj,propID=pID,data=data})
   if changed then
     updateDecals = true

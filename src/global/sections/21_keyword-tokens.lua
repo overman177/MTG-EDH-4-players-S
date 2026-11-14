@@ -163,7 +163,14 @@ function mtgQueuePrintedKeywordEquip(zone, obj)
 
     local guid = obj.getGUID()
     if guid == nil or mtgPrintedKeywordPending[guid] then return end
-    local info = mtgCardMetadata({guid = guid})
+    -- Isolate malformed/imported card text from the zone reconciliation loop.
+    -- A single odd card must never interrupt other cards' normal zone events.
+    local ok, info = pcall(mtgCardMetadata, {guid = guid})
+    if not ok then
+        log("[MTG Keywords] Metadata parse skipped for " .. tostring(guid)
+            .. ": " .. tostring(info))
+        return
+    end
     if info == nil or type(info.printedKeywords) ~= "table"
         or #info.printedKeywords == 0 then return end
 

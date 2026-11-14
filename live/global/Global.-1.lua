@@ -4147,14 +4147,16 @@ function mtgQueuePrintedKeywordEquip(zone, obj)
             or obj.resting or not zoneContains(zone, obj)
     end)
 end
--- Flying visual effect: subtle, slow, low-cost motion of the actual card.
+-- Flying visual effect: simple smooth vertical bobbing of the actual card.
 -- No clones, no locks, no new UI. Only an enabled πKeywords/Flying value
 -- on a face-up card resting in a tracked battlefield scripting zone qualifies.
 -- Physical stacking, pickup, leaving play and keyword removal stop the effect.
 local mtgFlyActive, mtgFlyHeld, mtgFlyPending = {}, {}, {}
 local mtgFlyRunning, mtgFlyEnabled = false, true
-local FLY_H, FLY_BOB, FLY_DRIFT = 0.11, 0.035, 0.018
-local FLY_STEP = 0.65
+local FLY_H, FLY_BOB = 0.10, 0.035 -- 0.065 to 0.135 above resting
+local FLY_RATE = 0.90               -- rad/s; ~7 seconds per complete cycle
+local FLY_ACTIVE_FRAMES = 2         -- ~30 Hz at normal TTS framerate
+local FLY_IDLE_FRAMES = 20          -- small idle cost
 
 local function mtgFlyAlive(obj)
     if obj == nil or obj.type ~= "Card" then return false end
@@ -4284,38 +4286,43 @@ end
 
 local function mtgFlyTick()
     local now = Time.time
-    for guid, s in pairs(mtgFlyActive) do
+    for guid, state in pairs(mtgFlyActive) do
         local obj = getObjectFromGUID(guid)
         local stop = not mtgFlyAlive(obj)
         if not stop then
-            local p, a = obj.getPosition(), s.anchor
+            local pos, anchor = obj.getPosition(), state.anchor
             if obj.is_face_down or mtgFlyHeld[guid] or obj.getLock()
                 or obj.use_gravity ~= false
-                or math.abs(p.x-a.x) > 0.38
-                or math.abs(p.y-a.y) > 0.40
-                or math.abs(p.z-a.z) > 0.38 then
+                or math.abs(pos.x - anchor.x) > 0.38
+                or math.abs(pos.y - anchor.y) > 0.40
+                or math.abs(pos.z - anchor.z) > 0.38 then
                 stop = true
-            elseif now >= s.checkAt then
-                s.checkAt = now + 2.5
+            elseif now >= state.checkAt then
+                state.checkAt = now + 2.5
                 if not mtgFlyHasKeyword(obj)
-                    or not zoneContains(s.zone, obj)
+                    or not zoneContains(state.zone, obj)
                     or mtgFlyStacked(obj) then stop = true end
             end
         end
         if stop then
             mtgFlyingHoverStop(guid, false)
         else
-            local a, phase = s.anchor, s.phase
-            local target = {
-                x=a.x + FLY_DRIFT*math.sin(now*0.9+phase),
-                y=a.y + FLY_H + FLY_BOB*math.sin(now*1.4+phase),
-                z=a.z + FLY_DRIFT*math.cos(now*0.75+phase)
-            }
+            local a = state.anchor
+            local y = a.y + FLY_H
+                + FLY_BOB * math.sin(now * FLY_RATE + state.phase)
+            -- Never restart TTS smooth movement while it is still running.
+            -- Apply small steps along one continuous curve; X/Z never drift.
             local ok = pcall(function()
-                obj.setPositionSmooth(target, false, false)
+                obj.setPosition({x=a.x, y=y, z=a.z})
             end)
             if not ok then mtgFlyingHoverStop(guid, false) end
         end
+    end
+    if mtgFlyRunning then
+        -- One loop for all flyers; throttle when none are active.
+        local frames = next(mtgFlyActive) and FLY_ACTIVE_FRAMES
+            or FLY_IDLE_FRAMES
+        Wait.frames(mtgFlyTick, frames)
     end
 end
 
@@ -4370,7 +4377,7 @@ end
 function mtgFlyingHoverInit()
     if mtgFlyRunning then return end
     mtgFlyRunning = true
-    Wait.time(mtgFlyTick, FLY_STEP, -1)
+    Wait.frames(mtgFlyTick, FLY_ACTIVE_FRAMES)
     for _, color in ipairs(mtgPlayerColors) do
         local p = data and data[color]
         if p and p.playmat then

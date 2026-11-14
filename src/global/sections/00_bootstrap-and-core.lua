@@ -72,7 +72,7 @@ function onLoad(saved)
     Wait.frames(function()
         mtgSeedZoneSnapshots()
         mtgSafeInit("context menu refresh", addZoneContextMenus)
-        Wait.time(mtgPollZoneSnapshots, 0.50, -1)
+        Wait.time(mtgPollZoneSnapshots, 0.85, -1)
     end, 12)
 
     -- One succinct chat notice; successful module diagnostics go to the console.
@@ -302,8 +302,10 @@ end
 
 local mtgZoneSnapshots = {}
 local mtgZonesReady = false
+local mtgTrackedZoneCache = nil
 
 local function mtgGetTrackedZones()
+    if mtgTrackedZoneCache ~= nil then return mtgTrackedZoneCache end
     local zones = {}
     if data == nil then return zones end
     for _, color in ipairs(mtgPlayerColors) do
@@ -317,6 +319,7 @@ local function mtgGetTrackedZones()
             end
         end
     end
+    mtgTrackedZoneCache = zones
     return zones
 end
 
@@ -335,6 +338,8 @@ local function mtgSnapshotObjects(zone)
 end
 
 function mtgSeedZoneSnapshots()
+    -- Rebuild cached zone references when tags / mappings are refreshed.
+    mtgTrackedZoneCache = nil
     mtgZoneSnapshots = {}
     for guid, zone in pairs(mtgGetTrackedZones()) do
         local present = {}

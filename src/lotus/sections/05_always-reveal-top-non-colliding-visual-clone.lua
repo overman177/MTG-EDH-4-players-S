@@ -83,14 +83,18 @@ function RevealTop.findLibrary(color)
     return nearestDeck or nearestCard
 end
 
-function RevealTop.addMenu(obj)
+function RevealTop.addMenu(obj, confirmedLibrary)
     if not obj or (obj.type ~= "Deck" and obj.type ~= "Card")
         or rtIsVisual(obj) or obj.isDestroyed() then return end
-    local isLibrary = false
-    for _, color in ipairs(RevealTop.COLORS) do
-        if RevealTop.findLibrary(color) == obj then isLibrary = true; break end
+    -- The periodic seat poll has already established library residency.
+    -- Calls from spawn still validate the object's current location.
+    if not confirmedLibrary then
+        local isLibrary = false
+        for _, color in ipairs(RevealTop.COLORS) do
+            if RevealTop.findLibrary(color) == obj then isLibrary = true; break end
+        end
+        if not isLibrary then return end
     end
-    if not isLibrary then return end
     local guid = obj.getGUID()
     if not guid or RevealTop.registered[guid] then return end
     local ok, err = pcall(function()
@@ -396,7 +400,7 @@ end
 function RevealTop.pollOne(color)
         local library = RevealTop.findLibrary(color)
         if library then
-            RevealTop.addMenu(library)
+            RevealTop.addMenu(library, true)
             RevealTop.cleanOldDeckUI(library)
         end
         if RevealTop.enabled[color] then

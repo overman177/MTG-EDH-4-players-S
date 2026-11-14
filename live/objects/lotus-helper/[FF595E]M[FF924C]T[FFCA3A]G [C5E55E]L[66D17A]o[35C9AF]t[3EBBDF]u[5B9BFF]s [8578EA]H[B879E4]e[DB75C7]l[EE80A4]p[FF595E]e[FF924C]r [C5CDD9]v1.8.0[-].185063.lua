@@ -398,6 +398,14 @@ end
 -- Optional manual overrides for cards with unusual names or no metadata:
 -- tag a physical card "MTG_Land" or "MTG_NonLand".
 function Preview.isLand(card)
+    -- The central metadata cache handles known card types; preserve the
+    -- existing local/Scryfall fallbacks for portable use on other tables.
+    local ok, meta = pcall(function()
+        return Global.call("mtgCardMetadata", {guid = card.getGUID()})
+    end)
+    if ok and type(meta) == "table" and meta.isLand ~= nil then
+        return meta.isLand
+    end
     if card.hasTag("MTG_Land") or card.hasTag("Land") then return true end
     if card.hasTag("MTG_NonLand") then return false end
 
@@ -1106,7 +1114,7 @@ end
 
 local DrawRandom = {
     ZONE_TAGS = { "Graveyard", "Library", "Exile" },
-    SCAN_INTERVAL = 1.0,
+    SCAN_INTERVAL = 2.0,
     registered = {}  -- deck GUID -> menu registered (until deck is destroyed)
 }
 
@@ -1218,13 +1226,13 @@ function DrawRandom.draw(playerColor, position, deck)
     end
 end
 
-function DrawRandom.registerDeck(deck)
+function DrawRandom.registerDeck(deck, alreadyInZone)
     if deck == nil or deck.type ~= "Deck" or deck.isDestroyed() then
         return
     end
     local guid = deck.getGUID()
     if guid == nil or DrawRandom.registered[guid] then return end
-    if not DrawRandom.isEligible(deck) then return end
+    if not alreadyInZone and not DrawRandom.isEligible(deck) then return end
 
     local ok, err = pcall(function()
         deck.addContextMenuItem("Draw Random", DrawRandom.draw)
@@ -1242,7 +1250,7 @@ function DrawRandom.scan()
     for _, zone in ipairs(DrawRandom.getZones()) do
         for _, obj in ipairs(zone.getObjects(true)) do
             if obj.type == "Deck" then
-                DrawRandom.registerDeck(obj)
+                DrawRandom.registerDeck(obj, true)
             end
         end
     end
@@ -3742,14 +3750,18 @@ function RevealTop.findLibrary(color)
     return nearestDeck or nearestCard
 end
 
-function RevealTop.addMenu(obj)
+function RevealTop.addMenu(obj, confirmedLibrary)
     if not obj or (obj.type ~= "Deck" and obj.type ~= "Card")
         or rtIsVisual(obj) or obj.isDestroyed() then return end
-    local isLibrary = false
-    for _, color in ipairs(RevealTop.COLORS) do
-        if RevealTop.findLibrary(color) == obj then isLibrary = true; break end
+    -- The periodic seat poll has already established library residency.
+    -- Calls from spawn still validate the object's current location.
+    if not confirmedLibrary then
+        local isLibrary = false
+        for _, color in ipairs(RevealTop.COLORS) do
+            if RevealTop.findLibrary(color) == obj then isLibrary = true; break end
+        end
+        if not isLibrary then return end
     end
-    if not isLibrary then return end
     local guid = obj.getGUID()
     if not guid or RevealTop.registered[guid] then return end
     local ok, err = pcall(function()
@@ -4055,7 +4067,7 @@ end
 function RevealTop.pollOne(color)
         local library = RevealTop.findLibrary(color)
         if library then
-            RevealTop.addMenu(library)
+            RevealTop.addMenu(library, true)
             RevealTop.cleanOldDeckUI(library)
         end
         if RevealTop.enabled[color] then

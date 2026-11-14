@@ -398,6 +398,14 @@ end
 -- Optional manual overrides for cards with unusual names or no metadata:
 -- tag a physical card "MTG_Land" or "MTG_NonLand".
 function Preview.isLand(card)
+    -- The central metadata cache handles known card types; preserve the
+    -- existing local/Scryfall fallbacks for portable use on other tables.
+    local ok, meta = pcall(function()
+        return Global.call("mtgCardMetadata", {guid = card.getGUID()})
+    end)
+    if ok and type(meta) == "table" and meta.isLand ~= nil then
+        return meta.isLand
+    end
     if card.hasTag("MTG_Land") or card.hasTag("Land") then return true end
     if card.hasTag("MTG_NonLand") then return false end
 

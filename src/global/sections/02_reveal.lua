@@ -103,7 +103,9 @@ end
 function tallyRevealCMC(ply, hexPrefix, nRevealed, card)
 	revealedCMC = revealedCMC or {}
 	revealedCMC[ply] = revealedCMC[ply] or 0
-	local cmc = getCMC(card.getName(), card.getDescription(), false)
+	local metadata = mtgCardMetadata({guid = card.getGUID()})
+	local cmc = metadata and metadata.manaValue
+	if cmc == nil then cmc = getCMC(card.getName(), card.getDescription(), false) end
 	local flag = ""
 	if cmc == nil then
 		flag = " [FF8800][b](CMC?)[/b][-]"

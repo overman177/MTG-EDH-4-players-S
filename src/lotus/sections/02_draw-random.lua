@@ -14,7 +14,7 @@
 
 local DrawRandom = {
     ZONE_TAGS = { "Graveyard", "Library", "Exile" },
-    SCAN_INTERVAL = 1.0,
+    SCAN_INTERVAL = 2.0,
     registered = {}  -- deck GUID -> menu registered (until deck is destroyed)
 }
 
@@ -126,13 +126,13 @@ function DrawRandom.draw(playerColor, position, deck)
     end
 end
 
-function DrawRandom.registerDeck(deck)
+function DrawRandom.registerDeck(deck, alreadyInZone)
     if deck == nil or deck.type ~= "Deck" or deck.isDestroyed() then
         return
     end
     local guid = deck.getGUID()
     if guid == nil or DrawRandom.registered[guid] then return end
-    if not DrawRandom.isEligible(deck) then return end
+    if not alreadyInZone and not DrawRandom.isEligible(deck) then return end
 
     local ok, err = pcall(function()
         deck.addContextMenuItem("Draw Random", DrawRandom.draw)
@@ -150,7 +150,7 @@ function DrawRandom.scan()
     for _, zone in ipairs(DrawRandom.getZones()) do
         for _, obj in ipairs(zone.getObjects(true)) do
             if obj.type == "Deck" then
-                DrawRandom.registerDeck(obj)
+                DrawRandom.registerDeck(obj, true)
             end
         end
     end

@@ -4,7 +4,7 @@
 -- Physical stacking, pickup, leaving play and keyword removal stop the effect.
 local mtgFlyActive, mtgFlyHeld, mtgFlyPending = {}, {}, {}
 local mtgFlyRunning, mtgFlyEnabled = false, true
-local FLY_H, FLY_BOB = 0.14, 0.06 -- 0.08 to 0.20 above resting
+local FLY_H, FLY_BOB = 0.20, 0.10 -- 0.10 to 0.30 above resting
 local FLY_RATE = 0.90               -- rad/s; ~7 seconds per complete cycle
 local FLY_ACTIVE_FRAMES = 2         -- ~30 Hz at normal TTS framerate
 local FLY_IDLE_FRAMES = 20          -- small idle cost

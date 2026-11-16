@@ -611,9 +611,6 @@ end
 
 -- keep track of "discard" pile when cascading
 function onObjectEnterContainer(container, enter_object)
-	if enter_object ~= nil and enter_object.type == "Card" then
-		mtgFlyingHoverStop(enter_object, false)
-	end
 	if enter_object.type == "Card" then
 		enter_object.setHiddenFrom({}) -- if hidden card enters a library, unhide
 		enter_object.use_hands = true

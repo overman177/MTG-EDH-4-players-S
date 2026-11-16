@@ -73,8 +73,6 @@ function onLoad(saved)
         mtgSeedZoneSnapshots()
         mtgSafeInit("context menu refresh", addZoneContextMenus)
         Wait.time(mtgPollZoneSnapshots, 0.85, -1)
-        -- Keyword module registration finishes after table initialization.
-        Wait.frames(mtgFlyingHoverInit, 75)
     end, 12)
 
     -- One succinct chat notice; successful module diagnostics go to the console.

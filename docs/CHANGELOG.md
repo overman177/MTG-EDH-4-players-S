@@ -1,5 +1,13 @@
 # Lotus Helper release history
 
+## Version 1.9.0 — Directional arrows and automation improvements
+- Arrows now point from the first (key-down) card to the second (key-up) card, without assigning attacker/defender roles.
+- Preserved multiple arrows, card-following arrows, Undo and configurable hold-to-clear.
+- Automatically recognizes printed card keywords and displays their Encoder indicators.
+- Improved card metadata handling and reduced unnecessary table polling.
+- Hardened Draw Random against transient deck merges, splits and destroyed objects.
+
+
 ## Version 1.8.0 — Ring ornament and Black Lotus quality-of-life
 - Added an animated One Ring ornament that floats and follows The Ring card.
 - Enlarged and restyled the startup banner with Black Lotus purple/cyan colors.

@@ -3,7 +3,7 @@
 --
 -- TTS does not let Lua assign C (or any default key) programmatically.
 -- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
--- DRAW: hold over defender and release over attacker to add a visual arrow.
+-- DRAW: hold over the starting card and release over the destination card.
 -- UNDO: tap to remove latest arrow; hold for your chosen duration to clear all.
 -- Holding never performs the short-press undo.
 -- Arrows are visual-only and session-only; no MTG rules are enforced.
@@ -20,10 +20,10 @@ Combat = {
         Yellow = {1.0, 0.83, 0.19},
         Blue = {0.30, 0.64, 1.0}
     },
-    pending = {}, -- color -> defender GUID during DRAW
+    pending = {}, -- color -> starting card GUID during DRAW
     history = {}, -- color -> created pairs in order
     undoHeld = {}, -- color -> pending short/long press token
-    links = {},   -- attacker GUID -> {defenders = { [defenderGUID] = playerColor }, by = color}
+    links = {},   -- starting GUID -> {defenders = { [destinationGUID] = ownerColor }, by = color} (historic keys)
     baseLines = {},
     -- Used only to remove AUTOFIGHT objects from older table saves.
     LEGACY_ANCHOR_TAG = "MTG_Lotus_AutoFightAnchor",
@@ -47,8 +47,8 @@ local function combatLocal(world)
     return {v.x, v.y, v.z}
 end
 
--- Each attacker can have several defenders, with independent arrows. One
--- defender may be selected for multiple attacking creatures.
+-- Each start card can point to multiple destinations, and each destination
+-- can receive multiple arrows. No attacker/defender role is inferred.
 function Combat.countDefenders(link)
     local n, only = 0, nil
     if not link then return 0, nil end
@@ -68,7 +68,8 @@ end
 
 -- Declaring a pairing is idempotent. Repeating it MUST NOT delete an
 -- earlier arrow, including when an input event is received more than once.
--- Each defender stores the color of the player who added that arrow.
+-- Each destination stores the color of the player who added the arrow.
+-- Legacy attacker/defender fields now simply mean start/destination.
 function Combat.addDefender(attackerGUID, defenderGUID, color)
     if attackerGUID == defenderGUID or not Combat.OWNERS[color] then return false end
     local link = Combat.links[attackerGUID]
@@ -200,13 +201,16 @@ function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
             and hovered.getGUID() or nil
         return
     end
-    local defender = Combat.pending[color]
+    local startGUID = Combat.pending[color]
     Combat.pending[color] = nil
-    if not Combat.enabled(color) or not defender
-        or not combatCard(getObjectFromGUID(defender))
+    if not Combat.enabled(color) or not startGUID
+        or not combatCard(getObjectFromGUID(startGUID))
         or not combatCard(hovered) then return end
-    local attacker = hovered.getGUID()
-    if attacker ~= defender then Combat.addDefender(attacker, defender, color) end
+    local endGUID = hovered.getGUID()
+    -- Direct the arrow from key-down card to key-up card, without combat roles.
+    if endGUID ~= startGUID then
+        Combat.addDefender(startGUID, endGUID, color)
+    end
 end
 
 -- Removing a single arrow requires an entirely separate key gesture.

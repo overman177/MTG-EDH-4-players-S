@@ -31,9 +31,9 @@ dofile("src/lotus/sections/06_combat-targeting.lua")
 Combat.updated=function() updates=updates+1 end
 local atk=card("a11111");local atk2=card("b22222")
 local d1=card("d11111");local d2=card("d22222");local d3=card("d33333");local d4=card("d44444")
-local function draw(color,def,attacker)
-    Combat.hotkey(color,def,nil,false)
-    Combat.hotkey(color,attacker,nil,true)
+local function draw(color,destination,startCard)
+    Combat.hotkey(color,startCard,nil,false)
+    Combat.hotkey(color,destination,nil,true)
 end
 local function count(attacker) return Combat.countDefenders(Combat.links[attacker.guid]) end
 local function down(color) Combat.undoHotkey(color,nil,nil,false) end
@@ -41,7 +41,10 @@ local function up(color) Combat.undoHotkey(color,nil,nil,true) end
 
 draw("White",d1,atk);draw("White",d2,atk);draw("White",d3,atk)
 draw("Blue",d4,atk);draw("Blue",d2,atk2)
-assert(count(atk)==4 and count(atk2)==1,"multiple defenders and owners")
+assert(count(atk)==4 and count(atk2)==1,"multiple destinations and owners")
+assert(Combat.links[atk.guid].defenders[d1.guid]=="White",
+    "key down selects start and key up selects destination")
+assert(Combat.links[d1.guid]==nil,"arrow is not reversed")
 draw("White",d1,atk);draw("White",atk,atk)
 assert(count(atk)==4,"drawing cannot remove links")
 

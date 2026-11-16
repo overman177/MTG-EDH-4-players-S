@@ -51,14 +51,17 @@ assert(binds["MTG: Undo Combat Target"].up==true,"Undo requires key release")
 assert(binds["MTG: Remove Combat Target"]==nil,"only two hotkeys registered")
 scheduled[1]()
 assert(anchor.destroyed and #buttons==2 and #xml==1,"legacy cleanup only")
-local function gesture(fn,def,atk)
-    fn("White",def,def.pos,false);fn("White",atk,atk.pos,true)
+local function gesture(fn,destination,startCard)
+    fn("White",startCard,startCard.pos,false)
+    fn("White",destination,destination.pos,true)
 end
 local draw=binds["MTG: Declare Combat Target"].fn
 local undo=binds["MTG: Undo Combat Target"].fn
 gesture(draw,d1,attacker);gesture(draw,d2,attacker)
 assert(Combat.countDefenders(Combat.links["a11111"])==2)
 assert(#lines==5 and lines[1]==oldLines[1],"both arrows and base line")
+assert(lines[2].points[1][1]<1 and lines[2].points[2][1]>3,
+    "shaft must point from starting card to destination")
 gesture(draw,attacker,attacker)
 assert(#lines==5,"stationary tap never deletes")
 d1.pos.x=10;Combat.render()
@@ -83,4 +86,11 @@ undo("White",nil,nil,true)
 assert(#lines==3,"release after long hold does not undo")
 Combat.onDestroy(d2)
 assert(#lines==1 and not next(Combat.links),"destroy cleanup")
-print("Combat vector line and two-key short/long Undo tests passed.")
+gesture(draw,attacker,d1)
+assert(Combat.links[d1.getGUID()].defenders[attacker.getGUID()]=="White",
+    "reverse gesture stores reversed direction")
+assert(lines[2].points[1][1]>lines[2].points[2][1],
+    "reverse gesture renders reversed arrow")
+Combat.clear("White")
+assert(#lines==1,"reversed arrow can be cleared")
+print("Combat start-to-finish direction, multi-arrow and Undo tests passed.")

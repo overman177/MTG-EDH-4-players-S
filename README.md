@@ -1,6 +1,6 @@
 # MTG EDH — Tabletop Simulator scripting
 
-**Current scripted release: v1.8.0** (four-player table).
+**Current scripted release: v1.9.0** (four-player table).
 
 **Maintained source architecture with GUID-safe Smart Import v3 deployment.**
 
@@ -49,12 +49,12 @@ The One Ring ornament `2d70e1` floats and rotates above The Ring card `d9fcbc`, 
 
 In **Table Settings > General**, combat targeting has **two bindable hotkeys**:
 
-- **MTG: Declare Combat Target** (C suggested): hold on defender, release on attacker to **add** an arrow; duplicates never toggle an existing connection.
+- **MTG: Declare Combat Target** (C suggested): hold on the starting card, release on the destination card to **add** an arrow; duplicates never toggle an existing connection.
 - **MTG: Undo Combat Target**: **tap and release** to remove your latest surviving arrow; **hold for your chosen duration (1–10 seconds, default 5)** to clear all arrows you created. Other players' arrows are untouched. Your existing Undo binding is preserved.
 
 **Open Game Keys** opens the TTS keybinding dialog, or open **Options > Game Keys** manually. The General tab now has a **per-player Undo hold-duration slider** instead of Undo/Clear buttons. Your setting is saved. Arrows are visual only: no automatic combat result or rules enforcement.
 
-More details: [Combat targeting](docs/COMBAT_TARGETING.md).
+More details: [Combat targeting](docs/COMBAT_TARGETING.md). The hotkey labels remain unchanged to preserve existing bindings; arrows do not assign MTG attacker or defender roles.
 
 ## One-click updates (Windows)
 

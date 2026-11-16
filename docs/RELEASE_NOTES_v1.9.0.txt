@@ -1,0 +1,7 @@
+Version 1.9.0
+
+- Arrows now draw from the card where you press the hotkey to the card where you release it.
+- Any two cards can be connected; multiple arrows, Undo and hold-to-clear are preserved.
+- Printed card keywords are detected automatically using the existing Encoder indicators.
+- Improved card metadata handling and reduced unnecessary table polling.
+- Improved Draw Random reliability while decks split, merge or disappear.

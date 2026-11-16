@@ -47,6 +47,8 @@ jobs:
         run: lua5.2 tests/preview_pipeline_test.lua
       - name: Test independent four-seat counter visibility
         run: lua5.2 tests/counter_visibility_test.lua
+      - name: Test Draw Random during transient deck merges
+        run: lua5.2 tests/draw_random_lifecycle_test.lua
       - name: Test Reveal Top during library deck merges
         run: lua5.2 tests/reveal_top_deck_merge_test.lua
       - name: Test per-seat combat hold settings and General tab

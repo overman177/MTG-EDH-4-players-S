@@ -1,42 +1,73 @@
 -- =============================================================
 -- MODULE 3/4: DRAW RANDOM
 --
--- Right-click Deck -> Draw Random when it is inside a scripting
--- zone tagged Graveyard, Library or Exile (any player color).
--- A deck never needs its own zone/player tag.
+-- Right-click Deck -> Draw Random inside a Library, Graveyard or Exile
+-- scripting zone (the deck itself does not need any tags).
 --
--- Important: TTS cannot remove one individual context-menu item.
--- Do not clearContextMenu(): that would erase Global/other scripts'
--- menu entries. Keep one registration per live deck; validate its
--- CURRENT zone when the item is used. The menu may remain visible
--- outside enabled zones, but clicking it cannot draw there.
+-- TTS merges and destroys Decks during draws/mills/shuffles. Zone snapshots
+-- may briefly contain invalid Unity object references. Never trust a
+-- reference from getObjects(true) without validating it inside pcall.
+--
+-- Register a context menu only after seeing the same live Deck GUID in two
+-- CONSECUTIVE complete scans. Event callbacks must not bypass this buffer.
+-- Once registered, preserve the menu when the deck moves: TTS cannot remove
+-- an individual context-menu item without clearing other scripts' menus.
+-- At click time, always recheck the deck's CURRENT zone.
 -- =============================================================
 
 local DrawRandom = {
     ZONE_TAGS = { "Graveyard", "Library", "Exile" },
     SCAN_INTERVAL = 2.0,
-    registered = {}  -- deck GUID -> menu registered (until deck is destroyed)
+    registered = {}, -- deck GUID -> context menu installed
+    candidates = {}, -- deck GUID -> {scan=N, count=N}
+    scanNumber = 0,
 }
 
-function DrawRandom.isSupportedZone(zone)
-    if zone == nil or zone.type ~= "Scripting" then return false end
-    for _, tag in ipairs(DrawRandom.ZONE_TAGS) do
-        if zone.hasTag(tag) then return true end
+-- A reference may be destroyed between returning from zone.getObjects(true)
+-- and reading its type/GUID. Guard both access and isDestroyed() itself.
+function DrawRandom.isAlive(obj, expectedType)
+    if obj == nil then return false end
+    local ok, alive = pcall(function()
+        return obj.isDestroyed() == false
+            and (expectedType == nil or obj.type == expectedType)
+    end)
+    return ok and alive == true
+end
+
+function DrawRandom.safeGuid(obj)
+    if not DrawRandom.isAlive(obj) then return nil end
+    local ok, guid = pcall(function() return obj.getGUID() end)
+    if ok and type(guid) == "string" and guid ~= "" then
+        return guid
     end
-    return false
+    return nil
+end
+
+function DrawRandom.isSupportedZone(zone)
+    if not DrawRandom.isAlive(zone, "Scripting") then return false end
+    local ok, supported = pcall(function()
+        for _, tag in ipairs(DrawRandom.ZONE_TAGS) do
+            if zone.hasTag(tag) then return true end
+        end
+        return false
+    end)
+    return ok and supported == true
 end
 
 function DrawRandom.getZones()
-    local zones = {}
-    local seen = {}
-
+    local zones, seen = {}, {}
     for _, tag in ipairs(DrawRandom.ZONE_TAGS) do
-        for _, zone in ipairs(getObjectsWithTag(tag) or {}) do
-            if zone.type == "Scripting" then
-                local guid = zone.getGUID()
-                if guid ~= nil and not seen[guid] then
-                    seen[guid] = true
-                    table.insert(zones, zone)
+        local ok, candidates = pcall(function()
+            return getObjectsWithTag(tag) or {}
+        end)
+        if ok and type(candidates) == "table" then
+            for _, zone in ipairs(candidates) do
+                if DrawRandom.isAlive(zone, "Scripting") then
+                    local guid = DrawRandom.safeGuid(zone)
+                    if guid and not seen[guid] then
+                        seen[guid] = true
+                        zones[#zones + 1] = zone
+                    end
                 end
             end
         end
@@ -44,18 +75,27 @@ function DrawRandom.getZones()
     return zones
 end
 
--- Check live occupancy, NOT the deck's tags and NOT a stale scan result.
-function DrawRandom.isEligible(deck)
-    if deck == nil or deck.type ~= "Deck" or deck.isDestroyed() then
-        return false
-    end
+-- Scripting zones need ignore-tags=true: decks without matching tags must
+-- still be discoverable. A failed call is not evidence that a zone is empty.
+function DrawRandom.safeZoneObjects(zone)
+    if not DrawRandom.isAlive(zone, "Scripting") then return nil end
+    local ok, objects = pcall(function() return zone.getObjects(true) end)
+    if ok and type(objects) == "table" then return objects end
+    return nil
+end
 
-    local deckGuid = deck.getGUID()
-    if deckGuid == nil then return false end
+-- Click-time eligibility is deliberately live, not cached. No menu action
+-- is allowed after the deck has left its Library/Graveyard/Exile zone.
+function DrawRandom.isEligible(deck)
+    if not DrawRandom.isAlive(deck, "Deck") then return false end
+    local guid = DrawRandom.safeGuid(deck)
+    if guid == nil then return false end
     for _, zone in ipairs(DrawRandom.getZones()) do
-        for _, obj in ipairs(zone.getObjects(true)) do
-            if obj == deck or obj.getGUID() == deckGuid then
-                return true
+        for _, obj in ipairs(DrawRandom.safeZoneObjects(zone) or {}) do
+            if DrawRandom.isAlive(obj, "Deck") then
+                if obj == deck or DrawRandom.safeGuid(obj) == guid then
+                    return DrawRandom.isAlive(deck, "Deck")
+                end
             end
         end
     end
@@ -80,29 +120,38 @@ function DrawRandom.draw(playerColor, position, deck)
         return
     end
 
-    local cards = deck.getObjects()
-    if cards == nil or #cards == 0 then return end
+    -- Decks may vanish while the player opens the context menu.
+    local ok, cards = pcall(function()
+        if not DrawRandom.isAlive(deck, "Deck") then return nil end
+        return deck.getObjects()
+    end)
+    if not ok or type(cards) ~= "table" or #cards == 0 then return end
 
     local selected = cards[math.random(1, #cards)]
-    -- Select by GUID whenever available; index is a safe fallback.
-    -- Never pass both index and guid to takeObject().
+    if type(selected) ~= "table" then return end
+
     local takeParameters = {
         smooth = false,
         callback_function = function(card)
-            if card == nil then return end
+            if not DrawRandom.isAlive(card, "Card") then return end
             Wait.condition(
                 function()
-                    if card.isDestroyed() then return end
-                    card.use_hands = true
-                    local ok, err = pcall(function()
+                    if not DrawRandom.isAlive(card, "Card") then return end
+                    local dealt, err = pcall(function()
+                        if card.isDestroyed() then return end
+                        card.use_hands = true
                         card.deal(1, playerColor, 1)
                     end)
-                    if not ok then
+                    if not dealt then
                         print("MTG Draw Random: deal failed: " .. tostring(err))
                     end
                 end,
                 function()
-                    return card.isDestroyed() or not card.spawning
+                    if not DrawRandom.isAlive(card, "Card") then return true end
+                    local ready, spawning = pcall(function()
+                        return card.spawning
+                    end)
+                    return not ready or not spawning
                 end,
                 3,
                 function()
@@ -111,73 +160,106 @@ function DrawRandom.draw(playerColor, position, deck)
             )
         end
     }
-    if selected.guid ~= nil then
+
+    -- Select by GUID whenever available; never pass both index and GUID.
+    if type(selected.guid) == "string" and selected.guid ~= "" then
         takeParameters.guid = selected.guid
     else
         takeParameters.index = selected.index
     end
 
-    local ok, err = pcall(function()
+    local taken, err = pcall(function()
+        if not DrawRandom.isAlive(deck, "Deck") then return end
         deck.takeObject(takeParameters)
     end)
-    if not ok then
+    if not taken then
         print("MTG Draw Random: takeObject failed: " .. tostring(err))
         broadcastToColor("Draw Random failed.", playerColor, {1, 0.4, 0.4})
     end
 end
 
-function DrawRandom.registerDeck(deck, alreadyInZone)
-    if deck == nil or deck.type ~= "Deck" or deck.isDestroyed() then
-        return
-    end
-    local guid = deck.getGUID()
-    if guid == nil or DrawRandom.registered[guid] then return end
-    if not alreadyInZone and not DrawRandom.isEligible(deck) then return end
+-- Called only by scan() after the two-scan stability buffer. No redundant
+-- nested search through every zone. Keep existing context menus untouched.
+function DrawRandom.registerDeck(deck)
+    if not DrawRandom.isAlive(deck, "Deck") then return false end
+    local guid = DrawRandom.safeGuid(deck)
+    if guid == nil or DrawRandom.registered[guid] then return false end
 
-    local ok, err = pcall(function()
+    local ok, added = pcall(function()
+        if deck.isDestroyed() or deck.type ~= "Deck" then return false end
         deck.addContextMenuItem("Draw Random", DrawRandom.draw)
+        return true
     end)
-    if ok then
+    if ok and added then
         DrawRandom.registered[guid] = true
-    else
-        print("MTG Draw Random: menu registration failed: " .. tostring(err))
+        DrawRandom.candidates[guid] = nil
+        return true
     end
+    return false -- transient/invalidation: retry only if seen in later scans
 end
 
 function DrawRandom.scan()
-    -- Periodic polling is required because tagged TTS scripting zones do
-    -- not emit enter/leave events for every untagged Deck.
+    -- Scripting-zone tag filtering suppresses some native enter events,
+    -- so event-only discovery is not sufficient.
+    DrawRandom.scanNumber = DrawRandom.scanNumber + 1
+    local scan = DrawRandom.scanNumber
+    local found = {} -- once per GUID even if zones overlap
+
     for _, zone in ipairs(DrawRandom.getZones()) do
-        for _, obj in ipairs(zone.getObjects(true)) do
-            if obj.type == "Deck" then
-                DrawRandom.registerDeck(obj, true)
+        local objects = DrawRandom.safeZoneObjects(zone)
+        if objects ~= nil then
+            for _, obj in ipairs(objects) do
+                if DrawRandom.isAlive(obj, "Deck") then
+                    local guid = DrawRandom.safeGuid(obj)
+                    if guid and not found[guid] then
+                        found[guid] = true
+                        if not DrawRandom.registered[guid] then
+                            local previous = DrawRandom.candidates[guid]
+                            local count = 1
+                            if previous and previous.scan == scan - 1 then
+                                count = previous.count + 1
+                            end
+                            DrawRandom.candidates[guid] = {
+                                scan = scan, count = count
+                            }
+                            if count >= 2 then
+                                DrawRandom.registerDeck(obj)
+                            end
+                        end
+                    end
+                end
             end
         end
     end
-    -- Do NOT reset registered when a deck leaves; Global now preserves
-    -- its context menu, so re-registering would duplicate the item.
+
+    -- Break the consecutive-scan streak when a deck disappears. Do not
+    -- erase 'registered': context menus must never be duplicated on reentry.
+    for guid in pairs(DrawRandom.candidates) do
+        if not found[guid] then DrawRandom.candidates[guid] = nil end
+    end
 end
 
 function DrawRandom.onEnterZone(zone, obj)
-    if obj == nil or obj.type ~= "Deck" then return end
-    if not DrawRandom.isSupportedZone(zone) then return end
-
-    -- Where an enter event does fire, register sooner than the next scan.
-    Wait.frames(function()
-        if not obj.isDestroyed() then
-            DrawRandom.registerDeck(obj)
-        end
-    end, 3)
+    -- Deliberately do not register or schedule a callback here.
+    -- An immediate onEnterZone would bypass the two-scan safety buffer.
 end
 
 function DrawRandom.onDestroy(obj)
-    if obj == nil or obj.type ~= "Deck" then return end
-    local guid = obj.getGUID()
-    if guid ~= nil then DrawRandom.registered[guid] = nil end
+    -- onObjectDestroy may deliver a reference already invalidated by Unity.
+    if obj == nil then return end
+    local ok, guid = pcall(function()
+        if obj.type == "Deck" then return obj.getGUID() end
+    end)
+    if ok and guid then
+        DrawRandom.registered[guid] = nil
+        DrawRandom.candidates[guid] = nil
+    end
 end
 
 function DrawRandom.load()
     DrawRandom.registered = {}
+    DrawRandom.candidates = {}
+    DrawRandom.scanNumber = 0
     Wait.frames(DrawRandom.scan, 5)
     Wait.time(DrawRandom.scan, DrawRandom.SCAN_INTERVAL, -1)
     log("MTG Portable Helper: Draw Random module ready.")

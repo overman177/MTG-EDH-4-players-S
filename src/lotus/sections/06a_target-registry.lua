@@ -290,21 +290,36 @@ function TargetRegistry.onChat(message, player)
             if not ok or type(state)~="table" or state.status~="ready" then
                 targetTell(color, "Card state unavailable (face-down or invalid).")
             else
-                local p = state.currentPower
-                local t = state.currentToughness
-                local pt = (p~=nil and tostring(p) or "?") ..
-                    "/" .. (t~=nil and tostring(t) or "?")
+                local function displayedStat(value)
+                    return value ~= nil and tostring(value) or "?"
+                end
+                local function displayedAdjustment(value)
+                    if type(value) ~= "number" then return "?" end
+                    return (value >= 0 and "+" or "") .. tostring(value)
+                end
+                local counters = type(state.counters)=="table" and state.counters or {}
+                local basePT = displayedStat(state.basePower) .. "/" ..
+                    displayedStat(state.baseToughness)
+                local currentPT = displayedStat(state.currentPower) .. "/" ..
+                    displayedStat(state.currentToughness)
+                local adjustments = displayedAdjustment(state.powerAdjustment) .. "/" ..
+                    displayedAdjustment(state.toughnessAdjustment)
                 targetTell(color, tostring(state.name) ..
                     " | owner " .. tostring(state.owner or "?") ..
                     " | controller " .. tostring(state.controller or "?") ..
                     " | zone " .. tostring(state.zone or "?") ..
                     " (" .. tostring(state.zoneColor or "-") .. ")")
-                targetTell(color, "P/T " .. pt ..
+                -- The base values are the active face's printed/encoded stats.
+                -- They are not the base stats set by Magic continuous effects.
+                targetTell(color, "Encoded base P/T " .. basePT ..
+                    " | adjustments " .. adjustments ..
+                    " | +1/+1 counters " ..
+                    displayedStat(counters.plusOnePlusOne))
+                targetTell(color, "Displayed P/T " .. currentPT ..
                     " (" .. tostring(state.powerToughnessSource or "unknown") ..
                     "; layers unverified), tapped=" .. tostring(state.tapped) ..
                     ", ready=" .. tostring(state.controlReady) ..
                     ", damage=" .. tostring(state.damageMarked))
-                local counters = type(state.counters)=="table" and state.counters or {}
                 local shown = {}
                 for _, key in ipairs({"plusOnePlusOne","named","stun","time","generic"}) do
                     if counters[key]~=nil then

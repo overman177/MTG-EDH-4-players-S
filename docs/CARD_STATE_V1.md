@@ -15,6 +15,9 @@ Hover a face-up card and type **`mtg state`** in chat. The result includes:
   cards move onto a different playmat. An explicit effect API is the sole way
   the new state layer changes it. The result may legitimately be unknown.
 - **Zone:** current zone/zone seat, reported separately from control.
+- **Chat output:** `mtg state` shows **Encoded base P/T**, signed
+  Encoder adjustments, +1/+1 counters and **Displayed P/T** separately.
+  Zero values and false readiness/tapped values remain visible.
 - **P/T:** reads current, already-encoded Unified module data
   (`_MTG_Simplified_UNIFIED` / `tyrantUnified`).
   `currentPower = numeric basePower + power adjustment + plusOneCounters`;

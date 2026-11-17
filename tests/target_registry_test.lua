@@ -13,6 +13,16 @@ function getObjectFromGUID(guid) return objects[guid] end
 function printToColor(msg, color) messages[#messages+1]={msg=msg, color=color} end
 Wait = {time=function() end}
 Global = {call=function(method, params)
+    if method=="mtgCardState" then
+        return {status="ready", name="Serra Angel", owner="White",
+            controller="White", zone="Battlefield", zoneColor="Red",
+            basePower="4",baseToughness="4",powerAdjustment=1,
+            toughnessAdjustment=2,currentPower=7,currentToughness=8,
+            powerToughnessSource="encoder",
+            counters={plusOnePlusOne=2,named=0,stun=0},
+            encodedKeywords={flying=1,vigilance=1},tapped=true,
+            controlReady=false,damageMarked=0}
+    end
     assert(method=="mtgCardCatalogRequest")
     return {status="pending", localData={name="Test"}} end}
 
@@ -28,6 +38,20 @@ local spell=card("111111","Swords to Plowshares")
 local target1=card("222222","Llanowar Elves")
 local target2=card("333333","Serra Angel")
 local other=card("444444","Shock")
+
+-- The chat snapshot must show the original encoded base separately from
+-- adjustments, +1/+1 counters and displayed P/T (plus known false values).
+TargetRegistry.onHover("White",target2)
+assert(TargetRegistry.onChat("mtg state",{color="White"})==false)
+local output={}
+for _, entry in ipairs(messages) do output[#output+1]=entry.msg end
+local chatLog=table.concat(output,"\n")
+assert(chatLog:find("Encoded base P/T 4/4",1,true),"show encoded base")
+assert(chatLog:find("adjustments +1/+2",1,true),"show signed adjustments")
+assert(chatLog:find("+1/+1 counters 2",1,true),"show stat counters separately")
+assert(chatLog:find("Displayed P/T 7/8",1,true),"show combined P/T")
+assert(chatLog:find("tapped=true, ready=false, damage=0",1,true),
+    "retain zero and false values without treating them as unknown")
 
 -- Ordinary arrows must not constitute registered targets.
 Combat.hotkey("White", spell, nil, false)

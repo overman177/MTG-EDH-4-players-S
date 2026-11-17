@@ -15,10 +15,17 @@ combat/visual arrow hotkeys are unchanged. The six-player table is unchanged.
    read-only API. If absent/unavailable, it tries Scryfall. Results are sent
    privately to the requesting color, with source (`mtga`/`scryfall`).
    Repeating a lookup uses an in-memory cache. No requests are made on hover.
-4. Hover the source card (for example Swords to Plowshares) and type
-   `mtg target`. Hold the existing arrow hotkey over the **same source
-   card**, then release it over Llanowar Elves; repeat with Serra Angel.
-5. Type `mtg targets` to review your **draft** selection.
+4. Two supported workflows:
+   - **Draw first:** draw arrows from Comet Storm to Llanowar Elves and
+     Serra Angel. Hover the **source OR either destination**, then type
+     `mtg target`. The helper identifies your most recent matching arrow
+     group and imports **both** targets in drawing order.
+   - **Start first:** type `mtg target` before drawing any arrows. The
+     **first arrow** establishes the source automatically; additional arrows
+     from the same source register more targets. You no longer have to
+     hover the correct source while typing the command.
+5. Type `mtg targets` to review your **draft** selection. After each
+   recorded gesture the helper also reports the target count privately.
    Tap the existing Undo hotkey: the last draft target should disappear.
 6. Type `mtg done` to commit. Record its `target-N` ID.
    Undo/clear the visual arrows, then type `mtg targets` again:
@@ -68,8 +75,14 @@ not stable Oracle identities.
   Successful results last only for the current scripting session. Failed
   lookups can be retried after two minutes.
 - Up to 20 targets per selection and 64 committed selections are kept.
-  Only gestures performed **after** `mtg target` are recorded, including
-  explicitly repeated gestures across pre-existing arrows.
+  `mtg target` captures existing arrows from the last hovered source (or
+  from its most recently drawn inbound arrow), **owned by that same seat**.
+  If no matching existing arrows are found, the first subsequent arrow
+  establishes the source. Repeated gestures across pre-existing arrows
+  add targets without duplicate registration.
+- Repeating `mtg target` during an active selection reports its current
+  count without replacing it. A source mismatch is reported privately.
+  An empty draft cannot be committed.
 - Undo/clear of visual arrows changes **draft** targets, not committed choices.
   This does not enforce legal targets, mana costs, priority, targets that are
   players, spells on the stack, or spell resolution.

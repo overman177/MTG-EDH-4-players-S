@@ -73,4 +73,58 @@ assert(stale.count==1 and stale.targets[1].valid==false)
 spell.dead=true
 assert(TargetRegistry.begin({color="White",sourceGUID="111111"}).status=="invalid")
 assert(TargetRegistry.onChat("mtg help", {color="White"})==false)
-print("Target registration isolation/undo/commit/invalid-target tests passed.")
+
+-- Regression: arrows were drawn BEFORE "mtg target", but the player
+-- last hovered the destination (Serra Angel), not the source (Comet Storm).
+local comet=card("555551","Comet Storm")
+local elf=card("555552","Llanowar Elves")
+local angel=card("555553","Serra Angel")
+local blueTarget=card("555554","Blue target")
+Combat.hotkey("White",comet,nil,false)
+Combat.hotkey("White",elf,nil,true)
+Combat.hotkey("White",comet,nil,false)
+Combat.hotkey("White",angel,nil,true)
+Combat.hotkey("Blue",comet,nil,false)
+Combat.hotkey("Blue",blueTarget,nil,true)
+TargetRegistry.onHover("White",angel)
+assert(TargetRegistry.onChat("mtg target",{color="White"})==false)
+local fromEnd=TargetRegistry.read({color="White"})
+assert(fromEnd.status=="active" and fromEnd.sourceGUID=="555551",
+    "source is recovered from an inbound arrow rather than last hovered target")
+assert(fromEnd.count==2 and fromEnd.targets[1].guid=="555552"
+    and fromEnd.targets[2].guid=="555553",
+    "both already drawn White arrows get registered in drawing order")
+assert(TargetRegistry.onChat("mtg target",{color="White"})==false)
+assert(TargetRegistry.read({color="White"}).count==2,
+    "repeating command reports active session, never erases earlier targets")
+assert(TargetRegistry.onChat("mtg done",{color="White"})==false)
+local seededCommit=TargetRegistry.read({color="White"})
+assert(seededCommit.status=="committed" and seededCommit.count==2)
+Combat.clear("White")
+assert(TargetRegistry.read({id=seededCommit.id}).count==2,
+    "committed targets independent of removed visual arrows")
+
+-- Regression: initiating a session BEFORE drawing arrows must not lock the
+-- source accidentally to the previously hovered destination.
+local newSpell=card("666661","New source")
+local secondTarget=card("666662","Second target")
+TargetRegistry.onHover("White",newSpell)
+assert(TargetRegistry.onChat("mtg target",{color="White"})==false)
+local before=TargetRegistry.read({color="White"})
+assert(before.status=="active" and before.sourceGUID==nil and before.count==0)
+assert(TargetRegistry.finish({color="White"}).status=="invalid",
+    "empty sessions cannot be accidentally committed")
+Combat.hotkey("White",newSpell,nil,false)
+Combat.hotkey("White",angel,nil,true)
+Combat.hotkey("White",newSpell,nil,false)
+Combat.hotkey("White",secondTarget,nil,true)
+local after=TargetRegistry.read({color="White"})
+assert(after.sourceGUID=="666661" and after.count==2,
+    "first arrow locks the correct source and subsequent arrows add targets")
+Combat.hotkey("White",newSpell,nil,false)
+Combat.hotkey("White",angel,nil,true)
+assert(TargetRegistry.read({color="White"}).count==2,"duplicate gestures are harmless")
+assert(TargetRegistry.onChat("mtg done",{color="White"})==false)
+assert(TargetRegistry.read({color="White"}).count==2)
+
+print("Target registration source auto-detection, pre-existing arrows, multiple targets and commit tests passed.")

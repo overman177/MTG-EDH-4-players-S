@@ -4710,29 +4710,87 @@ local function targetSnapshot(record, state)
     return {
         status = state, id = record.id, color = record.color,
         sourceGUID = record.sourceGUID,
-        sourceValid = targetCard(getObjectFromGUID(record.sourceGUID)),
+        sourceName = record.sourceGUID and targetName(getObjectFromGUID(record.sourceGUID))
+            or "(waiting for first arrow)",
+        sourceValid = record.sourceGUID ~= nil
+            and targetCard(getObjectFromGUID(record.sourceGUID)) or false,
         count = #values, targets = values
     }
 end
 
+-- Source discovery for chat-driven sessions: a hovered arrow DESTINATION
+-- is not necessarily its source. Prefer outgoing arrows from the hovered
+-- card, otherwise search inbound arrows newest-first in this player's history.
+-- Only links owned by the requesting seat can become that seat's targets.
+local function targetOwnedArrow(color, sourceGUID, destinationGUID)
+    local link = Combat.links[sourceGUID]
+    return link ~= nil and link.defenders ~= nil
+        and link.defenders[destinationGUID] == color
+        and targetCard(getObjectFromGUID(sourceGUID))
+        and targetCard(getObjectFromGUID(destinationGUID))
+end
+
+local function targetSourceForHint(color, hintGUID)
+    if type(hintGUID) ~= "string"
+        or not targetCard(getObjectFromGUID(hintGUID)) then return nil end
+    for _, pair in ipairs(Combat.history[color] or {}) do
+        if pair.attacker == hintGUID
+            and targetOwnedArrow(color, pair.attacker, pair.defender) then
+            return hintGUID
+        end
+    end
+    local history = Combat.history[color] or {}
+    for i = #history, 1, -1 do
+        local pair = history[i]
+        if pair.defender == hintGUID
+            and targetOwnedArrow(color, pair.attacker, pair.defender) then
+            return pair.attacker
+        end
+    end
+    return nil
+end
+
+local function targetSeedExisting(record)
+    for _, pair in ipairs(Combat.history[record.color] or {}) do
+        if #record.targets >= TargetRegistry.MAX_TARGETS then break end
+        if pair.attacker == record.sourceGUID
+            and not record.index[pair.defender]
+            and targetOwnedArrow(record.color, pair.attacker, pair.defender) then
+            record.targets[#record.targets + 1] = pair.defender
+            record.index[pair.defender] = true
+        end
+    end
+end
+
 function TargetRegistry.begin(params)
     local color = type(params) == "table" and params.color or nil
-    local sourceGUID = type(params) == "table" and params.sourceGUID or nil
+    local explicitSource = type(params) == "table" and params.sourceGUID or nil
+    local hintGUID = type(params) == "table" and params.hintGUID or nil
     if not Combat.OWNERS[color] or not Combat.enabled(color) then
         return {status = "invalid", reason = "targeting disabled or invalid seat"}
     end
-    if type(sourceGUID) ~= "string"
-        or not targetCard(getObjectFromGUID(sourceGUID)) then
+    if TargetRegistry.active[color] then
+        local snapshot = targetSnapshot(TargetRegistry.active[color], "active")
+        snapshot.alreadyActive = true
+        return snapshot
+    end
+    if explicitSource ~= nil
+        and (type(explicitSource) ~= "string"
+            or not targetCard(getObjectFromGUID(explicitSource))) then
         return {status = "invalid", reason = "source must be a live card"}
     end
-    if TargetRegistry.active[color] then
-        return {status = "invalid", reason = "finish or cancel current selection first"}
-    end
+    local selectedSource = explicitSource or targetSourceForHint(color, hintGUID)
     TargetRegistry.sequence = TargetRegistry.sequence + 1
     local record = {
         id = "target-" .. tostring(TargetRegistry.sequence),
-        color = color, sourceGUID = sourceGUID, targets = {}, index = {}
+        color = color, sourceGUID = selectedSource,
+        targets = {}, index = {}
     }
+    -- When invoked from chat after drawing the arrows, capture those arrows
+    -- immediately. Explicit API sessions start empty for callers to control.
+    if explicitSource == nil and selectedSource ~= nil then
+        targetSeedExisting(record)
+    end
     TargetRegistry.active[color] = record
     return targetSnapshot(record, "active")
 end
@@ -4741,12 +4799,27 @@ end
 -- gesture. This also allows the user to select a pre-existing visual arrow.
 function TargetRegistry.onDraw(color, sourceGUID, destinationGUID)
     local record = TargetRegistry.active[color]
-    if record == nil or record.sourceGUID ~= sourceGUID then return false end
+    if record == nil or not targetCard(getObjectFromGUID(sourceGUID)) then
+        return false
+    end
+    -- First arrow chooses the source. Hovering a target while typing the
+    -- command can no longer accidentally pin the wrong source.
+    if record.sourceGUID == nil then record.sourceGUID = sourceGUID end
+    if record.sourceGUID ~= sourceGUID then
+        targetTell(color, "Ignored arrow from " ..
+            targetName(getObjectFromGUID(sourceGUID)) ..
+            ". Current source is " ..
+            targetName(getObjectFromGUID(record.sourceGUID)) .. ".")
+        return false
+    end
     if sourceGUID == destinationGUID or record.index[destinationGUID]
         or #record.targets >= TargetRegistry.MAX_TARGETS
         or not targetCard(getObjectFromGUID(destinationGUID)) then return false end
     record.targets[#record.targets + 1] = destinationGUID
     record.index[destinationGUID] = true
+    targetTell(color, "Target " .. tostring(#record.targets) .. ": " ..
+        targetName(getObjectFromGUID(destinationGUID)) ..
+        " (source: " .. targetName(getObjectFromGUID(sourceGUID)) .. ")")
     return true
 end
 
@@ -4763,6 +4836,10 @@ function TargetRegistry.finish(params)
     local color = type(params) == "table" and params.color or nil
     local record = TargetRegistry.active[color]
     if not record then return {status = "none", count = 0, targets = {}} end
+    if #record.targets == 0 then
+        return {status = "invalid",
+            reason = "No targets selected. Draw a source-to-target arrow first."}
+    end
     TargetRegistry.active[color] = nil
     TargetRegistry.committed[record.id] = record
     TargetRegistry.latest[color] = record.id
@@ -4839,6 +4916,7 @@ local function targetDescribe(color, result)
         return
     end
     targetTell(color, result.status .. " " .. tostring(result.id) ..
+        " | source: " .. tostring(result.sourceName) ..
         " | " .. tostring(result.count or 0) .. " target(s)")
     for i, value in ipairs(result.targets or {}) do
         targetTell(color, tostring(i) .. ". " .. value.name .. " [" ..
@@ -4860,8 +4938,8 @@ function TargetRegistry.onChat(message, player)
     local color = player.color
     if not Combat.OWNERS[color] then return false end
     if command == "mtg help" then
-        targetTell(color, "Hover a face-up card: mtg inspect = catalog lookup; " ..
-            "mtg target = start a selection. Draw arrows normally, " ..
+        targetTell(color, "mtg inspect = look up last hovered card; " ..
+            "mtg target = capture arrows (before OR after drawing), " ..
             "mtg done = commit, mtg targets = inspect, mtg cancel = discard draft.")
     elseif command == "mtg inspect" then
         local guid = TargetRegistry.hovered[color]
@@ -4884,14 +4962,22 @@ function TargetRegistry.onChat(message, player)
         end
     elseif command == "mtg target" then
         local result = TargetRegistry.begin({
-            color = color, sourceGUID = TargetRegistry.hovered[color]
+            color = color, hintGUID = TargetRegistry.hovered[color]
         })
-        if result.status == "active" then
-            targetTell(color, "Selecting targets for " ..
-                targetName(getObjectFromGUID(result.sourceGUID)) ..
-                ". Draw arrows from THIS card, then type mtg done.")
+        if result.status == "active" and result.alreadyActive then
+            targetTell(color, "Selection " .. tostring(result.id) ..
+                " is already active: " .. tostring(result.count) ..
+                " target(s). Continue drawing, then type mtg done.")
+        elseif result.status == "active" and result.sourceGUID ~= nil then
+            targetTell(color, "Captured " .. tostring(result.count) ..
+                " existing arrow target(s) for " .. result.sourceName ..
+                ". Draw more arrows from that card or type mtg done.")
+        elseif result.status == "active" then
+            targetTell(color, "Target capture ready. Draw FIRST arrow from " ..
+                "your source card to a target; draw more from the SAME source. " ..
+                "Type mtg targets to check, then mtg done.")
         else
-            targetTell(color, result.reason or "Hover over the source card.")
+            targetTell(color, result.reason or "Could not start target selection.")
         end
     elseif command == "mtg done" then
         targetDescribe(color, TargetRegistry.finish({color = color}))

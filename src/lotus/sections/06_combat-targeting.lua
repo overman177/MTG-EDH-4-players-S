@@ -136,6 +136,7 @@ end
 function Combat.loop(generation)
     if generation ~= Combat.loopGeneration then return end
     Combat.render()
+    if SpellButtons and SpellButtons.refresh then SpellButtons.refresh() end
     if next(Combat.links) then
         Wait.time(function() Combat.loop(generation) end, Combat.REFRESH_SECONDS)
     else
@@ -145,6 +146,7 @@ end
 
 function Combat.updated()
     Combat.render()
+    if SpellButtons and SpellButtons.refresh then SpellButtons.refresh() end
     if next(Combat.links) and not Combat.loopActive then
         Combat.loopActive = true
         Combat.loopGeneration = Combat.loopGeneration + 1
@@ -154,6 +156,32 @@ function Combat.updated()
         Combat.loopGeneration = Combat.loopGeneration + 1
         Combat.loopActive = false
     end
+end
+
+-- Remove exactly the caller's outgoing arrows from ONE source, including
+-- history/Undo entries. Never touches links with a different source or owner.
+function Combat.clearSource(color,sourceGUID)
+    if not Combat.OWNERS[color] or type(sourceGUID)~="string" then return false end
+    local link=Combat.links[sourceGUID]
+    if link==nil then return false end
+    local changed=false
+    for dest,owner in pairs(link.defenders or {}) do
+        if owner==color then
+            link.defenders[dest]=nil
+            if TargetRegistry and TargetRegistry.onArrowRemoved then
+                TargetRegistry.onArrowRemoved(color,sourceGUID,dest)
+            end
+            changed=true
+        end
+    end
+    if not changed then return false end
+    if not next(link.defenders) then Combat.links[sourceGUID]=nil end
+    local h=Combat.history[color] or {}
+    for i=#h,1,-1 do
+        if h[i].attacker==sourceGUID then table.remove(h,i) end
+    end
+    Combat.updated()
+    return true
 end
 
 function Combat.clear(color)

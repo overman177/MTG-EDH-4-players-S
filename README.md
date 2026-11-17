@@ -56,6 +56,7 @@ In **Table Settings > General**, combat targeting has **two bindable hotkeys**:
 
 More details: [Combat targeting](docs/COMBAT_TARGETING.md).
 Experimental 4-player card catalog and explicit target selection: [prototype test guide](docs/CARD_TARGETS_PROTOTYPE.md).
+Manual-stack, opt-in **Resolve** buttons for selected instant/sorcery arrow sources: [4-player test guide](docs/ARROW_SPELL_RESOLUTION.md).
 Unified card state reads current Encoder stats/counters, preserves the write-once owner, and permits controller changes only through the explicit effect API; see [4P card state test guide](docs/CARD_STATE_V1.md). The hotkey labels remain unchanged to preserve existing bindings; arrows do not assign MTG attacker or defender roles.
 
 ## One-click updates (Windows)

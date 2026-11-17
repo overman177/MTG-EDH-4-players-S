@@ -12,6 +12,7 @@ function onLoad(savedData)
     RevealTop.load(savedData)
     Combat.load()
     TargetRegistry.load()
+    SpellButtons.load()
     -- Deferred until Global and the other script objects have loaded.
     Wait.frames(Settings.ready, 20)
     log("MTG Portable Helper: Playmat module ready.")

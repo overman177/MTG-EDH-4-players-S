@@ -116,7 +116,12 @@ function mtgHandleZoneEnter(zone, obj)
     fetchlandEnter(zone, obj)
     dfcLandEnter(zone, obj)
     stampOwnershipOnEnter(zone, obj)
-    if obj.type == "Card" then mtgInvalidateCardMetadata({guid = obj.getGUID()}) end
+    if obj.type == "Card" then
+        mtgInvalidateCardMetadata({guid = obj.getGUID()})
+        if type(mtgCardStateOnZoneEnter)=="function" then
+            mtgCardStateOnZoneEnter(zone, obj)
+        end
+    end
     ownershipMatEnter(zone, obj)
     mtgQueuePrintedKeywordEquip(zone, obj)
     mtgRefreshContextMenus(obj)

@@ -4932,15 +4932,58 @@ function TargetRegistry.onChat(message, player)
     local recognized = {
         ["mtg inspect"] = true, ["mtg target"] = true,
         ["mtg done"] = true, ["mtg cancel"] = true,
-        ["mtg targets"] = true, ["mtg help"] = true
+        ["mtg targets"] = true, ["mtg state"] = true, ["mtg help"] = true
     }
     if not recognized[command] then return nil end
     local color = player.color
     if not Combat.OWNERS[color] then return false end
     if command == "mtg help" then
-        targetTell(color, "mtg inspect = look up last hovered card; " ..
-            "mtg target = capture arrows (before OR after drawing), " ..
-            "mtg done = commit, mtg targets = inspect, mtg cancel = discard draft.")
+        targetTell(color, "mtg inspect = remote card catalog; mtg state = Encoder stats; " ..
+            "mtg target = capture arrows, mtg targets = view, " ..
+            "mtg done = commit, mtg cancel = discard draft.")
+    elseif command == "mtg state" then
+        local guid = TargetRegistry.hovered[color]
+        if not guid then
+            targetTell(color, "Hover over a face-up card first.")
+        else
+            local ok, state = pcall(function()
+                return Global.call("mtgCardState", {guid=guid})
+            end)
+            if not ok or type(state)~="table" or state.status~="ready" then
+                targetTell(color, "Card state unavailable (face-down or invalid).")
+            else
+                local p = state.currentPower
+                local t = state.currentToughness
+                local pt = (p~=nil and tostring(p) or "?") ..
+                    "/" .. (t~=nil and tostring(t) or "?")
+                targetTell(color, tostring(state.name) ..
+                    " | owner " .. tostring(state.owner or "?") ..
+                    " | controller " .. tostring(state.controller or "?") ..
+                    " | zone " .. tostring(state.zone or "?") ..
+                    " (" .. tostring(state.zoneColor or "-") .. ")")
+                targetTell(color, "P/T " .. pt ..
+                    " (" .. tostring(state.powerToughnessSource or "unknown") ..
+                    "; layers unverified), tapped=" .. tostring(state.tapped) ..
+                    ", ready=" .. tostring(state.controlReady) ..
+                    ", damage=" .. tostring(state.damageMarked))
+                local counters = type(state.counters)=="table" and state.counters or {}
+                local shown = {}
+                for _, key in ipairs({"plusOnePlusOne","named","stun","time","generic"}) do
+                    if counters[key]~=nil then
+                        shown[#shown+1]=key .. "=" .. tostring(counters[key])
+                    end
+                end
+                targetTell(color, "Counters: " ..
+                    (#shown>0 and table.concat(shown,", ") or "none encoded"))
+                local keywords = {}
+                for name, val in pairs(state.encodedKeywords or {}) do
+                    if val and val~=0 then keywords[#keywords+1]=name end
+                end
+                table.sort(keywords)
+                targetTell(color,"Encoded keywords: " ..
+                    (#keywords>0 and table.concat(keywords,", ") or "none"))
+            end
+        end
     elseif command == "mtg inspect" then
         local guid = TargetRegistry.hovered[color]
         if not guid then

@@ -53,6 +53,8 @@ jobs:
         run: lua5.2 tests/reveal_top_deck_merge_test.lua
       - name: Test per-seat combat hold settings and General tab
         run: lua5.2 tests/combat_settings_test.lua
+      - name: Test live Encoder-backed card state and explicit controller changes
+        run: lua5.2 tests/card_state_test.lua
       - name: Test combat targeting interactions
         run: lua5.2 tests/combat_hotkey_test.lua
       - name: Test Lotus keybind menu routing

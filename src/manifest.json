@@ -10,6 +10,7 @@
         "src/global/sections/00_bootstrap-and-core.lua",
         "src/global/sections/00a_card-metadata.lua",
         "src/global/sections/00b_card-catalog.lua",
+        "src/global/sections/00c_card-state.lua",
         "src/global/sections/01_table-buttons.lua",
         "src/global/sections/02_reveal.lua",
         "src/global/sections/03_mulligan.lua",
@@ -50,7 +51,7 @@
         "src/global/sections/38_bug-reports.lua"
       ],
       "source_git_blob": "5749bcd3751f4f36d6ffaf1771efbf24c868bb82",
-      "section_count": 41
+      "section_count": 42
     },
     {
       "id": "lotus",

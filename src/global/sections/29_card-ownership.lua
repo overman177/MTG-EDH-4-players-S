@@ -21,7 +21,9 @@
 -- any of these belongs to that colour. Their command zone is included so
 -- commanders -- which start there and never pass through the library or hand --
 -- still get an owner.
-ownershipStampZones = { "libraryZone", "commandZone" }
+-- MTG graveyards hold only their owners' cards. Exile does NOT establish
+-- ownership; exiled cards can belong to opponents.
+ownershipStampZones = { "libraryZone", "commandZone", "graveyard" }
 
 -- stamp ownership the first time a card is seen in one of its owner's private
 -- areas: their library / command zone (matched by the per-colour zone) or their

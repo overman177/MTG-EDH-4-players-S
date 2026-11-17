@@ -54,7 +54,8 @@ In **Table Settings > General**, combat targeting has **two bindable hotkeys**:
 
 **Open Game Keys** opens the TTS keybinding dialog, or open **Options > Game Keys** manually. The General tab now has a **per-player Undo hold-duration slider** instead of Undo/Clear buttons. Your setting is saved. Arrows are visual only: no automatic combat result or rules enforcement.
 
-More details: [Combat targeting](docs/COMBAT_TARGETING.md). The hotkey labels remain unchanged to preserve existing bindings; arrows do not assign MTG attacker or defender roles.
+More details: [Combat targeting](docs/COMBAT_TARGETING.md).
+Experimental 4-player card catalog and explicit target selection: [prototype test guide](docs/CARD_TARGETS_PROTOTYPE.md). The hotkey labels remain unchanged to preserve existing bindings; arrows do not assign MTG attacker or defender roles.
 
 ## One-click updates (Windows)
 

@@ -9,6 +9,7 @@
       "parts": [
         "src/global/sections/00_bootstrap-and-core.lua",
         "src/global/sections/00a_card-metadata.lua",
+        "src/global/sections/00b_card-catalog.lua",
         "src/global/sections/01_table-buttons.lua",
         "src/global/sections/02_reveal.lua",
         "src/global/sections/03_mulligan.lua",
@@ -49,7 +50,7 @@
         "src/global/sections/38_bug-reports.lua"
       ],
       "source_git_blob": "5749bcd3751f4f36d6ffaf1771efbf24c868bb82",
-      "section_count": 40
+      "section_count": 41
     },
     {
       "id": "lotus",
@@ -63,10 +64,11 @@
         "src/lotus/sections/04_original-moon-mtg-equipment-encoder-based.lua",
         "src/lotus/sections/05_always-reveal-top-non-colliding-visual-clone.lua",
         "src/lotus/sections/06_combat-targeting.lua",
+        "src/lotus/sections/06a_target-registry.lua",
         "src/lotus/sections/07_shared-event-dispatcher.lua"
       ],
       "source_git_blob": "03a74e10015c87f920278ab8cce407d03c96a7a8",
-      "section_count": 8
+      "section_count": 9
     },
     {
       "id": "ui",

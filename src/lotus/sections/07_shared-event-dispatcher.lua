@@ -11,6 +11,7 @@ function onLoad(savedData)
     Equipment.load()
     RevealTop.load(savedData)
     Combat.load()
+    TargetRegistry.load()
     -- Deferred until Global and the other script objects have loaded.
     Wait.frames(Settings.ready, 20)
     log("MTG Portable Helper: Playmat module ready.")
@@ -21,6 +22,8 @@ function onSave()
 end
 
 function onChat(message, player)
+    local targetResult = TargetRegistry.onChat(message, player)
+    if targetResult ~= nil then return targetResult end
     local rtResult = RevealTop.onChat(message, player)
     if rtResult ~= nil then return rtResult end
     return Playmats.onChat(message, player)
@@ -45,10 +48,12 @@ function onObjectDestroy(obj)
     DrawRandom.onDestroy(obj)
     RevealTop.onDestroy(obj)
     Combat.onDestroy(obj)
+    TargetRegistry.onDestroy(obj)
 end
 
 function onObjectHover(playerColor, obj)
     Equipment.onHover(playerColor, obj)
+    TargetRegistry.onHover(playerColor, obj)
 end
 
 function onObjectLeaveZone(zone, obj)
@@ -145,4 +150,21 @@ end
 -- Global XML: navigate read-only patch notes release pages.
 function settingsNotesNavigate(player, value, id)
     Settings.navigateNotes(player, value, id)
+end
+
+-- Explicit target-selection API (no MTG legality / spell resolution).
+function mtgBeginTargetSelection(params)
+    return TargetRegistry.begin(params)
+end
+
+function mtgReadTargetSelection(params)
+    return TargetRegistry.read(params)
+end
+
+function mtgFinishTargetSelection(params)
+    return TargetRegistry.finish(params)
+end
+
+function mtgCancelTargetSelection(params)
+    return TargetRegistry.cancel(params)
 end

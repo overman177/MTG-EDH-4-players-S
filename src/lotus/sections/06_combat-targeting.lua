@@ -166,6 +166,9 @@ function Combat.clear(color)
         for defenderGUID, owner in pairs(link.defenders) do
             if owner == color or (owner == true and link.by == color) then
                 link.defenders[defenderGUID] = nil
+                if TargetRegistry and TargetRegistry.onArrowRemoved then
+                    TargetRegistry.onArrowRemoved(color, attackerGUID, defenderGUID)
+                end
                 changed = true
             end
         end
@@ -210,6 +213,11 @@ function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     -- Direct the arrow from key-down card to key-up card, without combat roles.
     if endGUID ~= startGUID then
         Combat.addDefender(startGUID, endGUID, color)
+        -- A deliberate gesture during an explicit selection assigns a target,
+        -- even when the visual arrow already existed. Ordinary arrows stay visual.
+        if TargetRegistry and TargetRegistry.onDraw then
+            TargetRegistry.onDraw(color, startGUID, endGUID)
+        end
     end
 end
 
@@ -219,6 +227,9 @@ function Combat.removePair(attacker, defender, color)
     local link = Combat.links[attacker]
     if not link or link.defenders[defender] ~= color then return false end
     link.defenders[defender] = nil
+    if TargetRegistry and TargetRegistry.onArrowRemoved then
+        TargetRegistry.onArrowRemoved(color, attacker, defender)
+    end
     if next(link.defenders) == nil then Combat.links[attacker] = nil end
     Combat.updated()
     return true

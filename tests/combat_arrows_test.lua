@@ -94,3 +94,7 @@ assert(lines[2].points[1][1]>lines[2].points[2][1],
 Combat.clear("White")
 assert(#lines==1,"reversed arrow can be cleared")
 print("Combat start-to-finish direction, multi-arrow and Undo tests passed.")
+
+-- Additional independent component tests run inside the same CI Lua step.
+dofile("tests/target_registry_test.lua")
+dofile("tests/card_catalog_test.lua")

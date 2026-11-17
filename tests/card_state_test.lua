@@ -82,6 +82,10 @@ assert(s.counters.stun==2 and s.counters.time==3 and s.counters.generic==7)
 assert(s.counters.encodedById.mtg_stuncounter==2)
 assert(s.encodedKeywords.flying==1 and s.statuses.frozen)
 assert(s.tapped==true)
+spell.rotation={y=0}
+assert(mtgCardState({guid="abcdef"}).tapped==false,
+    "untapped is a known false, not an unknown nil")
+spell.rotation={y=90}
 assert(s.damageMarked==nil and s.summoningSick==nil,
     "unobserved damage and control readiness must be unknown")
 assert(writes==0,"card queries must not mutate Encoder")

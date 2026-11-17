@@ -1192,8 +1192,9 @@ function mtgCardState(params)
     local rotation = mtgStateSafe(function() return obj.getRotation() end)
     local rotY = rotation and mtgStateNumber(rotation.y)
     -- TTS rotation convention used by existing Untap module: 90/270 = tapped.
-    local tapped = rotY and (rotY % 180 > 45 and rotY % 180 < 135) or nil
-    local readiness = rec and rec.ready or nil
+    local tapped = nil
+    if rotY ~= nil then tapped = (rotY % 180 > 45 and rotY % 180 < 135) end
+    local readiness = rec and rec.ready
     local summoningSick = nil
     if zone == "Battlefield" and readiness ~= nil then
         -- Readiness is tracked on turn-start + explicit control events. Haste

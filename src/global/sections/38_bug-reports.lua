@@ -20,6 +20,9 @@ bugReportKey = "mtg-edh-4player"
 
 -- one shared in-progress report, matching the shared panel widgets
 bugReportDraft = bugReportDraft or { type = "Bug report", title = "", description = "" }
+-- UI-level deterrence only: Worker must enforce rate limits server-side.
+bugReportLastAttempt = bugReportLastAttempt or {}
+bugReportPending = bugReportPending or {}
 
 -- is the current draft a bug report (vs a feature request)?
 function bugReportIsBug()
@@ -78,6 +81,27 @@ function submitBugReport(player)
 		broadcastToColor("Enter a title before submitting.", player.color, { 1, 0.4, 0.4 })
 		return
 	end
+	local description = (bugReportDraft.description or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	if #title < 8 or #description < 20 then
+		broadcastToColor("Add a descriptive title (8+ characters) and details (20+ characters).", player.color, {1,0.4,0.4})
+		return
+	end
+	local lower = (title .. " " .. description):lower()
+	if lower:find("discord.gg/", 1, true) or lower:find("discord.com/invite/", 1, true) then
+		broadcastToColor("Discord invitation links are not valid bug reports.", player.color, {1,0.4,0.4})
+		return
+	end
+	local reporterId = tostring(player.steam_id or player.color)
+	if bugReportPending[reporterId] then
+		broadcastToColor("A report is still being submitted.", player.color, {1,0.6,0.2})
+		return
+	end
+	if os.time() - (bugReportLastAttempt[reporterId] or 0) < 120 then
+		broadcastToColor("Please wait two minutes between reports.", player.color, {1,0.6,0.2})
+		return
+	end
+	bugReportLastAttempt[reporterId] = os.time()
+	bugReportPending[reporterId] = true
 	local isBug = bugReportIsBug()
 	broadcastToColor(
 		"Submitting your " .. (isBug and "bug report" or "feature request") .. "...",
@@ -88,7 +112,7 @@ function submitBugReport(player)
 	local payload = {
 		type = isBug and "bug" or "feature",
 		title = title,
-		description = bugReportDraft.description or "",
+		description = description,
 		reporter = player.steam_name or player.color,
 		-- SteamID64: stable + unique, but self-asserted -- the Worker cannot verify
 		-- it (TTS exposes no Steam auth ticket), so treat it as a strong hint only.
@@ -102,9 +126,17 @@ function submitBugReport(player)
 		["X-Report-Key"] = bugReportKey,
 	}
 	local color = player.color
-	WebRequest.custom(bugReportURL, "POST", true, JSON.encode(payload), headers, function(resp)
-		bugReportDone(resp, color)
+	local ok, err = pcall(function()
+		WebRequest.custom(bugReportURL, "POST", true, JSON.encode(payload), headers, function(resp)
+			bugReportPending[reporterId] = nil
+			bugReportDone(resp, color)
+		end)
 	end)
+	if not ok then
+		bugReportPending[reporterId] = nil
+		broadcastToColor("Report could not be sent: " .. tostring(err), color, {1,0.3,0.3})
+		return
+	end
 	visibleCloseRules(player, "BugReportPanel")
 end
 

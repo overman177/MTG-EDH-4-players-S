@@ -2,6 +2,20 @@
 -- SHARED EVENT DISPATCHER (6 MODULES)
 -- =============================================================
 
+-- Isolate TTS callback failures when Card/Deck Unity proxies expire on merges.
+local lotusCallbackErrors = {}
+local function lotusSafeCall(label, callback, ...)
+    if type(callback) ~= "function" then return end
+    local ok, err = pcall(callback, ...)
+    if not ok then
+        local key = label .. ":" .. tostring(err)
+        if not lotusCallbackErrors[key] then
+            lotusCallbackErrors[key] = true
+            print("[MTG Lotus callback] " .. key)
+        end
+    end
+end
+
 function onLoad(savedData)
     Playmats.load(savedData)
     Wait.frames(Playmats.alignExisting, 30)
@@ -31,40 +45,40 @@ function onChat(message, player)
 end
 
 function onObjectEnterZone(zone, obj)
-    Preview.onEnterZone(zone, obj)
-    DrawRandom.onEnterZone(zone, obj)
-    Equipment.onEnterZone(zone, obj)
+    lotusSafeCall("Preview.onEnterZone", Preview.onEnterZone, zone, obj)
+    lotusSafeCall("DrawRandom.onEnterZone", DrawRandom.onEnterZone, zone, obj)
+    lotusSafeCall("Equipment.onEnterZone", Equipment.onEnterZone, zone, obj)
 end
 
 function onObjectPickUp(playerColor, obj)
-    Preview.onPickUp(playerColor, obj)
+    lotusSafeCall("Preview.onPickUp", Preview.onPickUp, playerColor, obj)
 end
 
 function onObjectDrop(playerColor, obj)
-    Preview.onDrop(playerColor, obj)
-    Equipment.onDrop(playerColor, obj)
+    lotusSafeCall("Preview.onDrop", Preview.onDrop, playerColor, obj)
+    lotusSafeCall("Equipment.onDrop", Equipment.onDrop, playerColor, obj)
 end
 
 function onObjectDestroy(obj)
-    DrawRandom.onDestroy(obj)
-    RevealTop.onDestroy(obj)
-    Combat.onDestroy(obj)
-    TargetRegistry.onDestroy(obj)
+    lotusSafeCall("DrawRandom.onDestroy", DrawRandom.onDestroy, obj)
+    lotusSafeCall("RevealTop.onDestroy", RevealTop.onDestroy, obj)
+    lotusSafeCall("Combat.onDestroy", Combat.onDestroy, obj)
+    lotusSafeCall("TargetRegistry.onDestroy", TargetRegistry.onDestroy, obj)
 end
 
 function onObjectHover(playerColor, obj)
-    Equipment.onHover(playerColor, obj)
-    TargetRegistry.onHover(playerColor, obj)
+    lotusSafeCall("Equipment.onHover", Equipment.onHover, playerColor, obj)
+    lotusSafeCall("TargetRegistry.onHover", TargetRegistry.onHover, playerColor, obj)
 end
 
 function onObjectLeaveZone(zone, obj)
-    Preview.onLeaveZone(zone, obj)
-    Equipment.onLeaveZone(zone, obj)
+    lotusSafeCall("Preview.onLeaveZone", Preview.onLeaveZone, zone, obj)
+    lotusSafeCall("Equipment.onLeaveZone", Equipment.onLeaveZone, zone, obj)
 end
 
 function onObjectSpawn(obj)
-    Equipment.onSpawn(obj)
-    RevealTop.onSpawn(obj)
+    lotusSafeCall("Equipment.onSpawn", Equipment.onSpawn, obj)
+    lotusSafeCall("RevealTop.onSpawn", RevealTop.onSpawn, obj)
 end
 
 -- Public methods retained for compatibility with other table scripts.

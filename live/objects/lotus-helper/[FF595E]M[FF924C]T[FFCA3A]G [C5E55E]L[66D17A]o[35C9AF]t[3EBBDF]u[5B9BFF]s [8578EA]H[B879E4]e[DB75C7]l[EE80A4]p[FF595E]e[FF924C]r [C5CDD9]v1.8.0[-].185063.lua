@@ -3243,6 +3243,11 @@ end
 -- =============================================================
 
 local Equipment = {}
+local function equipmentAlive(obj)
+    if obj == nil then return false end
+    local ok, valid = pcall(function() return obj.isDestroyed() == false end)
+    return ok and valid == true
+end
 
 --[[--
 moon-mtg-equip (tag-aware, menu-safe, high-visibility hover button)
@@ -3549,11 +3554,14 @@ local function refresh_deck(deck)
 end
 
 local function refresh_deck_later(deck)
-    if deck == nil or deck.tag ~= "Deck" then return end
-    local guid = deck.getGUID()
+    if not equipmentAlive(deck) then return end
+    local ok, guid = pcall(function()
+        if deck.tag == "Deck" then return deck.getGUID() end
+    end)
+    if not ok or not guid then return end
     Wait.frames(function()
         local current = getObjectFromGUID(guid)
-        if current ~= nil then refresh_deck(current) end
+        if equipmentAlive(current) then pcall(refresh_deck, current) end
     end, 2)
 end
 
@@ -3624,15 +3632,17 @@ end
 local function refresh_hovered_decks()
     local seen = {}
     for _, guid in pairs(hovered) do
-        if not seen[guid] then
+        if guid and not seen[guid] then
             seen[guid] = true
             local obj = getObjectFromGUID(guid)
-            if obj ~= nil then
-                if obj.tag == "Deck" then
-                    refresh_deck(obj)
-                elseif obj.tag == "Card" then
-                    refresh_equipped_card(obj)
-                end
+            if equipmentAlive(obj) then
+                pcall(function()
+                    if obj.tag == "Deck" then
+                        refresh_deck(obj)
+                    elseif obj.tag == "Card" then
+                        refresh_equipped_card(obj)
+                    end
+                end)
             end
         end
     end
@@ -3675,10 +3685,14 @@ function Equipment.load()
     Wait.frames(function()
         collect_protected_snap_points()
         for _, obj in ipairs(getObjects()) do
-            if obj.tag == "Deck" then
-                remove_equip_button(obj)
-            elseif obj.tag == "Card" then
-                remove_unequip_button(obj)
+            if equipmentAlive(obj) then
+                pcall(function()
+                    if obj.tag == "Deck" then
+                        remove_equip_button(obj)
+                    elseif obj.tag == "Card" then
+                        remove_unequip_button(obj)
+                    end
+                end)
             end
         end
         refresh_hovered_decks()
@@ -3687,29 +3701,31 @@ end
 
 function Equipment.onHover(player_color, obj)
     local old_guid = hovered[player_color]
-    local new_guid = (obj ~= nil and (obj.tag == "Deck" or obj.tag == "Card"))
-                     and obj.getGUID() or nil
-
+    local new_guid = nil
+    if equipmentAlive(obj) then
+        local ok, guid, kind = pcall(function()
+            return obj.getGUID(), obj.tag
+        end)
+        if ok and (kind == "Deck" or kind == "Card") then new_guid = guid end
+    end
     hovered[player_color] = new_guid
-
-    if old_guid ~= nil and old_guid ~= new_guid
-        and not is_hovered(old_guid) then
+    if old_guid ~= nil and old_guid ~= new_guid and not is_hovered(old_guid) then
         local previous = getObjectFromGUID(old_guid)
-        if previous ~= nil then
-            if previous.tag == "Deck" then
-                remove_equip_button(previous)
-            elseif previous.tag == "Card" then
-                remove_unequip_button(previous)
-            end
+        if equipmentAlive(previous) then
+            pcall(function()
+                if previous.tag == "Deck" then
+                    remove_equip_button(previous)
+                elseif previous.tag == "Card" then
+                    remove_unequip_button(previous)
+                end
+            end)
         end
     end
-
     if new_guid ~= nil then
-        if obj.tag == "Deck" then
-            refresh_deck(obj)
-        else
-            refresh_equipped_card(obj)
-        end
+        pcall(function()
+            if obj.tag == "Deck" then refresh_deck(obj)
+            else refresh_equipped_card(obj) end
+        end)
     end
 end
 
@@ -3724,26 +3740,28 @@ function Equipment.onDrop(player_color, obj)
     -- merging. Avoid sending a destroyed Card reference to Encoder.
     Wait.frames(function()
         local current = getObjectFromGUID(guid)
-        if current == nil or current.isDestroyed() then return end
-        if current.tag == "Card" then
-            init_card(current)
-            refresh_equipped_card(current)
-        elseif current.tag == "Deck" then
-            refresh_deck(current)
-        end
+        if not equipmentAlive(current) then return end
+        pcall(function()
+            if current.tag == "Card" then
+                init_card(current)
+                refresh_equipped_card(current)
+            elseif current.tag == "Deck" then
+                refresh_deck(current)
+            end
+        end)
     end, 2)
 end
 
 function Equipment.onEnterZone(zone, obj)
-    if obj ~= nil and obj.tag == "Deck" then refresh_deck_later(obj) end
+    if equipmentAlive(obj) then refresh_deck_later(obj) end
 end
 
 function Equipment.onLeaveZone(zone, obj)
-    if obj ~= nil and obj.tag == "Deck" then refresh_deck_later(obj) end
+    if equipmentAlive(obj) then refresh_deck_later(obj) end
 end
 
 function Equipment.onSpawn(obj)
-    if obj ~= nil and obj.tag == "Deck" then refresh_deck_later(obj) end
+    if equipmentAlive(obj) then refresh_deck_later(obj) end
 end
 
 
@@ -3833,8 +3851,10 @@ function RevealTop.findLibrary(color)
 end
 
 function RevealTop.addMenu(obj, confirmedLibrary)
-    if not obj or (obj.type ~= "Deck" and obj.type ~= "Card")
-        or rtIsVisual(obj) or obj.isDestroyed() then return end
+    if not rtAlive(obj) then return end
+    local kindOK, kind = pcall(function() return obj.type end)
+    if not kindOK or (kind ~= "Deck" and kind ~= "Card")
+        or rtIsVisual(obj) then return end
     -- The periodic seat poll has already established library residency.
     -- Calls from spawn still validate the object's current location.
     if not confirmedLibrary then
@@ -4304,9 +4324,13 @@ function RevealTop.onSpawn(obj)
 end
 
 function RevealTop.onDestroy(obj)
-    if not obj then return end
-    local guid = obj.getGUID()
-    if obj.type == "Deck" or obj.type == "Card" then
+    if obj == nil then return end
+    -- onObjectDestroy can deliver an already-invalid Unity proxy.
+    local ok, guid, kind = pcall(function()
+        return obj.getGUID(), obj.type
+    end)
+    if not ok or type(guid) ~= "string" then return end
+    if kind == "Deck" or kind == "Card" then
         RevealTop.registered[guid] = nil
     end
     if rtIsVisual(obj) then
@@ -5287,6 +5311,20 @@ end
 -- SHARED EVENT DISPATCHER (6 MODULES)
 -- =============================================================
 
+-- Isolate TTS callback failures when Card/Deck Unity proxies expire on merges.
+local lotusCallbackErrors = {}
+local function lotusSafeCall(label, callback, ...)
+    if type(callback) ~= "function" then return end
+    local ok, err = pcall(callback, ...)
+    if not ok then
+        local key = label .. ":" .. tostring(err)
+        if not lotusCallbackErrors[key] then
+            lotusCallbackErrors[key] = true
+            print("[MTG Lotus callback] " .. key)
+        end
+    end
+end
+
 function onLoad(savedData)
     Playmats.load(savedData)
     Wait.frames(Playmats.alignExisting, 30)
@@ -5316,40 +5354,40 @@ function onChat(message, player)
 end
 
 function onObjectEnterZone(zone, obj)
-    Preview.onEnterZone(zone, obj)
-    DrawRandom.onEnterZone(zone, obj)
-    Equipment.onEnterZone(zone, obj)
+    lotusSafeCall("Preview.onEnterZone", Preview.onEnterZone, zone, obj)
+    lotusSafeCall("DrawRandom.onEnterZone", DrawRandom.onEnterZone, zone, obj)
+    lotusSafeCall("Equipment.onEnterZone", Equipment.onEnterZone, zone, obj)
 end
 
 function onObjectPickUp(playerColor, obj)
-    Preview.onPickUp(playerColor, obj)
+    lotusSafeCall("Preview.onPickUp", Preview.onPickUp, playerColor, obj)
 end
 
 function onObjectDrop(playerColor, obj)
-    Preview.onDrop(playerColor, obj)
-    Equipment.onDrop(playerColor, obj)
+    lotusSafeCall("Preview.onDrop", Preview.onDrop, playerColor, obj)
+    lotusSafeCall("Equipment.onDrop", Equipment.onDrop, playerColor, obj)
 end
 
 function onObjectDestroy(obj)
-    DrawRandom.onDestroy(obj)
-    RevealTop.onDestroy(obj)
-    Combat.onDestroy(obj)
-    TargetRegistry.onDestroy(obj)
+    lotusSafeCall("DrawRandom.onDestroy", DrawRandom.onDestroy, obj)
+    lotusSafeCall("RevealTop.onDestroy", RevealTop.onDestroy, obj)
+    lotusSafeCall("Combat.onDestroy", Combat.onDestroy, obj)
+    lotusSafeCall("TargetRegistry.onDestroy", TargetRegistry.onDestroy, obj)
 end
 
 function onObjectHover(playerColor, obj)
-    Equipment.onHover(playerColor, obj)
-    TargetRegistry.onHover(playerColor, obj)
+    lotusSafeCall("Equipment.onHover", Equipment.onHover, playerColor, obj)
+    lotusSafeCall("TargetRegistry.onHover", TargetRegistry.onHover, playerColor, obj)
 end
 
 function onObjectLeaveZone(zone, obj)
-    Preview.onLeaveZone(zone, obj)
-    Equipment.onLeaveZone(zone, obj)
+    lotusSafeCall("Preview.onLeaveZone", Preview.onLeaveZone, zone, obj)
+    lotusSafeCall("Equipment.onLeaveZone", Equipment.onLeaveZone, zone, obj)
 end
 
 function onObjectSpawn(obj)
-    Equipment.onSpawn(obj)
-    RevealTop.onSpawn(obj)
+    lotusSafeCall("Equipment.onSpawn", Equipment.onSpawn, obj)
+    lotusSafeCall("RevealTop.onSpawn", RevealTop.onSpawn, obj)
 end
 
 -- Public methods retained for compatibility with other table scripts.

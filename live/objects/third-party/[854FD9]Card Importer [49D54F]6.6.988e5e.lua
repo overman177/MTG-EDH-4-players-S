@@ -530,6 +530,7 @@ end
 function cleanImageUrl(uri)
   if not uri or uri == '' then return '' end
   uri = uri:gsub('%?.*', '')
+  uri = uri:gsub('img%.klrmngr%.com/dispaly/', 'img.klrmngr.com/display/')
   uri = uri:gsub('cards%.scryfall%.io', 'img.klrmngr.com')
   return uri
 end
@@ -538,6 +539,7 @@ function cleanSpawnJson(jsonLine)
   if not jsonLine then return jsonLine end
   jsonLine = jsonLine:gsub('(https://[^"%?]+%.[a-zA-Z0-9]+)%?[%w%-_=%%%.]+', '%1')
   jsonLine = jsonLine:gsub('cards%.scryfall%.io', 'img.klrmngr.com')
+  jsonLine = jsonLine:gsub('img%.klrmngr%.com/dispaly/', 'img.klrmngr.com/display/')
   return jsonLine
 end
 

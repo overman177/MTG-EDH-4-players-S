@@ -84,8 +84,10 @@ function RevealTop.findLibrary(color)
 end
 
 function RevealTop.addMenu(obj, confirmedLibrary)
-    if not obj or (obj.type ~= "Deck" and obj.type ~= "Card")
-        or rtIsVisual(obj) or obj.isDestroyed() then return end
+    if not rtAlive(obj) then return end
+    local kindOK, kind = pcall(function() return obj.type end)
+    if not kindOK or (kind ~= "Deck" and kind ~= "Card")
+        or rtIsVisual(obj) then return end
     -- The periodic seat poll has already established library residency.
     -- Calls from spawn still validate the object's current location.
     if not confirmedLibrary then
@@ -555,9 +557,13 @@ function RevealTop.onSpawn(obj)
 end
 
 function RevealTop.onDestroy(obj)
-    if not obj then return end
-    local guid = obj.getGUID()
-    if obj.type == "Deck" or obj.type == "Card" then
+    if obj == nil then return end
+    -- onObjectDestroy can deliver an already-invalid Unity proxy.
+    local ok, guid, kind = pcall(function()
+        return obj.getGUID(), obj.type
+    end)
+    if not ok or type(guid) ~= "string" then return end
+    if kind == "Deck" or kind == "Card" then
         RevealTop.registered[guid] = nil
     end
     if rtIsVisual(obj) then

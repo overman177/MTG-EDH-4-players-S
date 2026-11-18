@@ -1,10 +1,12 @@
 # MTG EDH — Tabletop Simulator scripting
 
-**Current scripted release: v1.9.0** (four-player table).
+**Current scripted release: v1.9.5** (four-player table).
 
 **Maintained source architecture with GUID-safe Smart Import v3 deployment.**
 
 The table's active object scripts live in `live/objects/`, with their original GUID filenames and contents preserved. The tracked `New/` folder is deliberately empty: imports from the six-player table were removed from this four-player repository. `savegame.json` stays at the repository root.
+
+For changes and testing notes, see [v1.9.5 patch notes](docs/RELEASE_NOTES_v1.9.5.md).
 
 ## Where to work
 
@@ -54,10 +56,7 @@ In **Table Settings > General**, combat targeting has **two bindable hotkeys**:
 
 **Open Game Keys** opens the TTS keybinding dialog, or open **Options > Game Keys** manually. The General tab now has a **per-player Undo hold-duration slider** instead of Undo/Clear buttons. Your setting is saved. Arrows are visual only: no automatic combat result or rules enforcement.
 
-More details: [Combat targeting](docs/COMBAT_TARGETING.md).
-Experimental 4-player card catalog and explicit target selection: [prototype test guide](docs/CARD_TARGETS_PROTOTYPE.md).
-Manual-stack, opt-in **Resolve** buttons for selected instant/sorcery arrow sources: [4-player test guide](docs/ARROW_SPELL_RESOLUTION.md).
-Unified card state reads current Encoder stats/counters, preserves the write-once owner, and permits controller changes only through the explicit effect API; see [4P card state test guide](docs/CARD_STATE_V1.md). The hotkey labels remain unchanged to preserve existing bindings; arrows do not assign MTG attacker or defender roles.
+More details: [Combat targeting](docs/COMBAT_TARGETING.md). The hotkey labels remain unchanged to preserve existing bindings; arrows do not assign MTG attacker or defender roles.
 
 ## One-click updates (Windows)
 

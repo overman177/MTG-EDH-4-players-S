@@ -51,9 +51,6 @@ function onObjectLeaveContainer(container, object)
 end
 
 function onObjectDropped(playerColor, object)
-    if type(mtgCardStateOnDrop)=="function" then
-        mtgCardStateOnDrop(playerColor, object)
-    end
 	if object == nil or not object.hasTag("keywordToken") then
 		return
 	end

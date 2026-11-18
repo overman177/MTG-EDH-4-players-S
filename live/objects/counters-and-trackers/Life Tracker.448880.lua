@@ -8,31 +8,6 @@ function updateSave()
   self.script_state=JSON.encode({['c']=count})
 end
 
--- Optional spell-resolution API; unlike UI clicks this accepts one parameter
--- table via Object.call(). Only a verified arrow spell handler should call it.
-function mtgLifeReady(params)
-  return {ok=type(count)=='number' and type(owner)=='string' and owner~='',
-      color=owner,count=count}
-end
-
-function mtgGainLife(params)
-  if type(params)~='table' or type(params.amount)~='number'
-      or params.amount~=math.floor(params.amount)
-      or params.amount<0 or params.amount>100000
-      or type(count)~='number' then
-    return {ok=false,error='invalid amount or uninitialized life tracker'}
-  end
-  local old=count
-  count=count+params.amount
-  sL(count,params.amount)
-  updateSave()
-  if params.amount>0 then
-    printToAll(owner..' gained '..tostring(params.amount)..
-      ' life from a resolved spell. ['..tostring(count)..']',ownerRGB)
-  end
-  return {ok=true,old=old,new=count}
-end
-
 function wait(t)
   local s=os.time()
   repeat coroutine.yield(0) until os.time()>s+t

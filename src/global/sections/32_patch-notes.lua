@@ -1,6 +1,6 @@
 -------------------------------- PATCH NOTES -----------------------------------
 -- Version currently deployed. Bump this when cutting a new release.
-VERSION = "v1.9.0"
+VERSION = "v1.9.5"
 
 -- Transient top-center screen message; reads VERSION so future releases only
 -- need to change the existing version constant. The XML itself is not edited
@@ -19,6 +19,15 @@ end
 
 local PATCH_NOTES_TAG = "patchNotesButton"
 local RELEASES_API = "https://api.github.com/repos/klrmngr/mtg-edh-4player/releases"
+local LOCAL_RELEASE_NOTES = table.concat({
+    "<b>v1.9.5</b>",
+    "• Hardened Lotus Helper callbacks during deck shuffles and merges.",
+    "• Improved Equipment and Always Reveal Top handling of disappearing deck objects.",
+    "• Corrected misspelled card-image CDN display URLs on new imports.",
+    "• Added bug-report validation, duplicate-request protection and a cooldown.",
+    "• Added automatic GitHub spam-issue triage and historical cleanup.",
+}, "\n")
+
 
 -- split a "vX.Y.Z" tag into numeric parts, e.g. "v0.1.10" -> {0, 1, 10}
 function parseVersion(s)
@@ -122,41 +131,39 @@ function spawnPatchNotesButton()
 end
 
 -- click handler: fetch every release and show the combined patch notes
+-- Always show this table's local notes, including when legacy release API is
+-- unreachable. The existing upstream feed remains optional historical context.
+local function renderPatchNotes(color, combined)
+    local visualLines = 0
+    for line in (combined .. "\n"):gmatch("(.-)\n") do
+        visualLines = visualLines + math.max(1, math.ceil(#line / 68))
+    end
+    UI.setAttribute("PatchNotesTitle", "text", "Patch Notes")
+    UI.setAttribute("PatchNotesRow", "preferredHeight", tostring(math.max(400, visualLines * 24 + 40)))
+    UI.setValue("PatchNotesText", combined)
+    visibleOpenRules(color, "PatchNotesPanel")
+end
+
 function showPatchNotes(obj, color, alt)
-	if color == "Grey" then
-		return
-	end
-	WebRequest.get(RELEASES_API, function(req)
-		if req.is_error then
-			broadcastToColor("Patch notes: couldn't reach GitHub (" .. tostring(req.error) .. ")", color, { 1, 0.4, 0.4 })
-			return
-		end
-		local releases = JSONdecode(req.text)
-		if type(releases) ~= "table" then
-			broadcastToColor("Patch notes: couldn't parse releases.", color, { 1, 0.4, 0.4 })
-			return
-		end
-		local parts = {}
-		for _, rel in ipairs(releases) do
-			local tag = rel.tag_name or rel.name or "?"
-			local notes = ""
-			if type(rel.body) == "string" then
-				notes = cleanPatchNotes(rel.body)
-			end
-			table.insert(parts, "<b>" .. tag .. "</b>\n" .. notes)
-		end
-		local combined = table.concat(parts, "\n\n")
-		-- size the scroll content to the notes so the TableLayout can auto-calc its
-		-- height: estimate wrapped visual lines (~68 chars per line at this width/font)
-		local visualLines = 0
-		for line in (combined .. "\n"):gmatch("(.-)\n") do
-			visualLines = visualLines + math.max(1, math.ceil(#line / 68))
-		end
-		UI.setAttribute("PatchNotesTitle", "text", "Patch Notes")
-		UI.setAttribute("PatchNotesRow", "preferredHeight", tostring(math.max(400, visualLines * 24 + 40)))
-		UI.setValue("PatchNotesText", combined)
-		visibleOpenRules(color, "PatchNotesPanel")
-	end)
+    if color == "Grey" then return end
+    renderPatchNotes(color, LOCAL_RELEASE_NOTES)
+    WebRequest.get(RELEASES_API, function(req)
+        if req.is_error then return end
+        local ok, releases = pcall(JSONdecode, req.text)
+        if not ok or type(releases) ~= "table" then return end
+        local parts = {LOCAL_RELEASE_NOTES}
+        for _, rel in ipairs(releases) do
+            local tag = rel.tag_name or rel.name or "?"
+            if tag ~= VERSION then
+                local notes = ""
+                if type(rel.body) == "string" then
+                    notes = cleanPatchNotes(rel.body)
+                end
+                table.insert(parts, "<b>" .. tag .. "</b>\n" .. notes)
+            end
+        end
+        renderPatchNotes(color, table.concat(parts, "\n\n"))
+    end)
 end
 
 function closePatchNotes(player, value, id)

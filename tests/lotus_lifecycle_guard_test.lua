@@ -1,21 +1,20 @@
--- A destroyed TTS Unity object proxy must not break sibling event handlers.
+-- Deck merges must not let one invalid Unity proxy cancel other event handlers.
 dofile("src/lotus/sections/05_always-reveal-top-non-colliding-visual-clone.lua")
-local dead = {
-    type="Deck",
-    getGUID=function() error("Object reference not set to an instance of an object") end
-}
-assert(pcall(RevealTop.onDestroy, dead), "RevealTop must tolerate invalid objects")
+local dead = {type="Deck",getGUID=function() error("Object reference not set to an instance of an object") end}
+assert(pcall(RevealTop.onDestroy, dead))
 local seen = {}
-DrawRandom={onDestroy=function() error("deck invalidated") end}
-Combat={onDestroy=function() seen.combat=true end}
-TargetRegistry={
-    onDestroy=function() seen.target=true end,
-    onHover=function() seen.hover=true end
+DrawRandom = {onDestroy=function() error("invalid deck reference") end}
+RevealTop.onDestroy = function() seen.reveal = true end
+Combat = {onDestroy=function() seen.combat = true end}
+Preview = {onDrop=function() error("card merged before drop") end}
+Equipment = {
+    onDrop=function() seen.drop = true end,
+    onHover=function() error("hovered object disappeared") end
 }
-Equipment={onHover=function() error("hovered deck invalidated") end}
 dofile("src/lotus/sections/07_shared-event-dispatcher.lua")
 assert(pcall(onObjectDestroy, dead))
-assert(seen.combat and seen.target, "Destroy event skipped subsequent modules")
+assert(seen.reveal and seen.combat, "Other destroy handlers must continue")
+assert(pcall(onObjectDrop, "White", dead))
+assert(seen.drop, "Equipment drop handler must continue")
 assert(pcall(onObjectHover, "White", dead))
-assert(seen.hover, "Hover event skipped target registry")
-print("Lotus lifecycle callbacks: OK")
+print("Lotus invalid Unity object regression: OK")

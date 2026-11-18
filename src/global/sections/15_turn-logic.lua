@@ -4,7 +4,6 @@
 -- glow on any lands played during it; then snapshot the lands already in the
 -- starting player's land zone and clear their entered-this-turn list
 function onPlayerTurnStart(player_color_start, player_color_previous)
-    if type(mtgCardStateOnTurn)=="function" then mtgCardStateOnTurn(player_color_start) end
 	clearLandGlows()
 	-- the previous player's turn just ended -- drop their Etali glow if it's theirs
 	maybeClearEtaliGlows(player_color_previous)

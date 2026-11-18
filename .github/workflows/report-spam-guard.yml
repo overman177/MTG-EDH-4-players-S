@@ -1,0 +1,59 @@
+name: Triage in-game issue report spam
+on:
+  issues:
+    types: [opened, reopened]
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/report-spam-guard.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  close-new-spam:
+    if: github.event_name == 'issues'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            if (!issue || issue.pull_request) return;
+            if (!(issue.title || '').startsWith('[Bug report] https://discord.gg/')) return;
+            if (!(issue.body || '').includes('**Reporter:** https://discord.gg/')) return;
+            await github.rest.issues.update({
+              ...context.repo, issue_number: issue.number,
+              state: 'closed', state_reason: 'not_planned'
+            });
+  cleanup-existing-spam:
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              ...context.repo, state: 'open', per_page: 100
+            });
+            let closed = 0, failed = 0;
+            for (const issue of issues) {
+              if (issue.pull_request) continue;
+              if (!(issue.title || '').startsWith('[Bug report] https://discord.gg/')) continue;
+              if (!(issue.body || '').includes('**Reporter:** https://discord.gg/')) continue;
+              try {
+                await github.rest.issues.update({
+                  ...context.repo, issue_number: issue.number,
+                  state: 'closed', state_reason: 'not_planned'
+                });
+                closed++;
+                if (closed % 25 === 0) core.info('Closed ' + closed + ' spam issues');
+              } catch (error) {
+                failed++;
+                core.warning('Could not close #' + issue.number + ': ' + error.message);
+              }
+              // Avoid secondary write-rate limits while processing ~998 issues.
+              await new Promise(resolve => setTimeout(resolve, 850));
+            }
+            core.info('Spam cleanup: closed ' + closed + '; errors ' + failed);

@@ -51,6 +51,10 @@ jobs:
         run: lua5.2 tests/draw_random_lifecycle_test.lua
       - name: Test Reveal Top during library deck merges
         run: lua5.2 tests/reveal_top_deck_merge_test.lua
+      - name: Test Lotus callbacks after deck-object invalidation
+        run: lua5.2 tests/lotus_lifecycle_guard_test.lua
+      - name: Test report validation and local cooldown
+        run: lua5.2 tests/bug_report_security_test.lua
       - name: Test per-seat combat hold settings and General tab
         run: lua5.2 tests/combat_settings_test.lua
       - name: Test live Encoder-backed card state and explicit controller changes

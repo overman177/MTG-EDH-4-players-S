@@ -23,8 +23,12 @@ RevealTop = {
     cleanedDecks = {}, paused = {}, mutationTokens = {},
     POLL_SECONDS = 0.65,
     -- Horizontal separation from the actual deck and library scripting zone.
-    OUTSIDE_DECK_GAP = 4.25,
-    OUTSIDE_ZONE_GAP = 2.25,
+    -- Fallback only: normal card width provides an edge-to-edge gap instead
+    -- of the previous 4.25-unit center separation.
+    OUTSIDE_DECK_GAP = 2.55,
+    OUTSIDE_ZONE_GAP = 0.12,
+    PREVIEW_EDGE_GAP = 0.12,
+    FALLBACK_CARD_WIDTH = 2.5,
     HEIGHT_ABOVE_DECK = 0.22,
 }
 
@@ -290,24 +294,41 @@ function RevealTop.topPosition(library, color)
     if magnitude < 0.1 then nx, nz, magnitude = 1, 0, 1 end
     nx, nz = nx / magnitude, nz / magnitude
 
-    local deckProjection =
-        (pos.x - center.x) * nx + (pos.z - center.z) * nz
-    local distance = deckProjection + RevealTop.OUTSIDE_DECK_GAP
+    -- Offset by the actual (projected) card width so the preview sits
+    -- immediately beside the deck, not several card-widths away. Keep its
+    -- whole footprint outside the Library scripting zone, not just its center.
+    local projectedWidth = RevealTop.FALLBACK_CARD_WIDTH
+    if ok and bounds and bounds.size then
+        local bx, bz = tonumber(bounds.size.x), tonumber(bounds.size.z)
+        if bx and bz then
+            local measured = math.abs(nx) * math.abs(bx)
+                + math.abs(nz) * math.abs(bz)
+            if measured > 0.1 then projectedWidth = measured end
+        end
+    end
+    local previewHalfWidth = 0.5 * projectedWidth
+    local separation = math.max(RevealTop.OUTSIDE_DECK_GAP,
+        projectedWidth + RevealTop.PREVIEW_EDGE_GAP)
     if zone then
         local valid, zb = pcall(function() return zone.getBounds() end)
         if valid and zb and zb.size
             and type(zb.size.x) == "number"
             and type(zb.size.z) == "number" then
-            -- Project the world-axis-aligned zone bounds onto the outward ray.
             local extent = 0.5 * (math.abs(nx) * math.abs(zb.size.x)
                 + math.abs(nz) * math.abs(zb.size.z))
-            distance = math.max(distance, extent + RevealTop.OUTSIDE_ZONE_GAP)
+            local deckProjection = (pos.x - center.x) * nx
+                + (pos.z - center.z) * nz
+            separation = math.max(separation,
+                extent + previewHalfWidth + RevealTop.OUTSIDE_ZONE_GAP
+                    - deckProjection)
         end
     end
+    -- Anchor to the deck, not to the zone center: this preserves the deck's
+    -- sideways alignment when the deck isn't exactly centered in its zone.
     return {
-        x = center.x + nx * distance,
+        x = pos.x + nx * separation,
         y = topY + RevealTop.HEIGHT_ABOVE_DECK,
-        z = center.z + nz * distance
+        z = pos.z + nz * separation
     }
 end
 

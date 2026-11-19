@@ -7098,6 +7098,7 @@ local LOCAL_RELEASE_NOTES = table.concat({
     "• Corrected the Lotus Helper version label and added v1.9.5 to its Settings patch notes.",
     "• Prevented Reveal Top preview cards from physically merging into libraries.",
     "• Moved Reveal Top previews outside the library zone, toward the table edge.",
+    "• Reduced preview spacing to a narrow gap directly beside each library.",
     "• Corrected misspelled card-image CDN display URLs on new imports.",
     "• Added bug-report validation, duplicate-request protection and a cooldown.",
     "• Added automatic GitHub spam-issue triage and historical cleanup.",

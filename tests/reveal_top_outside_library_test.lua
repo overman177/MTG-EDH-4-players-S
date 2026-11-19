@@ -39,6 +39,15 @@ for _, sample in ipairs({
         "Preview is still in the Library zone: "..sample.color)
     assert(outward>=RevealTop.OUTSIDE_DECK_GAP-0.01,
         "Preview is close enough to merge with the deck")
+    local cardWidth=math.abs(dx)*2.5+math.abs(dz)*3.6
+    local nearestAllowed=math.max(RevealTop.OUTSIDE_DECK_GAP,
+        cardWidth+RevealTop.PREVIEW_EDGE_GAP,
+        zoneExtent+0.5*cardWidth+RevealTop.OUTSIDE_ZONE_GAP)
+    assert(math.abs(outward-nearestAllowed)<0.02,
+        "Preview has an unnecessarily large gap from the Library")
+    assert(outward-0.5*cardWidth>=zoneExtent+
+        RevealTop.OUTSIDE_ZONE_GAP-0.01,
+        "Part of preview overlaps Library scripting zone")
     assert(outward>0,"Preview went inward instead of toward table edge")
 end
 
@@ -56,6 +65,17 @@ RevealTop.visuals.Blue=preview
 RevealTop.follow("Blue",moved)
 assert(previewPosition.x>12 and previewPosition.z>4,
     "Follow relocated the preview back over the deck")
+
+-- Decks can be slightly off-center in their zone. The preview must stay on
+-- the deck's outward ray, not snap sideways to the center of the zone.
+local zone=makeZone("Blue",11,5,3,3)
+local shifted=makeLibrary(13,3)
+local beside=RevealTop.topPosition(shifted,"Blue")
+local length=math.sqrt(11*11+5*5)
+local dx,dz=11/length,5/length
+local sideways=-(beside.x-13)*dz+(beside.z-3)*dx
+assert(math.abs(sideways)<0.01,
+    "Preview does not align with an off-center library")
 
 -- A missing/dead zone must fail toward separation, never return deck center.
 zones={}

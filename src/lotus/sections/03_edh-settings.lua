@@ -447,6 +447,7 @@ Settings.LOCAL_MAINTENANCE_NOTES = table.concat({
     "- Hardened Lotus deck callbacks and Equipment/Always Reveal Top during deck merges.",
     "- Fixed Draw Random with Always Reveal Top enabled; pause and refresh its visual clone.",
     "- Placed Reveal Top previews outside the library zone, toward the table edge.",
+    "- Moved the preview closer, immediately beside its library.",
     "- Corrected malformed card-image URLs for new imports.",
     "- Added bug-report spam validation and duplicate-submission protection.",
 }, "\n")

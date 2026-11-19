@@ -44,3 +44,7 @@ from the active table scripts. Existing visual combat arrows remain.
 GitHub code updates are not the same as uploading a Tabletop Simulator
 Steam Workshop version. To test locally, import the compiled GUID scripts
 and use Smart Import > Save & Play.
+
+- Refined Reveal Top placement to sit immediately alongside each library with
+  only a narrow gap, while keeping its full visual footprint outside the
+  library scripting zone and preserving non-interaction safeguards.

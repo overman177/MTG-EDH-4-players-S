@@ -5,7 +5,8 @@ local source = f:read("*a")
 f:close()
 assert(load(source, "@reveal-top", "t", _ENV))()
 local pending = {}
-Wait = {frames = function() end}
+local nextFrames = {}
+Wait = {frames = function(fn) nextFrames[#nextFrames + 1] = fn end}
 getObjectFromGUID = function() return nil end
 local function library(guid, name, cardGuid)
     local obj = {type="Deck", dead=false, UI={getXmlTable=function() return {} end}}
@@ -56,7 +57,20 @@ local function visual(guid)
     function obj.getPosition() return obj.pos or {x=0,y=0,z=0} end
     function obj.setRotation(r) obj.rot=r end
     function obj.getRotation() return obj.rot or {x=0,y=0,z=0} end
-    function obj.getComponentsInChildren() return {} end
+    local collider={enabled=true}
+    collider.set=function(name,val)
+        assert(name=="enabled")
+        collider.enabled=val
+    end
+    collider.get=function(name)
+        assert(name=="enabled")
+        return collider.enabled
+    end
+    function obj.getComponentsInChildren(kind)
+        if kind=="BoxCollider" then return {collider} end
+        return {}
+    end
+
     function obj.getComponent() return nil end
     return obj
 end
@@ -75,4 +89,10 @@ local correct = visual("visual2")
 assert(pcall(pending[2].callback_function, correct), "new callback raised")
 assert(not correct.dead and correct.tags[RevealTop.VISUAL_TAG],
     "current Deck should receive a valid visual")
+assert(#nextFrames == 1, "collider verification must be deferred")
+nextFrames[1]()
+assert(correct.pos ~= nil and correct.pos.y < 10,
+    "verified visual should move from staging position to deck")
+assert(RevealTop.visuals.Blue == correct,
+    "verified visual should be registered for following")
 print("Reveal Top deck-merge regression test passed")

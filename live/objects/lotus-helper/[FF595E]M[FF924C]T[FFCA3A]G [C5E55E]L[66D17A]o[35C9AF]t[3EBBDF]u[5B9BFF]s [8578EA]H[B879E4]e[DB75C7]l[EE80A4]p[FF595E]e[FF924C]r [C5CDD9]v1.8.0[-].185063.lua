@@ -4113,11 +4113,10 @@ end
 -- Cards normally use BoxCollider; search children too in case an importer
 -- supplies extra collider components. Leave the visible MeshRenderer intact.
 function RevealTop.disableVisualColliders(obj)
-    if obj == nil or obj.isDestroyed() or not rtIsVisual(obj) then return 0 end
-    local disabled, seen = 0, {}
+    if not rtAlive(obj) or not rtIsVisual(obj) then return 0 end
+    local disabled, failed, seen = 0, false, {}
     for _, kind in ipairs({"BoxCollider", "MeshCollider", "SphereCollider", "CapsuleCollider"}) do
         local components = {}
-        -- getComponentsInChildren searches the object and its children.
         local ok, found = pcall(function()
             return obj.getComponentsInChildren(kind)
         end)
@@ -4126,7 +4125,6 @@ function RevealTop.disableVisualColliders(obj)
                 components[#components + 1] = component
             end
         end
-        -- Fallback for objects/versions that only expose a root component.
         if #components == 0 then
             local rootOK, root = pcall(function() return obj.getComponent(kind) end)
             if rootOK and root ~= nil then components[1] = root end
@@ -4134,11 +4132,23 @@ function RevealTop.disableVisualColliders(obj)
         for _, component in ipairs(components) do
             if component ~= nil and not seen[component] then
                 seen[component] = true
-                local setOK = pcall(function() component.set("enabled", false) end)
-                if setOK then disabled = disabled + 1 end
+                local setOK, verified = pcall(function()
+                    component.set("enabled", false)
+                    -- Confirm that Unity accepted the change, rather than
+                    -- treating a successful .set call as proof of safety.
+                    return component.get("enabled") == false
+                end)
+                if setOK and verified then
+                    disabled = disabled + 1
+                else
+                    failed = true
+                end
             end
         end
     end
+    -- A clone with no discoverable collider (or any unverified one) must NOT
+    -- approach the real deck. Do not guess that it is non-colliding.
+    if failed then return 0 end
     return disabled
 end
 
@@ -4149,40 +4159,49 @@ function RevealTop.spawnVisual(color, info)
         RevealTop.errors[color] = err
         return
     end
+
+    -- A freshly spawned Card has physical colliders until TTS finishes its
+    -- Unity initialization. Never spawn it within reach of the library:
+    -- one frame of contact can merge the preview INTO the real deck.
+    local posOK, staging = pcall(RevealTop.topPosition, info.library)
+    if not posOK or not staging then
+        RevealTop.errors[color] = "Library disappeared before preview spawn"
+        return
+    end
+    staging = {x=staging.x, y=staging.y + 15, z=staging.z}
+
     RevealTop.spawning[color] = version
     RevealTop.retryAt[color] = os.time()
+    local function current()
+        return RevealTop.enabled[color] and not RevealTop.paused[color]
+            and RevealTop.versions[color] == version
+    end
+    local function discard(obj, why)
+        if RevealTop.spawning[color] == version then
+            RevealTop.spawning[color] = nil
+        end
+        if RevealTop.visuals[color] == obj then
+            RevealTop.visuals[color] = nil
+            RevealTop.visualGuids[color] = nil
+        end
+        if current() then RevealTop.errors[color] = why end
+        if obj ~= nil then pcall(function() obj.destruct() end) end
+    end
+
     local ok, why = pcall(function()
         spawnObjectData({
             data = card,
-            position = RevealTop.topPosition(info.library),
+            position = staging,
             rotation = RevealTop.faceUpRotation(info.library),
             callback_function = function(obj)
-                if RevealTop.spawning[color] == version then
-                    RevealTop.spawning[color] = nil
-                end
-                if not obj then
-                    RevealTop.errors[color] = "Spawn callback returned no object"
+                if not rtAlive(obj) or not current() then
+                    discard(obj, "Visual spawn superseded or destroyed")
                     return
                 end
-                if not RevealTop.enabled[color] or RevealTop.paused[color]
-                    or RevealTop.versions[color] ~= version then
-                    pcall(function() obj.destruct() end)
-                    return
-                end
-                -- Re-resolve the library after the async spawn. A group of
-                -- loose cards can replace the Deck before this callback runs.
-                local freshOK, fresh = pcall(function()
-                    return RevealTop.inspect(color, false)
-                end)
-                if not freshOK or not fresh
-                    or fresh.signature ~= info.signature
-                    or not rtAlive(fresh.library) then
-                    RevealTop.signatures[color] = nil
-                    RevealTop.errors[color] = "Library changed while visual spawned"
-                    pcall(function() obj.destruct() end)
-                    return
-                end
-                local success, setupErr = pcall(function()
+                -- The object stays far above the table while its components
+                -- initialize. No preview object is registered with follow()
+                -- until every detected collider has been disabled and checked.
+                local configured, configErr = pcall(function()
                     obj.addTag(RevealTop.VISUAL_TAG)
                     obj.addTag("LotusRT_" .. color)
                     obj.use_gravity = false
@@ -4191,31 +4210,50 @@ function RevealTop.spawnVisual(color, info)
                     obj.tooltip = false
                     obj.sticky = false
                     obj.setLock(true)
-                    obj.setPosition(RevealTop.topPosition(fresh.library))
-                    obj.setRotation(RevealTop.faceUpRotation(fresh.library))
-                    -- Components can be available immediately, but some TTS
-                    -- spawns initialize physics in the following frame.
-                    RevealTop.disableVisualColliders(obj)
                 end)
-                if not success then
-                    RevealTop.errors[color] = "Clone setup: " .. tostring(setupErr)
-                    pcall(function() obj.destruct() end)
+                if not configured then
+                    discard(obj, "Visual setup failed: " .. tostring(configErr))
                     return
                 end
-                RevealTop.visuals[color] = obj
-                -- Newly created objects receive their final GUID after spawning.
-                -- Reapply collider removal after physics initialization; no
-                -- effect on the real library or any other card.
-                Wait.frames(function()
-                    if RevealTop.visuals[color] == obj and rtAlive(obj) then
-                        RevealTop.visualGuids[color] = obj.getGUID()
-                        local count = RevealTop.disableVisualColliders(obj)
-                        if count == 0 then
-                            RevealTop.errors[color] = "Visual clone collider could not be disabled"
+                local waitOK, waitErr = pcall(function()
+                    Wait.frames(function()
+                        local finalized, finalErr = pcall(function()
+                            if not current() or not rtAlive(obj) then
+                                discard(obj, "Visual is no longer current")
+                                return
+                            end
+                            -- A draw/merge may have replaced the Deck after
+                            -- spawnObjectData, so re-resolve the live library.
+                            local fresh = RevealTop.inspect(color, false)
+                            if not fresh or fresh.signature ~= info.signature
+                                or not rtAlive(fresh.library) then
+                                RevealTop.signatures[color] = nil
+                                discard(obj, "Library changed during visual spawn")
+                                return
+                            end
+                            local disabled = RevealTop.disableVisualColliders(obj)
+                            if disabled < 1 then
+                                discard(obj, "Unsafe preview collider; clone discarded")
+                                return
+                            end
+                            local position = RevealTop.topPosition(fresh.library)
+                            local rotation = RevealTop.faceUpRotation(fresh.library)
+                            local guid = obj.getGUID()
+                            obj.setPosition(position)
+                            obj.setRotation(rotation)
+                            RevealTop.visuals[color] = obj
+                            RevealTop.visualGuids[color] = guid
+                            RevealTop.spawning[color] = nil
+                            RevealTop.errors[color] = nil
+                        end)
+                        if not finalized then
+                            discard(obj, "Visual finalize failed: " .. tostring(finalErr))
                         end
-                    end
-                end, 2)
-                RevealTop.errors[color] = nil
+                    end, 2)
+                end)
+                if not waitOK then
+                    discard(obj, "Preview scheduler failed: " .. tostring(waitErr))
+                end
             end
         })
     end)

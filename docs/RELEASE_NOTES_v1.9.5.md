@@ -23,6 +23,10 @@ automation is included in this release.
   version was already v1.9.5), and included maintenance notes directly in
   Lotus Settings without modifying the owner's Notebook page.
 
+- Prevented temporary Reveal Top cards from spawning physically above a
+  library before collision removal is verified. Previews that cannot be
+  made collision-free are discarded rather than risking duplicated cards.
+
 ## Deferred to a later update
 
 The experimental card catalog, semantic target registry, Encoder-backed

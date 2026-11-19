@@ -53,6 +53,8 @@ jobs:
         run: lua5.2 tests/draw_random_lifecycle_test.lua
       - name: Test Reveal Top during library deck merges
         run: lua5.2 tests/reveal_top_deck_merge_test.lua
+      - name: Ensure Reveal Top clone is collision-free before moving over library
+        run: lua5.2 tests/reveal_visual_collision_gate_test.lua
       - name: Test Draw Random with Always Reveal Top enabled
         run: lua5.2 tests/draw_random_reveal_top_test.lua
       - name: Test Lotus callbacks after deck-object invalidation

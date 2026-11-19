@@ -3,14 +3,23 @@ local deck={type="Deck",locked=false,x=13,y=1,z=-6,drawn=0}
 deck.isDestroyed=function()return false end
 deck.getGUID=function()return "deck12" end
 deck.getPosition=function()return {x=deck.x,y=deck.y,z=deck.z} end
-deck.getObjects=function()return {{guid="card12"}} end
+deck.count=3
+deck.getObjects=function()
+    local cards={{guid="card12"},{guid="card13"}}
+    if deck.count>2 then cards[3]={guid="card14"} end
+    return cards
+end
 deck.setLock=function(value) deck.locked=value end
 deck.takeObject=function(params)
-    assert(params.guid=="card12" and params.index==nil)
+    assert(type(params.guid)=="string" and params.index==nil)
     assert(params.position and params.position.y>=deck.y+5,
         "Extracted card could collide with its source deck")
     assert(params.position.x==deck.x and params.position.z==deck.z)
-    assert(deck.locked,"Source deck not stabilized during extraction")
+    assert(deck.locked or deck.count<=2,
+        "Source deck not stabilized during extraction")
+    if deck.count<=2 then
+        assert(not deck.locked, "Collapsing deck must not be locked")
+    end
     local card={type="Card",spawning=false}
     card.isDestroyed=function()return false end
     card.deal=function(count,color,hand)
@@ -55,4 +64,10 @@ deck.locked=true
 dr.draw("White",nil,deck)
 assert(deck.drawn==2 and deck.locked, "Originally locked deck was changed")
 assert(#frameQueue==1,"Originally locked deck must not schedule unlock")
+deck.locked=false
+deck.count=2
+dr.draw("White",nil,deck)
+assert(deck.drawn==3 and not deck.locked,
+    "Draw Random locked a deck that will collapse to a single card")
+assert(#frameQueue==1, "Two-card deck must not schedule a late unlock")
 print("Draw Random extraction cannot nudge the deck: OK")

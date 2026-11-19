@@ -158,7 +158,7 @@ function DrawRandom.draw(playerColor, position, deck)
     -- internal Card is extracted; never change an already-locked deck.
     local lockedByDraw = false
     local lockOK, wasLocked = pcall(function() return deck.locked end)
-    if lockOK and wasLocked == false then
+    if lockOK and wasLocked == false and #cards > 2 then
         lockedByDraw = pcall(function() deck.setLock(true) end)
     end
 

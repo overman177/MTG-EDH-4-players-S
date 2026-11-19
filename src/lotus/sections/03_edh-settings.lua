@@ -446,6 +446,7 @@ Settings.LOCAL_MAINTENANCE_NOTES = table.concat({
     "- Fixed the Lotus Helper displaying version 1.9.0 after a v1.9.5 update.",
     "- Hardened Lotus deck callbacks and Equipment/Always Reveal Top during deck merges.",
     "- Fixed Draw Random with Always Reveal Top enabled; pause and refresh its visual clone.",
+    "- Placed Reveal Top previews outside the library zone, toward the table edge.",
     "- Corrected malformed card-image URLs for new imports.",
     "- Added bug-report spam validation and duplicate-submission protection.",
 }, "\n")

@@ -27,6 +27,11 @@ automation is included in this release.
   library before collision removal is verified. Previews that cannot be
   made collision-free are discarded rather than risking duplicated cards.
 
+- Moved the temporary Reveal Top card beside its library, outward from table
+  center and beyond the library scripting zone. The preview remains locked,
+  non-interactable and collision-checked. Existing merged cards are not
+  automatically removed by this change.
+
 ## Deferred to a later update
 
 The experimental card catalog, semantic target registry, Encoder-backed

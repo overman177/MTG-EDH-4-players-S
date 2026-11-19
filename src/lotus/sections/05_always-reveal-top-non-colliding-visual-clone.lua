@@ -22,8 +22,9 @@ RevealTop = {
     visualGuids = {}, visuals = {}, spawning = {}, errors = {}, retryAt = {},
     cleanedDecks = {}, paused = {}, mutationTokens = {},
     POLL_SECONDS = 0.65,
-    -- Vertical clearance above the upper face of the real library. A visible
-    -- gap reduces the risk of TTS merging the decorative card with the deck.
+    -- Horizontal separation from the actual deck and library scripting zone.
+    OUTSIDE_DECK_GAP = 4.25,
+    OUTSIDE_ZONE_GAP = 2.25,
     HEIGHT_ABOVE_DECK = 0.22,
 }
 
@@ -248,14 +249,63 @@ function RevealTop.suspendDuringDraw(deck)
     return false
 end
 
-function RevealTop.topPosition(library)
+-- Keep the preview OUTSIDE the Library scripting zone and offset it
+-- radially away from table center, so it cannot join a real Deck or become
+-- part of a library's drawable contents. Works for 4/6-sided seat layouts.
+-- AABB projection is conservative for rotated zones; if zone bounds are
+-- unavailable, a minimum gap from the real library still applies.
+function RevealTop.topPosition(library, color)
     local pos = library.getPosition()
     local topY = pos.y + 0.25
     local ok, bounds = pcall(function() return library.getBounds() end)
     if ok and bounds and bounds.center and bounds.size then
         topY = bounds.center.y + 0.5 * bounds.size.y
     end
-    return {x=pos.x, y=topY + RevealTop.HEIGHT_ABOVE_DECK, z=pos.z}
+
+    local center = {x=pos.x, z=pos.z}
+    local zone = nil
+    if color then
+        local found, result = pcall(RevealTop.findZone, color)
+        if found then zone = result end
+    end
+    if zone then
+        local got, zp = pcall(function() return zone.getPosition() end)
+        if got and type(zp) == "table"
+            and type(zp.x) == "number" and type(zp.z) == "number" then
+            center = {x=zp.x, z=zp.z}
+        end
+    end
+
+    -- Library zones sit around the table's origin; the zone center defines
+    -- the seat's outward ray. Fall back to library position if necessary.
+    local nx, nz = center.x, center.z
+    local magnitude = math.sqrt(nx * nx + nz * nz)
+    if magnitude < 0.1 then
+        nx, nz = pos.x, pos.z
+        magnitude = math.sqrt(nx * nx + nz * nz)
+    end
+    if magnitude < 0.1 then nx, nz, magnitude = 1, 0, 1 end
+    nx, nz = nx / magnitude, nz / magnitude
+
+    local deckProjection =
+        (pos.x - center.x) * nx + (pos.z - center.z) * nz
+    local distance = deckProjection + RevealTop.OUTSIDE_DECK_GAP
+    if zone then
+        local valid, zb = pcall(function() return zone.getBounds() end)
+        if valid and zb and zb.size
+            and type(zb.size.x) == "number"
+            and type(zb.size.z) == "number" then
+            -- Project the world-axis-aligned zone bounds onto the outward ray.
+            local extent = 0.5 * (math.abs(nx) * math.abs(zb.size.x)
+                + math.abs(nz) * math.abs(zb.size.z))
+            distance = math.max(distance, extent + RevealTop.OUTSIDE_ZONE_GAP)
+        end
+    end
+    return {
+        x = center.x + nx * distance,
+        y = topY + RevealTop.HEIGHT_ABOVE_DECK,
+        z = center.z + nz * distance
+    }
 end
 
 function RevealTop.faceUpRotation(library)
@@ -267,7 +317,7 @@ end
 function RevealTop.follow(color, library)
     local obj = RevealTop.visualFor(color)
     if not rtAlive(obj) or not rtAlive(library) then return end
-    local newPos = RevealTop.topPosition(library)
+    local newPos = RevealTop.topPosition(library, color)
     local oldPos = obj.getPosition()
     if math.abs(newPos.x - oldPos.x) > 0.035
         or math.abs(newPos.y - oldPos.y) > 0.035
@@ -372,7 +422,7 @@ function RevealTop.spawnVisual(color, info)
     -- A freshly spawned Card has physical colliders until TTS finishes its
     -- Unity initialization. Never spawn it within reach of the library:
     -- one frame of contact can merge the preview INTO the real deck.
-    local posOK, staging = pcall(RevealTop.topPosition, info.library)
+    local posOK, staging = pcall(RevealTop.topPosition, info.library, color)
     if not posOK or not staging then
         RevealTop.errors[color] = "Library disappeared before preview spawn"
         return
@@ -445,7 +495,7 @@ function RevealTop.spawnVisual(color, info)
                                 discard(obj, "Unsafe preview collider; clone discarded")
                                 return
                             end
-                            local position = RevealTop.topPosition(fresh.library)
+                            local position = RevealTop.topPosition(fresh.library, color)
                             local rotation = RevealTop.faceUpRotation(fresh.library)
                             local guid = obj.getGUID()
                             obj.setPosition(position)

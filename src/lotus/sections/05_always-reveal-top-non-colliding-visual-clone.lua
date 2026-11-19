@@ -269,10 +269,13 @@ function RevealTop.topPosition(library, color)
         if found then zone = result end
     end
     if zone then
-        local got, zp = pcall(function() return zone.getPosition() end)
-        if got and type(zp) == "table"
-            and type(zp.x) == "number" and type(zp.z) == "number" then
-            center = {x=zp.x, z=zp.z}
+        -- TTS can expose Vector as a userdata rather than a plain table.
+        local got, zx, zz = pcall(function()
+            local zp = zone.getPosition()
+            return zp.x, zp.z
+        end)
+        if got and type(zx) == "number" and type(zz) == "number" then
+            center = {x=zx, z=zz}
         end
     end
 

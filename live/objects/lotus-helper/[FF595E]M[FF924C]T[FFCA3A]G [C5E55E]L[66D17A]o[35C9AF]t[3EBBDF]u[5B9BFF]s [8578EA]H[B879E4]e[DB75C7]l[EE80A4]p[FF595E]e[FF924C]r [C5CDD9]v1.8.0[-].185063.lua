@@ -1,5 +1,5 @@
 --[[==========================================================================
-    MTG LOTUS HELPER  |  v1.9.0  |  Tabletop Simulator Object Script
+    MTG LOTUS HELPER  |  v1.9.5  |  Tabletop Simulator Object Script
 
     MODULES
       1. Card Preview  - Hand plays and first CommanderZone battlefield entry
@@ -14,7 +14,7 @@
 ==========================================================================]]
 
 local HELPER_NAME = "MTG Lotus Helper"
-local HELPER_VERSION = "1.9.0"
+local HELPER_VERSION = "1.9.5"
 
 -- Patch notes are stored outside Lua in a TTS Notebook page named
 -- LOTUS_PATCH_NOTES, assigned to the Black (GM) seat. The Notes API reads
@@ -1818,6 +1818,15 @@ end
 -- Lotus reads it when Patch Notes opens; the settings text is never editable.
 Settings.NOTEBOOK_TITLE = "LOTUS_PATCH_NOTES"
 Settings.NOTEBOOK_COLOR = "Black"
+Settings.LOCAL_MAINTENANCE_NOTES = table.concat({
+    "Version 1.9.5",
+    "- Fixed the Lotus Helper displaying version 1.9.0 after a v1.9.5 update.",
+    "- Hardened Lotus deck callbacks and Equipment/Always Reveal Top during deck merges.",
+    "- Fixed Draw Random with Always Reveal Top enabled; pause and refresh its visual clone.",
+    "- Corrected malformed card-image URLs for new imports.",
+    "- Added bug-report spam validation and duplicate-submission protection.",
+}, "\n")
+
 
 function Settings.getNotebookTab()
     -- Returns (matching tab or nil, notebook API available).
@@ -1937,6 +1946,11 @@ function Settings.syncPatchNotes(resetToLatest)
         notes = "No patch notes published yet."
     else
         notes = tab.body
+    end
+    -- Always show maintenance notes for the installed script version without
+    -- modifying the creator's saved Notebook page or duplicating its entry.
+    if not notes:find("Version 1.9.5", 1, true) then
+        notes = Settings.LOCAL_MAINTENANCE_NOTES .. "\n\n" .. notes
     end
     if Settings.notesRaw ~= notes then
         Settings.notesRaw = notes

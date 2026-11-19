@@ -441,6 +441,15 @@ end
 -- Lotus reads it when Patch Notes opens; the settings text is never editable.
 Settings.NOTEBOOK_TITLE = "LOTUS_PATCH_NOTES"
 Settings.NOTEBOOK_COLOR = "Black"
+Settings.LOCAL_MAINTENANCE_NOTES = table.concat({
+    "Version 1.9.5",
+    "- Fixed the Lotus Helper displaying version 1.9.0 after a v1.9.5 update.",
+    "- Hardened Lotus deck callbacks and Equipment/Always Reveal Top during deck merges.",
+    "- Fixed Draw Random with Always Reveal Top enabled; pause and refresh its visual clone.",
+    "- Corrected malformed card-image URLs for new imports.",
+    "- Added bug-report spam validation and duplicate-submission protection.",
+}, "\n")
+
 
 function Settings.getNotebookTab()
     -- Returns (matching tab or nil, notebook API available).
@@ -560,6 +569,11 @@ function Settings.syncPatchNotes(resetToLatest)
         notes = "No patch notes published yet."
     else
         notes = tab.body
+    end
+    -- Always show maintenance notes for the installed script version without
+    -- modifying the creator's saved Notebook page or duplicating its entry.
+    if not notes:find("Version 1.9.5", 1, true) then
+        notes = Settings.LOCAL_MAINTENANCE_NOTES .. "\n\n" .. notes
     end
     if Settings.notesRaw ~= notes then
         Settings.notesRaw = notes

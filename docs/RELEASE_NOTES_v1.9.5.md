@@ -19,6 +19,10 @@ automation is included in this release.
 - Added automatic closure/cleanup for recurring Discord-invitation
   spam in the GitHub Issues tracker.
 
+- Corrected the Lotus Helper's visible version label to v1.9.5 (the Global
+  version was already v1.9.5), and included maintenance notes directly in
+  Lotus Settings without modifying the owner's Notebook page.
+
 ## Deferred to a later update
 
 The experimental card catalog, semantic target registry, Encoder-backed

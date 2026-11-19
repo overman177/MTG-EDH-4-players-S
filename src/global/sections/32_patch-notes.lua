@@ -24,6 +24,7 @@ local LOCAL_RELEASE_NOTES = table.concat({
     "• Hardened Lotus Helper callbacks during deck shuffles and merges.",
     "• Improved Equipment and Always Reveal Top handling of disappearing deck objects.",
     "• Fixed Draw Random with Reveal Top: pause and refresh the visual clone during draws.",
+    "• Corrected the Lotus Helper version label and added v1.9.5 to its Settings patch notes.",
     "• Corrected misspelled card-image CDN display URLs on new imports.",
     "• Added bug-report validation, duplicate-request protection and a cooldown.",
     "• Added automatic GitHub spam-issue triage and historical cleanup.",

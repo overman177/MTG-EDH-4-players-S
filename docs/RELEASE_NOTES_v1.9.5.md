@@ -52,3 +52,7 @@ and use Smart Import > Save & Play.
 - Tightened preview spacing slightly while retaining a non-interactable,
   collider-disabled visual, and stabilized the source deck during Draw Random
   by extracting the card above it and briefly locking the stack.
+
+- Aligned the Reveal Top clone with the Library zone's local horizontal edge
+  rather than moving diagonally away from the table center. It now appears
+  immediately alongside the zone and remains non-interactable.

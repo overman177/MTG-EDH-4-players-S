@@ -29,6 +29,7 @@ local LOCAL_RELEASE_NOTES = table.concat({
     "• Moved Reveal Top previews outside the library zone, toward the table edge.",
     "• Reduced preview spacing to a narrow gap directly beside each library.",
     "• Tightened preview spacing and stabilized deck physics during Draw Random.",
+    "• Aligned Reveal Top previews alongside their Library zones rather than diagonally.",
     "• Corrected misspelled card-image CDN display URLs on new imports.",
     "• Added bug-report validation, duplicate-request protection and a cooldown.",
     "• Added automatic GitHub spam-issue triage and historical cleanup.",

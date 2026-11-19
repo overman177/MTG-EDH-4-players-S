@@ -1858,6 +1858,7 @@ Settings.LOCAL_MAINTENANCE_NOTES = table.concat({
     "- Fixed Draw Random with Always Reveal Top enabled; pause and refresh its visual clone.",
     "- Placed Reveal Top previews outside the library zone, toward the table edge.",
     "- Tightened the preview gap and stabilized decks during Draw Random.",
+    "- Aligned Reveal Top previews to Library-zone sides, removing diagonal offset.",
     "- Moved the preview closer, immediately beside its library.",
     "- Corrected malformed card-image URLs for new imports.",
     "- Added bug-report spam validation and duplicate-submission protection.",
@@ -3853,9 +3854,9 @@ RevealTop = {
     -- Fallback only: normal card width provides an edge-to-edge gap instead
     -- of the previous 4.25-unit center separation.
     OUTSIDE_DECK_GAP = 2.50,
-    -- Visual is non-interactable and collision-free: a 0.32-unit edge
-    -- inset is safe while its center remains well outside the zone.
-    OUTSIDE_ZONE_GAP = -0.32,
+    -- Keep a small gap beyond the physical library zone, rather than an
+    -- overlap that could confuse zone-based automation.
+    OUTSIDE_ZONE_GAP = 0.08,
     PREVIEW_EDGE_GAP = 0.08,
     FALLBACK_CARD_WIDTH = 2.5,
     HEIGHT_ABOVE_DECK = 0.22,
@@ -4082,82 +4083,105 @@ function RevealTop.suspendDuringDraw(deck)
     return false
 end
 
--- Keep the preview OUTSIDE the Library scripting zone and offset it
--- radially away from table center, so it cannot join a real Deck or become
--- part of a library's drawable contents. Works for 4/6-sided seat layouts.
--- AABB projection is conservative for rotated zones; if zone bounds are
--- unavailable, a minimum gap from the real library still applies.
+-- Align the preview with the Library zone's LOCAL right axis, not a ray
+-- from world origin. A radial offset made previews drift diagonally from
+-- upright decks. The original card stays untouched: only its visual copy
+-- moves sideways, beyond the zone's edge.
+local function rtSideAxis(obj)
+    if not obj then return nil end
+    local ok, x, z = pcall(function()
+        local v = obj.getTransformRight()
+        return v.x, v.z
+    end)
+    if ok and type(x) == "number" and type(z) == "number" then
+        local length = math.sqrt(x*x + z*z)
+        if length > 0.01 then return x/length, z/length end
+    end
+    -- Compatibility fallback for objects without transform helper methods.
+    local good, yaw = pcall(function() return obj.getRotation().y end)
+    if good and type(yaw) == "number" then
+        local rad = math.rad(yaw)
+        return math.cos(rad), -math.sin(rad)
+    end
+    return nil
+end
+
+local function rtLocalWidth(obj, nx, nz, fallback)
+    if obj == nil then return fallback end
+    -- Normalized bounds describe the unrotated local footprint. This is
+    -- more accurate than the world AABB of a rotated six-seat zone.
+    local ok, width = pcall(function()
+        return obj.getBoundsNormalized().size.x
+    end)
+    if ok and type(width) == "number" and width > 0.1 then
+        return width
+    end
+    local valid, projected = pcall(function()
+        local size = obj.getBounds().size
+        return math.abs(nx)*size.x + math.abs(nz)*size.z
+    end)
+    if valid and type(projected) == "number" and projected > 0.1 then
+        return projected
+    end
+    return fallback
+end
+
 function RevealTop.topPosition(library, color)
     local pos = library.getPosition()
     local topY = pos.y + 0.25
-    local ok, bounds = pcall(function() return library.getBounds() end)
-    if ok and bounds and bounds.center and bounds.size then
+    local boundsOK, bounds = pcall(function() return library.getBounds() end)
+    if boundsOK and bounds and bounds.center and bounds.size then
         topY = bounds.center.y + 0.5 * bounds.size.y
     end
 
-    local center = {x=pos.x, z=pos.z}
     local zone = nil
     if color then
         local found, result = pcall(RevealTop.findZone, color)
         if found then zone = result end
     end
+
+    local nx, nz = rtSideAxis(zone)
+    if not nx then nx, nz = rtSideAxis(library) end
+    if not nx then nx, nz = 1, 0 end
+
+    -- Pick the right/left edge facing away from the table center; retain the
+    -- library's longitudinal coordinate so their tops remain aligned.
+    local zoneX, zoneZ = pos.x, pos.z
     if zone then
-        -- TTS can expose Vector as a userdata rather than a plain table.
-        local got, zx, zz = pcall(function()
-            local zp = zone.getPosition()
-            return zp.x, zp.z
+        local got, x, z = pcall(function()
+            local p = zone.getPosition()
+            return p.x, p.z
         end)
-        if got and type(zx) == "number" and type(zz) == "number" then
-            center = {x=zx, z=zz}
+        if got and type(x)=="number" and type(z)=="number" then
+            zoneX, zoneZ = x, z
         end
     end
-
-    -- Library zones sit around the table's origin; the zone center defines
-    -- the seat's outward ray. Fall back to library position if necessary.
-    local nx, nz = center.x, center.z
-    local magnitude = math.sqrt(nx * nx + nz * nz)
-    if magnitude < 0.1 then
-        nx, nz = pos.x, pos.z
-        magnitude = math.sqrt(nx * nx + nz * nz)
+    local outward = nx*zoneX + nz*zoneZ
+    if math.abs(outward) < 0.01 then
+        outward = nx*pos.x + nz*pos.z
     end
-    if magnitude < 0.1 then nx, nz, magnitude = 1, 0, 1 end
-    nx, nz = nx / magnitude, nz / magnitude
+    if outward < 0 then nx, nz = -nx, -nz end
 
-    -- Offset by the actual (projected) card width so the preview sits
-    -- immediately beside the deck, not several card-widths away. Keep its
-    -- whole footprint outside the Library scripting zone, not just its center.
-    local projectedWidth = RevealTop.FALLBACK_CARD_WIDTH
-    if ok and bounds and bounds.size then
-        local bx, bz = tonumber(bounds.size.x), tonumber(bounds.size.z)
-        if bx and bz then
-            local measured = math.abs(nx) * math.abs(bx)
-                + math.abs(nz) * math.abs(bz)
-            if measured > 0.1 then projectedWidth = measured end
-        end
-    end
-    local previewHalfWidth = 0.5 * projectedWidth
-    local separation = math.max(RevealTop.OUTSIDE_DECK_GAP,
-        projectedWidth + RevealTop.PREVIEW_EDGE_GAP)
+    local width = rtLocalWidth(library, nx, nz,
+        RevealTop.FALLBACK_CARD_WIDTH)
+    local separation = math.max(
+        RevealTop.OUTSIDE_DECK_GAP,
+        width + RevealTop.PREVIEW_EDGE_GAP
+    )
     if zone then
-        local valid, zb = pcall(function() return zone.getBounds() end)
-        if valid and zb and zb.size
-            and type(zb.size.x) == "number"
-            and type(zb.size.z) == "number" then
-            local extent = 0.5 * (math.abs(nx) * math.abs(zb.size.x)
-                + math.abs(nz) * math.abs(zb.size.z))
-            local deckProjection = (pos.x - center.x) * nx
-                + (pos.z - center.z) * nz
+        local zoneWidth = rtLocalWidth(zone, nx, nz, nil)
+        if zoneWidth then
+            local offset = (zoneX-pos.x)*nx + (zoneZ-pos.z)*nz
             separation = math.max(separation,
-                extent + previewHalfWidth + RevealTop.OUTSIDE_ZONE_GAP
-                    - deckProjection)
+                offset + 0.5*zoneWidth + 0.5*width
+                    + RevealTop.OUTSIDE_ZONE_GAP)
         end
     end
-    -- Anchor to the deck, not to the zone center: this preserves the deck's
-    -- sideways alignment when the deck isn't exactly centered in its zone.
+
     return {
-        x = pos.x + nx * separation,
+        x = pos.x + nx*separation,
         y = topY + RevealTop.HEIGHT_ABOVE_DECK,
-        z = pos.z + nz * separation
+        z = pos.z + nz*separation
     }
 end
 

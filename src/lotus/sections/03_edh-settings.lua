@@ -448,6 +448,7 @@ Settings.LOCAL_MAINTENANCE_NOTES = table.concat({
     "- Fixed Draw Random with Always Reveal Top enabled; pause and refresh its visual clone.",
     "- Placed Reveal Top previews outside the library zone, toward the table edge.",
     "- Tightened the preview gap and stabilized decks during Draw Random.",
+    "- Aligned Reveal Top previews to Library-zone sides, removing diagonal offset.",
     "- Moved the preview closer, immediately beside its library.",
     "- Corrected malformed card-image URLs for new imports.",
     "- Added bug-report spam validation and duplicate-submission protection.",

@@ -1,94 +1,99 @@
--- All preview positions must be radially outside their Library zones.
+-- Reveal Top previews must run alongside the library-zone side edge.
+-- Six-seat rotation must not introduce a diagonal displacement.
 dofile("src/lotus/sections/05_always-reveal-top-non-colliding-visual-clone.lua")
 local zones = {}
 getObjectFromGUID = function(guid) return zones[guid] end
 getObjectsWithTag = function() return {} end
-local function makeZone(color, x, z, sizeX, sizeZ)
+local function axis(yaw)
+    local rad=math.rad(yaw)
+    return math.cos(rad),-math.sin(rad)
+end
+local function makeZone(color,x,z,yaw,width)
     local zone={type="Scripting"}
     zone.hasTag=function(tag) return tag=="Library" or tag==color end
     zone.getPosition=function() return {x=x,y=1,z=z} end
-    zone.getBounds=function()
-        return {size={x=sizeX,y=1,z=sizeZ}}
+    zone.getTransformRight=function()
+        local rx,rz=axis(yaw)
+        return {x=rx,y=0,z=rz}
     end
+    zone.getBoundsNormalized=function()
+        return {size={x=width,y=1,z=4}}
+    end
+    -- A generous world AABB must not override the local normalized width.
+    zone.getBounds=function() return {size={x=8,y=1,z=8}} end
     zones[RevealTop.LIBRARY_GUIDS[color]]=zone
     return zone
 end
-local function makeLibrary(x,z)
+local function makeLibrary(x,z,yaw,width)
     local library={}
     library.isDestroyed=function() return false end
     library.getPosition=function() return {x=x,y=1,z=z} end
-    library.getBounds=function()
-        return {center={x=x,y=1,z=z},size={x=2.5,y=0.3,z=3.6}}
+    library.getRotation=function() return {x=0,y=yaw,z=180} end
+    library.getTransformRight=function()
+        local rx,rz=axis(yaw)
+        return {x=rx,y=0,z=rz}
     end
-    library.getRotation=function() return {x=0,y=0,z=180} end
+    library.getBoundsNormalized=function()
+        return {size={x=width,y=0.3,z=3.5}}
+    end
+    library.getBounds=function()
+        return {center={x=x,y=1,z=z},size={x=width,y=0.3,z=3.5}}
+    end
     return library
 end
 for _, sample in ipairs({
-    {color="Blue",x=11,z=5,width=5,depth=3},
-    {color="White",x=-13,z=-6,width=6,depth=4},
+    {color="Blue",x=11,z=5,yaw=0},
+    {color="White",x=-13,z=-6,yaw=0},
+    {color="Red",x=3,z=15,yaw=60},
+    {color="Yellow",x=-15,z=3,yaw=120},
 }) do
-    makeZone(sample.color,sample.x,sample.z,sample.width,sample.depth)
-    local deck=makeLibrary(sample.x,sample.z)
-    local preview=RevealTop.topPosition(deck,sample.color)
-    local length=math.sqrt(sample.x*sample.x+sample.z*sample.z)
-    local dx,dz=sample.x/length,sample.z/length
-    local outward=(preview.x-sample.x)*dx+(preview.z-sample.z)*dz
-    local zoneExtent=0.5*(math.abs(dx)*sample.width+
-        math.abs(dz)*sample.depth)
-    assert(outward>=zoneExtent+RevealTop.OUTSIDE_ZONE_GAP-0.01,
-        "Preview is still in the Library zone: "..sample.color)
-    assert(outward>=RevealTop.OUTSIDE_DECK_GAP-0.01,
-        "Preview is close enough to merge with the deck")
-    local cardWidth=math.abs(dx)*2.5+math.abs(dz)*3.6
-    local nearestAllowed=math.max(RevealTop.OUTSIDE_DECK_GAP,
-        cardWidth+RevealTop.PREVIEW_EDGE_GAP,
-        zoneExtent+0.5*cardWidth+RevealTop.OUTSIDE_ZONE_GAP)
-    assert(math.abs(outward-nearestAllowed)<0.02,
-        "Preview has an unnecessarily large gap from the Library")
-    assert(outward-0.5*cardWidth>=zoneExtent+
-        RevealTop.OUTSIDE_ZONE_GAP-0.01,
-        "Part of preview overlaps Library scripting zone")
-    assert(outward>zoneExtent,"Visual center must remain outside library zone")
-    assert(outward>0,"Preview went inward instead of toward table edge")
+    local deck=makeLibrary(sample.x,sample.z,sample.yaw,2.5)
+    makeZone(sample.color,sample.x,sample.z,sample.yaw,3.0)
+    local view=RevealTop.topPosition(deck,sample.color)
+    local rx,rz=axis(sample.yaw)
+    if sample.x*rx+sample.z*rz<0 then rx,rz=-rx,-rz end
+    local dx,dz=view.x-sample.x,view.z-sample.z
+    local sideways=dx*rx+dz*rz
+    local longitudinal=dx*(-rz)+dz*rx
+    assert(math.abs(longitudinal)<0.001,
+        "Preview drifts diagonally off the zone axis for "..sample.color)
+    local expected=math.max(RevealTop.OUTSIDE_DECK_GAP,
+        2.5+RevealTop.PREVIEW_EDGE_GAP,
+        1.5+1.25+RevealTop.OUTSIDE_ZONE_GAP)
+    assert(math.abs(sideways-expected)<0.01,
+        "Preview is not adjacent to the Library zone for "..sample.color)
+    assert(sideways-1.25>=1.5+RevealTop.OUTSIDE_ZONE_GAP-0.01,
+        "Preview still overlaps the Library zone")
+    assert(sideways<3.2, "Preview spaced too far from the zone")
 end
 
-local moved=makeLibrary(12,4)
-local previewPosition={x=12,y=1,z=4}
-local preview={
+-- Off-center libraries remain next to their deck without diagonal drift.
+makeZone("Blue",11,5,0,3)
+local shifted=makeLibrary(12,3,0,2.5)
+local shiftedPos=RevealTop.topPosition(shifted,"Blue")
+assert(math.abs(shiftedPos.z-3)<0.001,
+    "Preview must retain the deck's lengthwise alignment")
+assert(shiftedPos.x>12, "Wrong outward side for offset library")
+
+-- Existing visual follows the same axis after a deck moves.
+local objPos={x=0,y=0,z=0}
+local visual={
     isDestroyed=function()return false end,
     hasTag=function(tag)return tag==RevealTop.VISUAL_TAG end,
-    getPosition=function()return previewPosition end,
-    setPosition=function(p)previewPosition=p end,
+    getPosition=function()return objPos end,
+    setPosition=function(p)objPos=p end,
     getRotation=function()return {x=0,y=0,z=0} end,
     setRotation=function()end
 }
-RevealTop.visuals.Blue=preview
-RevealTop.follow("Blue",moved)
-assert(previewPosition.x>12 and previewPosition.z>4,
-    "Follow relocated the preview back over the deck")
+RevealTop.visuals.Blue=visual
+RevealTop.follow("Blue",shifted)
+assert(math.abs(objPos.z-3)<0.001 and objPos.x>12,
+    "Follow should retain local sideways alignment")
 
--- Decks can be slightly off-center in their zone. The preview must stay on
--- the deck's outward ray, not snap sideways to the center of the zone.
-local zone=makeZone("Blue",11,5,3,3)
-local shifted=makeLibrary(13,3)
-local beside=RevealTop.topPosition(shifted,"Blue")
-local length=math.sqrt(11*11+5*5)
-local dx,dz=11/length,5/length
-local sideways=-(beside.x-13)*dz+(beside.z-3)*dx
-assert(math.abs(sideways)<0.01,
-    "Preview does not align with an off-center library")
-
--- A missing/dead zone must fail toward separation, never return deck center.
+-- No zone: preserve separation and use the library's own local right axis.
 zones={}
-local fallback=RevealTop.topPosition(makeLibrary(15,-7),"Blue")
-local movedDist=math.sqrt((fallback.x-15)^2+(fallback.z+7)^2)
-assert(movedDist>=RevealTop.OUTSIDE_DECK_GAP-0.01,
-    "Missing zone left preview over library")
+local fallback=makeLibrary(-15,-5,0,2.5)
+local fp=RevealTop.topPosition(fallback,"Blue")
+assert(fp.x<-17.4 and math.abs(fp.z+5)<0.001)
 
-local f=assert(io.open("src/lotus/sections/05_always-reveal-top-non-colliding-visual-clone.lua","rb"))
-local source=f:read("*a")
-f:close()
-assert(source:find("RevealTop.topPosition(library, color)",1,true))
-assert(source:find("pcall(RevealTop.topPosition, info.library, color)",1,true))
-assert(source:find("RevealTop.topPosition(fresh.library, color)",1,true))
-print("Reveal Top stays outward and outside the library zone: OK")
+print("Reveal Top zone-aligned sideways positioning: OK")

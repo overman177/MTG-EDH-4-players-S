@@ -81,6 +81,8 @@ old.dead = true
 active = replacement
 local stale = visual("visual1")
 assert(pcall(pending[1].callback_function, stale), "stale callback raised")
+assert(#nextFrames == 1, "stale preview must wait outside the table")
+nextFrames[1]()
 assert(stale.dead and RevealTop.signatures.Blue == nil,
     "stale clone must be discarded and retried")
 RevealTop.poll()
@@ -89,8 +91,8 @@ local correct = visual("visual2")
 assert(pcall(pending[2].callback_function, correct), "new callback raised")
 assert(not correct.dead and correct.tags[RevealTop.VISUAL_TAG],
     "current Deck should receive a valid visual")
-assert(#nextFrames == 1, "collider verification must be deferred")
-nextFrames[1]()
+assert(#nextFrames == 2, "replacement visual must wait for colliders")
+nextFrames[2]()
 assert(correct.pos ~= nil and correct.pos.y < 10,
     "verified visual should move from staging position to deck")
 assert(RevealTop.visuals.Blue == correct,

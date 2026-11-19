@@ -1240,6 +1240,28 @@ function DrawRandom.draw(playerColor, position, deck)
         end
     end
 
+    -- takeObject's default spawn point is deck position +2 on world X.
+    -- That short-lived physical Card can nudge a nearby library. Extract it
+    -- well above the original deck, then deal it straight into the hand.
+    local posOK, drawPosition = pcall(function()
+        local p = deck.getPosition()
+        return {x = p.x, y = p.y + 6, z = p.z}
+    end)
+    if not posOK or type(drawPosition) ~= "table"
+        or type(drawPosition.x) ~= "number"
+        or type(drawPosition.y) ~= "number"
+        or type(drawPosition.z) ~= "number" then
+        drawPosition = nil
+    end
+
+    -- Freeze only an originally-unlocked deck for a few frames while its
+    -- internal Card is extracted; never change an already-locked deck.
+    local lockedByDraw = false
+    local lockOK, wasLocked = pcall(function() return deck.locked end)
+    if lockOK and wasLocked == false then
+        lockedByDraw = pcall(function() deck.setLock(true) end)
+    end
+
     local takeParameters = {
         smooth = false,
         callback_function = function(card)
@@ -1271,6 +1293,8 @@ function DrawRandom.draw(playerColor, position, deck)
         end
     }
 
+    if drawPosition then takeParameters.position = drawPosition end
+
     -- Select by GUID whenever available; never pass both index and GUID.
     if type(selected.guid) == "string" and selected.guid ~= "" then
         takeParameters.guid = selected.guid
@@ -1282,6 +1306,15 @@ function DrawRandom.draw(playerColor, position, deck)
         if not DrawRandom.isAlive(deck, "Deck") then return end
         deck.takeObject(takeParameters)
     end)
+    if lockedByDraw then
+        local function releaseDeck()
+            if DrawRandom.isAlive(deck, "Deck") then
+                pcall(function() deck.setLock(false) end)
+            end
+        end
+        local scheduled = pcall(function() Wait.frames(releaseDeck, 8) end)
+        if not scheduled then releaseDeck() end
+    end
     if not taken then
         print("MTG Draw Random: takeObject failed: " .. tostring(err))
         broadcastToColor("Draw Random failed.", playerColor, {1, 0.4, 0.4})
@@ -1824,6 +1857,7 @@ Settings.LOCAL_MAINTENANCE_NOTES = table.concat({
     "- Hardened Lotus deck callbacks and Equipment/Always Reveal Top during deck merges.",
     "- Fixed Draw Random with Always Reveal Top enabled; pause and refresh its visual clone.",
     "- Placed Reveal Top previews outside the library zone, toward the table edge.",
+    "- Tightened the preview gap and stabilized decks during Draw Random.",
     "- Moved the preview closer, immediately beside its library.",
     "- Corrected malformed card-image URLs for new imports.",
     "- Added bug-report spam validation and duplicate-submission protection.",
@@ -3818,9 +3852,11 @@ RevealTop = {
     -- Horizontal separation from the actual deck and library scripting zone.
     -- Fallback only: normal card width provides an edge-to-edge gap instead
     -- of the previous 4.25-unit center separation.
-    OUTSIDE_DECK_GAP = 2.55,
-    OUTSIDE_ZONE_GAP = 0.12,
-    PREVIEW_EDGE_GAP = 0.12,
+    OUTSIDE_DECK_GAP = 2.50,
+    -- Visual is non-interactable and collision-free: a 0.32-unit edge
+    -- inset is safe while its center remains well outside the zone.
+    OUTSIDE_ZONE_GAP = -0.32,
+    PREVIEW_EDGE_GAP = 0.08,
     FALLBACK_CARD_WIDTH = 2.5,
     HEIGHT_ABOVE_DECK = 0.22,
 }

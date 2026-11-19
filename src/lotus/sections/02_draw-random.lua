@@ -140,6 +140,28 @@ function DrawRandom.draw(playerColor, position, deck)
         end
     end
 
+    -- takeObject's default spawn point is deck position +2 on world X.
+    -- That short-lived physical Card can nudge a nearby library. Extract it
+    -- well above the original deck, then deal it straight into the hand.
+    local posOK, drawPosition = pcall(function()
+        local p = deck.getPosition()
+        return {x = p.x, y = p.y + 6, z = p.z}
+    end)
+    if not posOK or type(drawPosition) ~= "table"
+        or type(drawPosition.x) ~= "number"
+        or type(drawPosition.y) ~= "number"
+        or type(drawPosition.z) ~= "number" then
+        drawPosition = nil
+    end
+
+    -- Freeze only an originally-unlocked deck for a few frames while its
+    -- internal Card is extracted; never change an already-locked deck.
+    local lockedByDraw = false
+    local lockOK, wasLocked = pcall(function() return deck.locked end)
+    if lockOK and wasLocked == false then
+        lockedByDraw = pcall(function() deck.setLock(true) end)
+    end
+
     local takeParameters = {
         smooth = false,
         callback_function = function(card)
@@ -171,6 +193,8 @@ function DrawRandom.draw(playerColor, position, deck)
         end
     }
 
+    if drawPosition then takeParameters.position = drawPosition end
+
     -- Select by GUID whenever available; never pass both index and GUID.
     if type(selected.guid) == "string" and selected.guid ~= "" then
         takeParameters.guid = selected.guid
@@ -182,6 +206,15 @@ function DrawRandom.draw(playerColor, position, deck)
         if not DrawRandom.isAlive(deck, "Deck") then return end
         deck.takeObject(takeParameters)
     end)
+    if lockedByDraw then
+        local function releaseDeck()
+            if DrawRandom.isAlive(deck, "Deck") then
+                pcall(function() deck.setLock(false) end)
+            end
+        end
+        local scheduled = pcall(function() Wait.frames(releaseDeck, 8) end)
+        if not scheduled then releaseDeck() end
+    end
     if not taken then
         print("MTG Draw Random: takeObject failed: " .. tostring(err))
         broadcastToColor("Draw Random failed.", playerColor, {1, 0.4, 0.4})

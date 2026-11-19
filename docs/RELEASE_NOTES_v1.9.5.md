@@ -48,3 +48,7 @@ and use Smart Import > Save & Play.
 - Refined Reveal Top placement to sit immediately alongside each library with
   only a narrow gap, while keeping its full visual footprint outside the
   library scripting zone and preserving non-interaction safeguards.
+
+- Tightened preview spacing slightly while retaining a non-interactable,
+  collider-disabled visual, and stabilized the source deck during Draw Random
+  by extracting the card above it and briefly locking the stack.

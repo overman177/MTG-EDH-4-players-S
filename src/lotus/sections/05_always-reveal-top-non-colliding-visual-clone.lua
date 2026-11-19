@@ -25,9 +25,11 @@ RevealTop = {
     -- Horizontal separation from the actual deck and library scripting zone.
     -- Fallback only: normal card width provides an edge-to-edge gap instead
     -- of the previous 4.25-unit center separation.
-    OUTSIDE_DECK_GAP = 2.55,
-    OUTSIDE_ZONE_GAP = 0.12,
-    PREVIEW_EDGE_GAP = 0.12,
+    OUTSIDE_DECK_GAP = 2.50,
+    -- Visual is non-interactable and collision-free: a 0.32-unit edge
+    -- inset is safe while its center remains well outside the zone.
+    OUTSIDE_ZONE_GAP = -0.32,
+    PREVIEW_EDGE_GAP = 0.08,
     FALLBACK_CARD_WIDTH = 2.5,
     HEIGHT_ABOVE_DECK = 0.22,
 }

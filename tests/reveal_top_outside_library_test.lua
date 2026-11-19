@@ -48,6 +48,7 @@ for _, sample in ipairs({
     assert(outward-0.5*cardWidth>=zoneExtent+
         RevealTop.OUTSIDE_ZONE_GAP-0.01,
         "Part of preview overlaps Library scripting zone")
+    assert(outward>zoneExtent,"Visual center must remain outside library zone")
     assert(outward>0,"Preview went inward instead of toward table edge")
 end
 

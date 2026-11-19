@@ -3,6 +3,10 @@
 Based on the stable v1.9.0 feature set. No new MTG card-resolution
 automation is included in this release.
 
+- Fixed Draw Random with Always Reveal Top enabled: removes the temporary
+  top-card clone during the draw, prevents stale copies, and refreshes it
+  after a short 45-frame pause while TTS updates the library.
+
 - Hardened Lotus Helper callbacks against destroyed Card/Deck references
   encountered during shuffles, merges, and object lifecycle events.
 - Added safer deferred updates for Equipment hover buttons and Always

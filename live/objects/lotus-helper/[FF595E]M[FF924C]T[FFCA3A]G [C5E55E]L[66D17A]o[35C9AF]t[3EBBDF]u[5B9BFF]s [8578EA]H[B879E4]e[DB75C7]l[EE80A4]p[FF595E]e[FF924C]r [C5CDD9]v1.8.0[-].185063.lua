@@ -1230,6 +1230,16 @@ function DrawRandom.draw(playerColor, position, deck)
     local selected = cards[math.random(1, #cards)]
     if type(selected) ~= "table" then return end
 
+    -- Reveal Top uses a physical visual-only clone above the library.
+    -- Remove it and pause its refresh while the deck splits/replaces itself.
+    -- This prevents duplicate-looking top cards and visual/deck merge races.
+    if RevealTop and type(RevealTop.suspendDuringDraw) == "function" then
+        local pauseOK, pauseErr = pcall(RevealTop.suspendDuringDraw, deck)
+        if not pauseOK then
+            print("[MTG Draw Random] Reveal Top pause failed: " .. tostring(pauseErr))
+        end
+    end
+
     local takeParameters = {
         smooth = false,
         callback_function = function(card)
@@ -3787,7 +3797,7 @@ RevealTop = {
     OLD_ANCHOR_TAG = "MTG_Lotus_RevealTop_Anchor",
     enabled = {}, registered = {}, signatures = {}, versions = {},
     visualGuids = {}, visuals = {}, spawning = {}, errors = {}, retryAt = {},
-    cleanedDecks = {},
+    cleanedDecks = {}, paused = {}, mutationTokens = {},
     POLL_SECONDS = 0.65,
     -- Vertical clearance above the upper face of the real library. A visible
     -- gap reduces the risk of TTS merging the decorative card with the deck.
@@ -3978,6 +3988,43 @@ function RevealTop.removeVisual(color)
     if obj then pcall(function() obj.destruct() end) end
 end
 
+-- Called by Draw Random only for a live library deck, before takeObject.
+-- A 45-frame pause spans TTS's asynchronous Deck -> Card transitions.
+-- Later draws supersede earlier resume callbacks.
+function RevealTop.suspendDuringDraw(deck)
+    if not rtAlive(deck) then return false end
+    for _, color in ipairs(RevealTop.COLORS) do
+        if RevealTop.enabled[color] then
+            local ok, library = pcall(RevealTop.findLibrary, color)
+            if ok and library == deck then
+                local token = (RevealTop.mutationTokens[color] or 0) + 1
+                RevealTop.mutationTokens[color] = token
+                RevealTop.paused[color] = true
+                RevealTop.versions[color] = (RevealTop.versions[color] or 0) + 1
+                RevealTop.signatures[color] = nil
+                RevealTop.removeVisual(color)
+                -- Remove any orphaned, tagged previews, but never real cards.
+                local found, visuals = pcall(getObjectsWithTag, "LotusRT_" .. color)
+                if found and type(visuals) == "table" then
+                    for _, visual in ipairs(visuals) do
+                        if rtAlive(visual) and rtIsVisual(visual) then
+                            pcall(function() visual.destruct() end)
+                        end
+                    end
+                end
+                Wait.frames(function()
+                    if RevealTop.mutationTokens[color] ~= token then return end
+                    RevealTop.paused[color] = nil
+                    RevealTop.signatures[color] = nil
+                    RevealTop.poll()
+                end, 45)
+                return true
+            end
+        end
+    end
+    return false
+end
+
 function RevealTop.topPosition(library)
     local pos = library.getPosition()
     local topY = pos.y + 0.25
@@ -4103,7 +4150,8 @@ function RevealTop.spawnVisual(color, info)
                     RevealTop.errors[color] = "Spawn callback returned no object"
                     return
                 end
-                if not RevealTop.enabled[color] or RevealTop.versions[color] ~= version then
+                if not RevealTop.enabled[color] or RevealTop.paused[color]
+                    or RevealTop.versions[color] ~= version then
                     pcall(function() obj.destruct() end)
                     return
                 end
@@ -4167,6 +4215,7 @@ end
 
 -- Isolate each seat when physics replaces a library Deck mid-poll.
 function RevealTop.pollOne(color)
+        if RevealTop.paused[color] then return end
         local library = RevealTop.findLibrary(color)
         if library then
             RevealTop.addMenu(library, true)
@@ -4293,7 +4342,7 @@ function RevealTop.load(saved)
     RevealTop.enabled, RevealTop.registered, RevealTop.signatures = {}, {}, {}
     RevealTop.versions, RevealTop.visuals, RevealTop.visualGuids = {}, {}, {}
     RevealTop.spawning, RevealTop.errors, RevealTop.retryAt = {}, {}, {}
-    RevealTop.cleanedDecks = {}
+    RevealTop.cleanedDecks, RevealTop.paused, RevealTop.mutationTokens = {}, {}, {}
     if type(saved) == "string" and saved ~= "" then
         local ok, data = pcall(JSON.decode, saved)
         if ok and type(data) == "table" and type(data.revealTopEnabled) == "table" then

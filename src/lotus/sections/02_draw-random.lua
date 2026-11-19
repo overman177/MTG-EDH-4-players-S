@@ -130,6 +130,16 @@ function DrawRandom.draw(playerColor, position, deck)
     local selected = cards[math.random(1, #cards)]
     if type(selected) ~= "table" then return end
 
+    -- Reveal Top uses a physical visual-only clone above the library.
+    -- Remove it and pause its refresh while the deck splits/replaces itself.
+    -- This prevents duplicate-looking top cards and visual/deck merge races.
+    if RevealTop and type(RevealTop.suspendDuringDraw) == "function" then
+        local pauseOK, pauseErr = pcall(RevealTop.suspendDuringDraw, deck)
+        if not pauseOK then
+            print("[MTG Draw Random] Reveal Top pause failed: " .. tostring(pauseErr))
+        end
+    end
+
     local takeParameters = {
         smooth = false,
         callback_function = function(card)

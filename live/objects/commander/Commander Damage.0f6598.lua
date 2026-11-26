@@ -1,5 +1,8 @@
+-- Commander damage tracker. Each physical tracker records damage from its indicated color; the Global script identifies the receiving seat by GUID.
+
 MIN_VALUE = 0
 MAX_VALUE = 21
+-- Restore the saved damage value and tint the tracker according to its description.
 function onload(saved_data)
   self.interactable = true
   val = 0
@@ -12,12 +15,14 @@ function onload(saved_data)
   createAll()
 end
 
+-- Persist the damage total in the object's script state.
 function updateSave()
   local data_to_save = {val}
   saved_data = JSON.encode(data_to_save)
   self.script_state = saved_data
 end
 
+-- Build the physical damage tracker controls.
 function createAll()
     s_color = {0.1, 0.1, 0.1, 95}
     f_color = {1,1,1,100}
@@ -124,6 +129,7 @@ function createAll()
       })
 end
 
+-- Change the damage value according to the click direction.
 function add_subtract(_obj, _color, alt_click)
   mod = alt_click and -1 or 1
   new_value = math.min(math.max(val + mod, MIN_VALUE), MAX_VALUE)
@@ -144,6 +150,7 @@ function reportDamage(delta)
   Global.call("commanderDamageDealt", { guid = self.getGUID(), delta = delta })
 end
 
+-- Refresh the displayed damage value and its saved state.
 function updateVal()
   if tooltip_show then
     ttText = "     " .. val .. "\n" .. self.getName()
@@ -168,6 +175,7 @@ function onChat(msg)
   end
 end
 
+-- Reset the damage tracker without using the normal damage reporting path.
 function reset_val()
   val = 0
   updateVal()
@@ -176,6 +184,7 @@ function reset_val()
 end
 
 self.max_typed_number=99
+-- Handle a directly entered counter value.
 function onNumberTyped(col,int)
   local delta = int - val
   val = int
@@ -184,5 +193,6 @@ function onNumberTyped(col,int)
   reportDamage(delta)
 end
 
+-- No-op callback for a display-only control.
 function null()
 end

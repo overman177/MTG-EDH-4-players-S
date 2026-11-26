@@ -1,3 +1,5 @@
+-- Radiation counter. Increment the amount, or process the supported milling and life-loss sequence when the player uses the action.
+
 --[[
     Radiation Counter Script
     =========================
@@ -38,6 +40,7 @@ MAX_VALUE = 99
 local TOOLTIP_INSTRUCTIONS = '           [b]Radiation[/b]'..'\n       [i]left click[/i]'..'\n -increment counter'..'\n\n       [i]right click[/i]'..'\n  -process radiation\n(mill cards, lose life \nfor non-lands)'..'\n\n       [i]type[/i]'..'\n  -set value directly'
 
 
+-- Restore the saved radiation count and initialize the object controls.
 function onload(saved_data)
   light_mode = true
   tooltip_show = false
@@ -55,12 +58,14 @@ end
 
 -- ---- UI / Button Management ----
 
+-- Persist the current counter state on this object.
 function updateSave()
   local data_to_save = {light_mode, val, tooltip_show}
   saved_data = JSON.encode(data_to_save)
   self.script_state = saved_data
 end
 
+-- Build the radiation display and interactive controls.
 function createAll()
     s_color = {0.5, 0.5, 0.5, 95}
 
@@ -141,6 +146,7 @@ function createAll()
   setTooltips()
 end
 
+-- Remove the existing controls before rebuilding them.
 function removeAll()
   self.removeButton(0)
   self.removeButton(1)
@@ -148,6 +154,7 @@ function removeAll()
   self.removeButton(3)
 end
 
+-- Rebuild the counter controls.
 function reloadAll()
   removeAll()
   createAll()
@@ -170,6 +177,7 @@ function editName(_obj, _string, value)
   setTooltips()
 end
 
+-- Route left-click increments and right-click radiation processing.
 function add_subtract(_obj, _color, alt_click)
   if alt_click then
     -- Right-click: process radiation
@@ -188,6 +196,7 @@ function add_subtract(_obj, _color, alt_click)
   end
 end
 
+-- Refresh the displayed radiation value and its saved state.
 function updateVal()
   if tooltip_show then
     ttText = "     " .. val .. "\n" .. self.getName() .. "\n\n" .. TOOLTIP_INSTRUCTIONS
@@ -209,12 +218,14 @@ function updateVal()
 
 end
 
+-- Reset the radiation counter.
 function reset_val()
   val = 0
   updateVal()
   updateSave()
 end
 
+-- Refresh the tooltips for the counter controls.
 function setTooltips()
   if tooltip_show then
     ttText = "     " .. val .. "\n" .. self.getName() .. "\n\n" .. TOOLTIP_INSTRUCTIONS
@@ -233,6 +244,7 @@ function null()
 end
 
 self.max_typed_number=999
+-- Handle a directly entered radiation count.
 function onNumberTyped(col,int)
   val = int
   updateVal()

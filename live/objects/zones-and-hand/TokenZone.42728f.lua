@@ -1,3 +1,5 @@
+-- Token deck spreader. A deck dropped onto the token marker is rotated and spread after it settles.
+
 -- TOKEN -> HAND DECK SPREADER
 -- Put this script directly on the token object.
 
@@ -10,6 +12,7 @@ local SPREAD_ROTATION = -90
 local busy = false
 
 
+-- Wait for a deck to settle before spreading it; ignore unrelated collisions while busy.
 function onCollisionEnter(info)
     if busy then return end
 
@@ -20,7 +23,7 @@ function onCollisionEnter(info)
 
     busy = true
 
-    -- Give the deck a moment to actually land.
+    -- Wait for the deck to settle before moving it.
     Wait.frames(function()
 
         if obj == nil or obj.isDestroyed() then
@@ -34,6 +37,7 @@ function onCollisionEnter(info)
 end
 
 
+-- Orient the deck to the marker and spread its cards in the intended direction.
 function spreadDeck(deck)
 
     -- Match the token's orientation, but turn the deck
@@ -53,7 +57,7 @@ function spreadDeck(deck)
             deck.spread(SPREAD_DISTANCE)
         end
 
-        -- Prevent immediate retriggering from all the cards.
+        -- Keep the spread operation from triggering again on the individual cards.
         Wait.time(function()
             busy = false
         end, 1)

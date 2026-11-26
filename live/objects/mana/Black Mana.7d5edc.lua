@@ -1,7 +1,10 @@
+-- Mana counter. The physical object's tint and name identify the mana color; this same script is reused across seats and colors.
+
 MIN_VALUE = 0
 MAX_VALUE = 99
 
 
+-- Restore the saved mana amount and use the object's existing tint for the controls.
 function onload(saved_data)
     bcolor = self.getColorTint()
     bcolor[4] = 100
@@ -15,12 +18,14 @@ function onload(saved_data)
     createAll()
 end
 
+-- Save the current mana amount on this object.
 function updateSave()
     local data_to_save = {1, val}
     saved_data = JSON.encode(data_to_save)
     self.script_state = saved_data
 end
 
+-- Create the counter button using the object name and tint.
 function createAll()
     bpars={
       label=tostring(val),
@@ -52,6 +57,7 @@ function createAll()
 
 end
 
+-- Adjust the mana amount according to the click direction.
 function add_subtract(_obj, _color, alt_click)
     mod = alt_click and -1 or 1
     new_value = math.min(math.max(val + mod, MIN_VALUE), MAX_VALUE)
@@ -62,6 +68,7 @@ function add_subtract(_obj, _color, alt_click)
   end
 end
 
+-- Refresh the displayed mana value.
 function updateVal()
     for ind=0,4 do
         self.editButton({index = ind, label = tostring(val)})
@@ -70,6 +77,7 @@ end
 
 
 self.max_typed_number=999
+-- Handle a mana value entered directly.
 function onNumberTyped(col,int)
   val = int
   updateVal()

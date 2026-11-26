@@ -1,6 +1,9 @@
+-- Command-zone tax counter. Its seat and placement come from the physical object's description and transform.
+
 MIN_VALUE = 0
 MAX_VALUE = 100
 
+-- Initialize the commander counter and create its on-object controls.
 function onload()
   val = 0
 
@@ -72,6 +75,7 @@ end
 --   end
 -- end
 
+-- Adjust the commander counter in response to the click.
 function add_subtract(_obj, _color, alt_click)
   mod = alt_click and -2 or 2
   new_value = math.min(math.max(val + mod, MIN_VALUE), MAX_VALUE)

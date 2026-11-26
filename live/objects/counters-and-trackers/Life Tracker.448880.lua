@@ -1,18 +1,23 @@
 --By Amuzet
 --polished/updated by π
+-- Life total tracker. Keeps the displayed total and saved state in sync and groups changes for the table's announcements.
+
 
 mod_name,version='LifeTracker',1
 author='76561198045776458'
 
+-- Persist the current life total in the object's script state.
 function updateSave()
   self.script_state=JSON.encode({['c']=count})
 end
 
+-- Yield the coroutine until the requested time has elapsed.
 function wait(t)
   local s=os.time()
   repeat coroutine.yield(0) until os.time()>s+t
 end
 
+-- Update the main total and temporary signed change label.
 function sL(l,n)
   plus=''
   if n~=nil then
@@ -29,10 +34,12 @@ function sL(l,n)
   slID=Wait.time(function() self.editButton({index=1,label=''}) end, 3)
 end
 
+-- Refresh tracked player state when a seat changes.
 function onPlayerChangeColor()
   onload(self.script_state)
 end
 
+-- Refresh tracked player state when a player connects.
 function onPlayerConnect()
   onload(self.script_state)
 end
@@ -45,6 +52,7 @@ function option(o,c,a)
   click_changeValue(o,c,n)
 end
 
+-- Handle the requested life adjustment and its grouped display.
 function click_changeValue(obj, color, val)
   -- if not(color==owner or Player[color].admin) then return end
   local C3=count
@@ -75,6 +83,7 @@ function click_changeValue(obj, color, val)
   updateSave()
 end
 
+-- Collect the active players for the life tracker's game state.
 function getActivePlayers()
   activePlayerList={}                       -- list of active colors
   for _,p in pairs(Player.getPlayers()) do
@@ -209,6 +218,7 @@ function onChat(msg,player)
   end
 end
 
+-- Initialize the life tracker, restore its saved value and create the controls.
 function onload(s)
   --Loads the tracking for if the game has started yet
   owner = self.getDescription()
@@ -316,6 +326,7 @@ function onload(s)
 	})
 end
 
+-- Reset the life tracker to its starting value.
 function resetLife(obj,color)
 	sL(40,0)
 	count=40
@@ -324,6 +335,7 @@ function resetLife(obj,color)
 end
 
 self.max_typed_number=999
+-- Handle a life value entered directly.
 function onNumberTyped(col,int)
   local n=int-count
   sL(int,n)
@@ -338,6 +350,7 @@ function onNumberTyped(col,int)
   end, 3)
 end
 
+-- No-op callback used by display-only buttons.
 function null()
 end
 

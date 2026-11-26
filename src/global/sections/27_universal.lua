@@ -1,3 +1,5 @@
+-- Shared card, zone, timing, placement and text parsing helpers.
+
 ----------------------------------- UNIVERSAL ----------------------------------
 
 -- Cards carry a small JSON object in their GMNotes so several systems can annotate
@@ -19,6 +21,7 @@ function getCardNotes(obj)
 	return {}
 end
 
+-- Read one key from the card's stored notes.
 function getCardNote(obj, key)
 	return getCardNotes(obj)[key]
 end
@@ -75,6 +78,7 @@ function getCardFromZone(zone)
 	return card -- if nil?
 end
 
+-- Find a deck object inside the supplied zone.
 function getDeckFromZone(zone)
 	local deck = nil
 	local objects = mtgZoneObjects(zone)
@@ -179,6 +183,7 @@ function allBut(playerColor)
 	end
 	return players
 end
+-- Remove the card's temporary visibility restriction.
 function unhide(card)
 	if card ~= nil then
 		card.setHiddenFrom({})
@@ -194,12 +199,14 @@ function gravityTrigger(obj)
 		end, 0.2)
 	end
 end
+-- Restore gravity to the object.
 function gravOn(obj)
 	if obj ~= nil then
 		obj.use_gravity = true
 	end
 end
 
+-- Temporarily disable interaction during an object move.
 function interactTrigger(obj)
 	if obj ~= nil then
 		obj.interactable = false
@@ -208,12 +215,14 @@ function interactTrigger(obj)
 		end, 0.2)
 	end
 end
+-- Restore interaction to the object.
 function interactOn(obj)
 	if obj ~= nil then
 		obj.interactable = true
 	end
 end
 
+-- Temporarily disable hand interaction while a card is moved.
 function handTrigger(obj)
 	if obj ~= nil then
 		obj.use_hands = false
@@ -222,6 +231,7 @@ function handTrigger(obj)
 		end, 0.1)
 	end
 end
+-- Restore hand interaction.
 function handOn(obj)
 	if obj ~= nil then
 		obj.use_hands = true
@@ -390,6 +400,7 @@ end
 -- within `window` seconds (default 0.5), else false. Key it however suits the
 -- caller (object guid, player colour, ...).
 doubleClickTimes = {}
+-- Track clicks by action key so sensitive actions can require confirmation.
 function isDoubleClick(key, window)
 	window = window or 0.5
 	local now = os.clock()
@@ -402,5 +413,6 @@ function isDoubleClick(key, window)
 	return false
 end
 
+-- Intentionally do nothing for a callback that requires a function name.
 function null() end
 

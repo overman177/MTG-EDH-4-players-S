@@ -1,10 +1,12 @@
-<!-- HOST SETTINGS -->
-<!-- host-only gear (gold), sits left of the per-player gear -->
+<!-- Host settings and enforcement controls. Lua handles host authorization. -->
+<!-- Host settings -->
+<!-- The gold gear opens host settings, next to the player settings gear. -->
 <Button id="hostGear" onClick="openHostSettings" text="&#9881;" textAlignment="MiddleCenter" padding="0 0 0 0"
     rectAlignment="LowerRight" offsetXY="-125 6" width="46" height="46" fontSize="28"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#e0a030"
     tooltip="Host settings (host only)" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 
+<!-- The enforcement switches and value switches use separate callbacks. -->
 <Panel id="HostSettingsPanel" width="440" height="560" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.32,0.20,0.03,0.98)" outline="#e0a030" outlineSize="2 -2" visibility="" active="False">
     <Text rectAlignment="UpperCenter" offsetXY="0 -20" width="360" height="34" fontSize="26" fontStyle="Bold" color="#ffd873" alignment="MiddleCenter" text="Host Settings" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="closeHostSettings" />

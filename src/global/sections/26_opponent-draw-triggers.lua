@@ -1,3 +1,5 @@
+-- Find and announce supported opponent-draw triggers.
+
 ---------------------------- OPPONENT-DRAW TRIGGERS ----------------------------
 -- Cards that trigger when someone draws -- Smothering Tithe, Consecrated Sphinx,
 -- Sheoldred, the Apocalypse, ... -- all share the same shape: "Whenever an

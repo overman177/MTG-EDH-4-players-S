@@ -1,3 +1,5 @@
+-- Respond to changes in TTS turn order and reset turn-related state.
+
 ----------------------------------- TURN LOGIC ----------------------------------
 
 -- at the start of a player's turn the previous turn has ended, so stop the
@@ -26,6 +28,7 @@ function clearLandGlows()
 	glowingLands = {}
 end
 
+-- Clear recorded land entries for the specified player.
 function resetLandTracker(color)
 	landsEnteredThisTurn[color] = {}
 	landZoneBaseline[color] = {}

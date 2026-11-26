@@ -1,3 +1,5 @@
+-- Optional land-face handling for double-faced cards.
+
 -------------------------------- DOUBLE-FACED CARDS ----------------------------
 -- A double-faced card is a TTS object with two states (state 1 = front face,
 -- state 2 = back face). When such a card is dropped into a player's land zone and

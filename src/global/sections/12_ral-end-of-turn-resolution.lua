@@ -1,3 +1,5 @@
+-- End-of-turn cleanup of Ral cards and the Past in Flames helper.
+
 ------------------------- RAL END-OF-TURN RESOLUTION ---------------------------
 -- When the Ral player's turn ends: clear the π note on every card we staged this
 -- turn, then send uncast flashback (pif) cards that aren't in exile to the

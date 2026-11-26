@@ -1,3 +1,4 @@
+<!-- Card spawner form and shared XML styles. Input callbacks update Global's search filters. -->
 <!-- Scryfall search bar -->
 <Defaults>
     <Panel class="WindowBorder" color="#8F8478" outline="#635351" outlineSize="2 -2" />
@@ -10,6 +11,7 @@
     <Button class="FAB" color="#4286f4" />
     <ToggleButton class="UIToggleButton" iconAlignment="Right" padding="5" transition="None" isOn="True" />
 </Defaults>
+<!-- The spawner filters are collected by the Lua callbacks before the search is sent. -->
 <Panel id="SearchPanel" class="WindowBorder" width="385" height="310" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="#666666" visibility="" active="False">
     <Row id="MenuBar" class="MenuBar" width="385">
         <Text id="WindowTitle" class="UIText" text="MTG Card Spawner" color="#FFFFFF" rectAlignment="UpperCenter" alignment="LowerCenter" width="230" height="80" offsetXY="0 55" />

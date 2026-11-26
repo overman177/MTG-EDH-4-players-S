@@ -1,9 +1,12 @@
+-- Start here for table startup, per-seat object references, role/color tags and zone-event reconciliation.
+
 -- MTG EDH Global — tag-aware compatibility patch
 -- Compatible with Portable Helper: zone role/color tags are metadata, not
 -- requirements for cards/decks. Never remove or automatically retag cards.
 
 local mtgStartupFailureCount = 0
 
+-- Run one startup task safely so an error does not stop the remaining initialization.
 local function mtgSafeInit(name, callback)
     local ok, err = pcall(callback)
     if not ok then
@@ -67,7 +70,7 @@ function onLoad(saved)
     mtgSafeInit("fetchlands", initFetchlands)
     mtgSafeInit("sticker bag", initStickerBagMenu)
 
-    -- Native zone events exclude tagged-incompatible cards. A low-frequency
+    -- TTS can skip zone events for cards whose tags do not match the zone. A low-frequency
     -- occupancy reconciliation restores those callbacks without tagging cards.
     Wait.frames(function()
         mtgSeedZoneSnapshots()
@@ -83,7 +86,7 @@ function onLoad(saved)
     end, 120)
 end
 
--- Ensure data structure exists
+-- Create the per-player state records.
 function buildDataStructure()
 	data = {
 		White = { deck = nil, tokenZones = {} },
@@ -93,7 +96,7 @@ function buildDataStructure()
 	}
 end
 
--- Get pointers to in-game objects so we can script them
+-- Find the in-game objects and keep their references for later use.
 function registerObjectGUIDs()
 	data["White"]["libraryZone"] = getObjectFromGUID("166036")
 	data["Red"]["libraryZone"] = getObjectFromGUID("2365d0")
@@ -241,7 +244,7 @@ end
 
 
 -------------------------------------------------------------------------------
--- TAG-AWARE ZONE LAYER
+-- Zone lookup and tag compatibility
 -- Roles: Library, Graveyard, Exile, Battlefield, CommanderZone
 -- Colors: White, Red, Yellow, Blue. Both role and color must be on ONE zone.
 -- Other tags (FetchPreview, MTG_Preview_InHand, controller tags, counters, etc.)
@@ -256,7 +259,7 @@ local mtgZoneRoles = {
 }
 local mtgPlayerColors = { "White", "Red", "Yellow", "Blue" }
 
--- IMPORTANT: `true` means ignore tags, ONLY on Scripting Zones.
+-- Only scripting zones accept true to ignore tag filtering.
 -- Deck/Bag getObjects() must retain the original container semantics.
 function mtgZoneObjects(zone)
     if zone == nil then return {} end
@@ -304,6 +307,7 @@ local mtgZoneSnapshots = {}
 local mtgZonesReady = false
 local mtgTrackedZoneCache = nil
 
+-- Collect the scripting zones that need occupancy reconciliation.
 local function mtgGetTrackedZones()
     if mtgTrackedZoneCache ~= nil then return mtgTrackedZoneCache end
     local zones = {}
@@ -323,10 +327,12 @@ local function mtgGetTrackedZones()
     return zones
 end
 
+-- Check whether this zone participates in occupancy tracking.
 local function mtgIsTrackedZone(zone)
     return zone ~= nil and mtgGetTrackedZones()[zone.getGUID()] ~= nil
 end
 
+-- Index the cards and decks currently inside the zone by GUID.
 local function mtgSnapshotObjects(zone)
     local found = {}
     for _, obj in ipairs(mtgZoneObjects(zone)) do
@@ -337,6 +343,7 @@ local function mtgSnapshotObjects(zone)
     return found
 end
 
+-- Record initial occupancy without treating cards already present as new entries.
 function mtgSeedZoneSnapshots()
     -- Rebuild cached zone references when tags / mappings are refreshed.
     mtgTrackedZoneCache = nil
@@ -351,6 +358,7 @@ function mtgSeedZoneSnapshots()
     mtgZonesReady = true
 end
 
+-- Deduplicate native and polled events before forwarding them to the gameplay handlers.
 local function mtgDispatchZoneChange(zone, obj, entering)
     if zone == nil or obj == nil then return end
     if obj.type ~= "Card" and obj.type ~= "Deck" then return end
@@ -376,6 +384,7 @@ local function mtgDispatchZoneChange(zone, obj, entering)
     end
 end
 
+-- Recover zone changes that TTS can miss when cards do not match the zone's tags.
 function mtgPollZoneSnapshots()
     if not mtgZonesReady then return end
     for guid, zone in pairs(mtgGetTrackedZones()) do
@@ -404,7 +413,7 @@ function mtgPollZoneSnapshots()
     end
 end
 
--- Optional manual refresh after editing zone tags (TTS console):
+-- After editing zone tags, you can rescan them from the TTS console:
 -- Global.call("mtgRefreshZoneTags")
 function mtgRefreshZoneTags()
     mtgResolveTaggedZones()
@@ -458,6 +467,8 @@ function onPlayerDisconnect(player) -- flip cards in hand if disconnected
 	end
 end
 
+-- Shared read-only metadata for physical cards. Unknown values remain nil; this is not a full Magic rules engine.
+
 -- SHARED CARD METADATA | on-demand, read-only, bounded
 -- Public: Global.call("mtgCardMetadata", {guid = card.getGUID()})
 -- Optional: Global.call("mtgInvalidateCardMetadata", {guid = guid})
@@ -481,6 +492,7 @@ local mtgMetadataBasicLands = {
     ["snow-covered forest"] = true
 }
 
+-- Drop a cached metadata record so the next lookup reads the live card again.
 function mtgInvalidateCardMetadata(params)
     local guid = type(params) == "table" and params.guid or params
     if type(guid) ~= "string" then return end
@@ -490,6 +502,7 @@ function mtgInvalidateCardMetadata(params)
     end
 end
 
+-- Parse an explicit printed type line; reject ordinary rules text instead of guessing.
 local function mtgMetadataTypesFromLine(line)
     if type(line) ~= "string" then return nil end
     line = line:lower():gsub("^%s*card%s+type%s*:%s*", "")
@@ -527,6 +540,7 @@ local function mtgMetadataInlineTypes(name)
     return #types > 0 and types or nil
 end
 
+-- Check whether the parsed list contains a given card type.
 local function mtgMetadataHasType(types, wanted)
     if type(types) ~= "table" then return false end
     for _, word in ipairs(types) do if word == wanted then return true end end
@@ -553,6 +567,7 @@ local mtgPrintedKeywordIDs = {
     ["vigilance"] = "mtg_vigilancecounter"
 }
 
+-- Read intrinsic keywords at the start of printed rules text rather than abilities that grant keywords.
 local function mtgMetadataPrintedKeywords(rawDescription)
     if type(rawDescription) ~= "string" then return {} end
     local result, seen = {}, {}
@@ -683,7 +698,9 @@ function mtgCardMetadata(params)
     return value
 end
 
---------------------------------- TABLE BUTTONS --------------------------------
+-- Physical buttons, numbered shortcuts and moving selected cards between game zones.
+
+--------------------------------- Table buttons --------------------------------
 function buildTableButtons()
 	-- support variables
 	nAlt = 3
@@ -738,6 +755,7 @@ function mtgGetZonePlacement(playerColor, key, height, faceDown)
     return pos, rot
 end
 
+-- Treat a typed number on an action button as a request to repeat that action.
 function onObjectNumberTyped(obj, ply, int)
 	local txt = " card"
 	if int > 1 then
@@ -818,7 +836,7 @@ function onObjectNumberTyped(obj, ply, int)
 	end
 end
 
--- Creates a button with given funcionality on the object
+-- Attach a physical button and its click handler to the object.
 function createTableButton(object, name, clickFunction, ttip)
 	object.tooltip = false
 	object.interactable = true
@@ -866,7 +884,7 @@ function createTableButtonM(object, name, clickFunction, ttip)
 		press_color = { 1, 0, 0, 0.2 },
 	})
 	-- mulligan counter label below the button (noop click = display only)
-	-- NOTE: kept at index 1 so playerMulligan's editButton({ index = 1 }) updates it
+	-- Note: kept at index 1 so playerMulligan's editButton({ index = 1 }) updates it
 	object.createButton({
 		click_function = "noop",
 		label = "Mulligans: 0",
@@ -917,8 +935,10 @@ function createTableButtonM(object, name, clickFunction, ttip)
 	-- centre of each player's playmat by spawnKeepButtons (see pregame.lua).
 end
 
+-- Intentionally do nothing; display-only buttons still need a callback.
 function noop() end
 
+-- Create the two reveal modes on opposite faces of one physical button.
 function createTableButtonR(object)
 	object.tooltip = false
 	object.interactable = true
@@ -951,7 +971,7 @@ function createTableButtonR(object)
 		})
 end
 
--- Scripting hotkeys
+-- Numbered TTS scripting shortcuts.
 function onScriptingButtonDown(index, playerColor)
 	if index == 10 then
 		if Turns.enable then
@@ -996,6 +1016,7 @@ function onScriptingButtonDown(index, playerColor)
 	end
 end
 
+-- Collect selected or hovered cards and place them under the player's library.
 function move2botLib(ply)
 	local objs = Player[ply].getSelectedObjects()
 	local cards = {}
@@ -1062,10 +1083,12 @@ function move2botLib(ply)
 end
 
 hoveredObjs = {}
+-- Remember the last object hovered by each player for shortcuts without a selection.
 function onObjectHover(ply, obj)
 	hoveredObjs[ply] = obj
 end
 
+-- Move selected or hovered cards to the player's graveyard.
 function move2grav(ply)
 	local objs = Player[ply].getSelectedObjects()
 	local cards = {}
@@ -1099,6 +1122,7 @@ function move2grav(ply)
 	end, 1)
 end
 
+-- Move selected or hovered cards to the player's exile zone.
 function move2exile(ply)
 	local objs = Player[ply].getSelectedObjects()
 	local cards = {}
@@ -1132,6 +1156,8 @@ function move2exile(ply)
 	end, 1)
 end
 
+-- Fan and stack reveal layouts, placement and running mana-value totals.
+
 ------------------------------------ REVEAL ------------------------------------
 -- world position of the n-th card (0-based) in the fanned-reveal layout above
 -- ply's library, and the matching face-up rotation. The library zone was rotated
@@ -1148,12 +1174,14 @@ function revealFanPos(ply, n)
 		+ righ:scale(-deckDirs[ply] * 2.25 * (nSide + revealRi))
 end
 
+-- Use the library's facing while turning the revealed card face up.
 function revealFanRot(ply)
 	local rot = data[ply]["libraryZone"].getRotation()
 	rot[3] = 0
 	return rot
 end
 
+-- Reveal one card into the fan layout, or switch modes on an alternate click.
 function revealFan(button, ply, alt)
 	if button ~= data[ply]["revealButton"] then
 		warnNotYours(button, ply)
@@ -1192,6 +1220,7 @@ function revealFan(button, ply, alt)
 	tallyRevealCMC(ply, hexPrefix, nRevealed, card)
 end
 
+-- Reveal one card into the stack layout, or switch back to fan mode.
 function revealStack(button, ply, alt)
 	if button ~= data[ply]["revealButton"] then
 		warnNotYours(button, ply)
@@ -1259,6 +1288,7 @@ function tallyRevealCMC(ply, hexPrefix, nRevealed, card)
 	)
 end
 
+-- Make room for a revealed card by moving cards out of the intended slot.
 function checkPosMove(pos, libZone)
 	local castPos = pos
 	castPos[2] = 1
@@ -1287,10 +1317,12 @@ function checkPosMove(pos, libZone)
 	end
 end
 
+-- Opening hands, mulligan counts and new-game safeguards.
+
 ----------------------------------- MULLIGAN -----------------------------------
 mulliganResetDelay = 300 -- auto-reset the count after this many seconds idle
 
--- bump a player's mulligan counter and refresh the on-table label
+-- Increase the mulligan count and refresh the displayed label.
 function bumpMulliganCount(color)
 	-- a bump while the count sits at 0 is a fresh opening hand (the very first one,
 	-- or the first after a right-click / inactivity reset): (re)snapshot the board
@@ -1330,6 +1362,7 @@ function resetMulliganCount(color)
 	resetKeepState(color)
 end
 
+-- Check whether the first hand zone contains any cards.
 function handIsEmpty(color)
 	for _, obj in pairs(Player[color].getHandObjects(1)) do
 		if obj.tag == "Card" then
@@ -1339,6 +1372,7 @@ function handIsEmpty(color)
 	return true
 end
 
+-- Handle opening hands, mulligans and manual count reset from the physical button.
 function playerMulligan(button, playerColor, alt)
 	-- identify which player's mulligan button was clicked (not necessarily the clicker)
 	local ownerColor = nil
@@ -1422,7 +1456,9 @@ function playerMulligan(button, playerColor, alt)
 	end
 end
 
--------------------------------- SERUM POWDER ----------------------------------
+-- Serum Powder's separate hand replacement flow.
+
+-------------------------------- Serum Powder ----------------------------------
 -- Exile the current hand and draw a fresh one of the same size.
 -- Hand size = min(7, 7 + 2 - mulliganCount). mulliganCount is the displayed
 -- mulligan number + 1, so the opening hand and the first mulligan both draw 7,
@@ -1506,7 +1542,9 @@ function playerSerumPowder(button, playerColor, alt)
 	end, 1.0)
 end
 
------------------------------------ BOARD RESET ----------------------------------
+-- Capture the starting library and commanders, restore the snapshot and reset life and damage.
+
+----------------------------------- Board reset ----------------------------------
 -- A per-player "Reset" button (under the mulligan count) restores that player's
 -- board to its game-start state. At the opening hand (the first mulligan bump,
 -- detected the same way mulligans are) we snapshot the full library deck and the
@@ -1735,6 +1773,8 @@ function commanderDamageDealt(params)
 		end
 	end
 end
+-- Optional starting-hand confirmation and pregame announcements.
+
 -------------------------------- KEEP / PREGAME --------------------------------
 -- A big "Keep" button sits in the centre of each player's playmat. Left-clicking
 -- it locks in that player's opening hand; right-clicking privately declares that
@@ -1947,6 +1987,8 @@ function resetKeepState(color)
 	refreshKeepButton(color)
 	pregameAnnounced = false
 end
+-- Shared command-zone button helpers used by the card-specific sections.
+
 -------------------------- COMMAND-ZONE COMMANDER BUTTONS -----------------------
 -- Shared machinery for per-player buttons that appear on a command-zone scripting
 -- zone when a specific commander is detected there at game start (see
@@ -2078,6 +2120,8 @@ function commandZoneOwnerOf(obj)
 	end
 	return nil
 end
+-- Etali's assisted library reveal and card placement.
+
 ------------------------------------ ETALI -------------------------------------
 -- "Etali, Primal Conqueror" gets a per-owner "Etali Trigger" button. It is NOT on
 -- the table by default: when a game starts (the opening-hand snapshot -- see
@@ -2228,6 +2272,8 @@ function etaliPlaceNonland(clickerColor, ownerColor, card)
 	card.setPositionSmooth(pos, false, true)
 	etaliGlow(card, ownerColor)
 end
+-- Commander-specific ping controls.
+
 -------------------------------------- PING --------------------------------------
 -- A handful of "ping" commanders get a per-owner "Ping" button. Like the Etali
 -- trigger it is NOT on the table by default: when a game starts (the opening-hand
@@ -2291,6 +2337,8 @@ function playerObNixPing(obj, clickerColor, alt)
 		end
 	end
 end
+-- Ral's counters, grid and coin-flip actions.
+
 ------------------------------------- RAL --------------------------------------
 -- "Ral, Monsoon Mage" gets a small button cluster by the command zone, present
 -- only when a game starts with Ral in the command zone (see command_buttons.lua)
@@ -2417,6 +2465,7 @@ function ralAdjustCounter(obj, alt, def)
 	ralBump(owner, def, alt and -1 or 1)
 end
 
+-- Handle clicks on the storm counter.
 function ralStormCounter(obj, color, alt)
 	ralAdjustCounter(obj, alt, ralCounterDefs[1])
 end
@@ -2453,6 +2502,8 @@ function playerCoinFlip(obj, clickerColor, alt)
 		broadcastToAll(ownerColor .. " flips a coin: Tails (-1 life)", stringColorToRGB(ownerColor))
 	end
 end
+
+-- Card handling for Ral's ultimate.
 
 -------------------------------- RAL ULTIMATE ----------------------------------
 -- Exile the top 8 cards of the owner's library: instants & sorceries go into a
@@ -2557,6 +2608,8 @@ function cardInZone(card, zone)
 	end
 	return false
 end
+
+-- End-of-turn cleanup of Ral cards and the Past in Flames helper.
 
 ------------------------- RAL END-OF-TURN RESOLUTION ---------------------------
 -- When the Ral player's turn ends: clear the π note on every card we staged this
@@ -2673,6 +2726,8 @@ function pifNext(color, queue, idx)
 		return not card.spawning
 	end)
 end
+-- Sticker bag actions and Goblin-specific starting setup.
+
 ------------------------------- GOBLIN STICKERS --------------------------------
 -- When a game starts (the same hook as Etali/Ral -- see bumpMulliganCount) with a
 -- "_____ Goblin" card in the player's library (deck), deal that player 3 random
@@ -2841,6 +2896,8 @@ function dealFromStickerDeck(color, deck)
 		end
 	end, 1)
 end
+-- Detect land entries, keep the turn's land count and update the physical display.
+
 --------------------------------- LAND TRACKER ---------------------------------
 -- Per-player land / mana display. This will eventually replace the standalone
 -- Land_Zone_Manager object. For now it renders text anchored to each player's
@@ -2878,6 +2935,7 @@ function spawnLandTrackerText()
 	end
 end
 
+-- Create the land display and its controls for one player.
 function createLandTrackerButtons(color)
 	local mat = data[color]["playmat"]
 	if mat == nil then
@@ -2921,6 +2979,8 @@ function createLandTrackerButtons(color)
 	})
 end
 
+-- Respond to changes in TTS turn order and reset turn-related state.
+
 ----------------------------------- TURN LOGIC ----------------------------------
 
 -- at the start of a player's turn the previous turn has ended, so stop the
@@ -2949,6 +3009,7 @@ function clearLandGlows()
 	glowingLands = {}
 end
 
+-- Clear recorded land entries for the specified player.
 function resetLandTracker(color)
 	landsEnteredThisTurn[color] = {}
 	landZoneBaseline[color] = {}
@@ -2962,6 +3023,8 @@ function resetLandTracker(color)
 	end
 	refreshLandTrackerText(color)
 end
+
+-- Gameplay work associated with object arrivals.
 
 ---------------------------------- ENTER LOGIC ----------------------------------
 
@@ -3028,6 +3091,8 @@ function registerLandEntered(color, obj)
 	refreshLandTrackerText(color)
 end
 
+-- On-table display updates.
+
 ------------------------------------ DISPLAY ------------------------------------
 
 
@@ -3048,6 +3113,7 @@ function mtgSetLandTrackerText(mat, label)
     end
 end
 
+-- Recalculate the label from the tracker state and settings.
 function refreshLandTrackerText(color)
 	local mat = data[color]["playmat"]
 	if mat == nil then
@@ -3070,6 +3136,8 @@ function refreshLandTrackerText(color)
 	end
 	mtgSetLandTrackerText(mat, label)
 end
+-- Detect supported ability restrictions and remind players; this does not enforce every Magic rule.
+
 ------------------------- ACTIVATED-ABILITY RESTRICTIONS -------------------------
 -- Some static cards read "Activated abilities of <type> can't be activated"
 -- (Linvala -> creatures, Karn the Great Creator -> artifacts, Collector Ouphe ->
@@ -3210,6 +3278,8 @@ function onObjectRotate(object, spin, flip, player_color, old_spin, old_flip)
 		{ 0.9, 0.3, 0.3 }
 	)
 end
+-- Fetchland targets, temporary choices, library searches and optional land-entry automation.
+
 --------------------------------- FETCHLANDS ----------------------------------
 -- When a fetch-style land ("Search your library for a <type> [or <type>] card
 -- ... put it onto the battlefield") sits in a player's land zone, show small
@@ -3825,6 +3895,7 @@ function fetchlandEnter(zone, obj)
 	end)
 end
 
+-- Remove fetch previews when the source card leaves.
 function fetchlandLeave(zone, obj)
 	if obj == nil then
 		return
@@ -3900,6 +3971,8 @@ function initFetchlands()
 		end
 	end
 end
+-- Optional land-face handling for double-faced cards.
+
 -------------------------------- DOUBLE-FACED CARDS ----------------------------
 -- A double-faced card is a TTS object with two states (state 1 = front face,
 -- state 2 = back face). When such a card is dropped into a player's land zone and
@@ -3943,6 +4016,8 @@ function dfcLandEnter(zone, obj)
 		end
 	end)
 end
+-- Apply supported keyword markers to cards and detect intrinsic printed keywords.
+
 ------------------------------- KEYWORD TOKENS ---------------------------------
 -- Keyword-status tokens (Frozen, Flying, Deathtouch, Trample, ...) live in
 -- infinite bags on the table. Each bag's nickname matches a keyword in the
@@ -3995,6 +4070,7 @@ function onObjectLeaveContainer(container, object)
 	end
 end
 
+-- Run the Global drop-related logic for a physical object.
 function onObjectDropped(playerColor, object)
 	if object == nil or not object.hasTag("keywordToken") then
 		return
@@ -4091,6 +4167,7 @@ end
 -- cards back and forth cannot add another keyword counter.
 local mtgPrintedKeywordPending = {}
 
+-- Schedule intrinsic keyword markers to be applied after the card settles.
 function mtgQueuePrintedKeywordEquip(zone, obj)
     if obj == nil or obj.type ~= "Card" or obj.is_face_down then return end
     if zone == nil or zone.type ~= "Scripting" then return end
@@ -4145,6 +4222,8 @@ function mtgQueuePrintedKeywordEquip(zone, obj)
             or obj.resting or not zoneContains(zone, obj)
     end)
 end
+-- Untap button and supported Seedborn Muse behavior.
+
 ------------------------------------- UNTAP ------------------------------------
 -- when each player last pressed their own untap-all button (os.time seconds).
 -- A draw within skipDrawWindow seconds of this is treated as the turn's draw
@@ -4265,6 +4344,8 @@ function untapAll(playerColor, foreign)
 	end
 end
 
+-- Draw button and single-card draw logic.
+
 ------------------------------------- DRAW -------------------------------------
 -- a draw within this many seconds of pressing untap-all counts as the turn's
 -- draw step, so a "skip your draw step" card should stop it
@@ -4288,6 +4369,7 @@ function skipDrawStepCard(playerColor)
 	return nil
 end
 
+-- Handle the Draw button and alternate-click count.
 function playerDraw(button, playerColor, alt)
 	if button == data[playerColor]["drawButton"] then
 		if not alt then
@@ -4325,6 +4407,7 @@ function playerDraw(button, playerColor, alt)
 	end
 end
 
+-- Draw one card from the player's library.
 function draw1(playerColor)
 	local card = getCardFromZone(data[playerColor]["libraryZone"])
 	if card ~= nil then
@@ -4336,6 +4419,8 @@ function draw1(playerColor)
 		end)
 	end
 end
+
+-- Mill button and graveyard placement.
 
 ------------------------------------- MILL -------------------------------------
 function playerMill(button, playerColor, alt)
@@ -4355,6 +4440,7 @@ function playerMill(button, playerColor, alt)
 	end
 end
 
+-- Move one library card to the player's graveyard.
 function mill1(playerColor)
 	local card = getCardFromZone(data[playerColor]["libraryZone"])
 	if card ~= nil then
@@ -4368,6 +4454,8 @@ function mill1(playerColor)
 		end, 0.5)
 	end
 end
+
+-- Scry button and secondary hand area.
 
 ------------------------------------- SCRY -------------------------------------
 function playerScry(button, playerColor, alt)
@@ -4387,6 +4475,7 @@ function playerScry(button, playerColor, alt)
 	end
 end
 
+-- Move one library card to the player's scry area.
 function scry1(playerColor)
 	local card = getCardFromZone(data[playerColor]["libraryZone"])
 	if card ~= nil then
@@ -4413,6 +4502,8 @@ function getHand2Pos(playerColor)
 	-- {x=pos.x+sca.x*rig.x*0.65,y=pos.y+sca.x*rig.y*0.65+1.5,z=pos.z+sca.x*rig.z*0.65}
 	return targPos
 end
+
+-- Find and announce supported opponent-draw triggers.
 
 ---------------------------- OPPONENT-DRAW TRIGGERS ----------------------------
 -- Cards that trigger when someone draws -- Smothering Tithe, Consecrated Sphinx,
@@ -4496,6 +4587,8 @@ function announceDrawTriggers(drawerColor, count, isDrawStep)
 		broadcastToColor("Your draw triggers: " .. table.concat(drawerList, ", ") .. ".", drawerColor, color)
 	end
 end
+-- Shared card, zone, timing, placement and text parsing helpers.
+
 ----------------------------------- UNIVERSAL ----------------------------------
 
 -- Cards carry a small JSON object in their GMNotes so several systems can annotate
@@ -4517,6 +4610,7 @@ function getCardNotes(obj)
 	return {}
 end
 
+-- Read one key from the card's stored notes.
 function getCardNote(obj, key)
 	return getCardNotes(obj)[key]
 end
@@ -4573,6 +4667,7 @@ function getCardFromZone(zone)
 	return card -- if nil?
 end
 
+-- Find a deck object inside the supplied zone.
 function getDeckFromZone(zone)
 	local deck = nil
 	local objects = mtgZoneObjects(zone)
@@ -4677,6 +4772,7 @@ function allBut(playerColor)
 	end
 	return players
 end
+-- Remove the card's temporary visibility restriction.
 function unhide(card)
 	if card ~= nil then
 		card.setHiddenFrom({})
@@ -4692,12 +4788,14 @@ function gravityTrigger(obj)
 		end, 0.2)
 	end
 end
+-- Restore gravity to the object.
 function gravOn(obj)
 	if obj ~= nil then
 		obj.use_gravity = true
 	end
 end
 
+-- Temporarily disable interaction during an object move.
 function interactTrigger(obj)
 	if obj ~= nil then
 		obj.interactable = false
@@ -4706,12 +4804,14 @@ function interactTrigger(obj)
 		end, 0.2)
 	end
 end
+-- Restore interaction to the object.
 function interactOn(obj)
 	if obj ~= nil then
 		obj.interactable = true
 	end
 end
 
+-- Temporarily disable hand interaction while a card is moved.
 function handTrigger(obj)
 	if obj ~= nil then
 		obj.use_hands = false
@@ -4720,6 +4820,7 @@ function handTrigger(obj)
 		end, 0.1)
 	end
 end
+-- Restore hand interaction.
 function handOn(obj)
 	if obj ~= nil then
 		obj.use_hands = true
@@ -4888,6 +4989,7 @@ end
 -- within `window` seconds (default 0.5), else false. Key it however suits the
 -- caller (object guid, player colour, ...).
 doubleClickTimes = {}
+-- Track clicks by action key so sensitive actions can require confirmation.
 function isDoubleClick(key, window)
 	window = window or 0.5
 	local now = os.clock()
@@ -4900,7 +5002,10 @@ function isDoubleClick(key, window)
 	return false
 end
 
+-- Intentionally do nothing for a callback that requires a function name.
 function null() end
+
+-- Context-menu registration, zone event routing and library or card actions.
 
 --------------------------------- CONTEXT MENU ---------------------------------
 
@@ -4908,6 +5013,7 @@ function null() end
 -- Do NOT call clearContextMenu(): it also deletes Portable Helper entries.
 local mtgAddedMenus = {}
 
+-- Check whether an object is currently in a zone with the requested role.
 local function mtgObjectInRole(obj, roleKey)
     if obj == nil or data == nil then return false end
     for _, color in ipairs(mtgPlayerColors) do
@@ -4919,6 +5025,7 @@ local function mtgObjectInRole(obj, roleKey)
     return false
 end
 
+-- Check whether the object is currently in a hand.
 local function mtgObjectInHand(obj)
     if obj == nil then return false end
     for _, color in ipairs(mtgPlayerColors) do
@@ -4929,6 +5036,7 @@ local function mtgObjectInHand(obj)
     return false
 end
 
+-- Register a context action and retain its zone restrictions for later validation.
 function mtgAddMenu(obj, label, handler, roleKey)
     if obj == nil then return end
     local guid = obj.getGUID()
@@ -4947,6 +5055,7 @@ function mtgAddMenu(obj, label, handler, roleKey)
     mtgAddedMenus[guid][label] = true
 end
 
+-- Refresh context actions for the object's current location.
 function mtgRefreshContextMenus(obj)
     if obj == nil or (obj.type ~= "Card" and obj.type ~= "Deck") then return end
     if obj.getName():lower():find("planechase") then return end
@@ -4968,6 +5077,7 @@ function mtgRefreshContextMenus(obj)
     end
 end
 
+-- Initialize context actions for objects already present in the tracked zones.
 function addZoneContextMenus()
     if data == nil then return end
     for _, color in ipairs(mtgPlayerColors) do
@@ -5009,10 +5119,12 @@ function onObjectEnterZone(zone, obj)
     mtgDispatchZoneChange(zone, obj, true)
 end
 
+-- Forward a native TTS exit event into Global's deduplicated event path.
 function onObjectLeaveZone(zone, obj)
     mtgDispatchZoneChange(zone, obj, false)
 end
 
+-- Run gameplay handlers for a confirmed arrival.
 function mtgHandleZoneEnter(zone, obj)
     if obj == nil or (obj.type ~= "Card" and obj.type ~= "Deck") then return end
     if obj.getName():lower():find("planechase") then return end
@@ -5026,6 +5138,7 @@ function mtgHandleZoneEnter(zone, obj)
     mtgRefreshContextMenus(obj)
 end
 
+-- Run gameplay handlers for a confirmed departure.
 function mtgHandleZoneLeave(zone, obj)
     if obj == nil or (obj.type ~= "Card" and obj.type ~= "Deck") then return end
     if obj.getName():lower():find("planechase") then return end
@@ -5036,6 +5149,7 @@ function mtgHandleZoneLeave(zone, obj)
     mtgRefreshContextMenus(obj)
 end
 
+-- Add the supported library land-search actions.
 function addLandContextMenus(deck)
 	local plains, island, mountain, swamp, forest, wastes = false, false, false, false, false, false
 	for _, card in pairs(deck.getObjects()) do
@@ -5212,6 +5326,7 @@ function deckRampWa(ply)
 	end, 0.1, 5)
 end
 
+-- Toggle the Encoder menu for the relevant object.
 function toggleEncMenu(ply)
 	objs = Player[ply].getSelectedObjects()
 	for i, obj in pairs(objs) do
@@ -5234,6 +5349,7 @@ function toggleEncMenu(ply)
 	end
 end
 
+-- Handle the context action for card-related token creation.
 function cardToken(ply)
 	objs = Player[ply].getSelectedObjects()
 	card = objs[1]
@@ -5268,6 +5384,7 @@ function cardToken(ply)
 	end)
 end
 
+-- Open the cascade action for the relevant card.
 function cardCascade(ply)
 	objs = Player[ply].getSelectedObjects()
 	card = objs[1]
@@ -5366,6 +5483,7 @@ function sortHands(ply)
 	end
 end
 
+-- Select a random card from the player's hand to discard.
 function randomDiscard(ply)
 	local cards = Player[ply].getHandObjects(1)
 	Player[ply].clearSelectedObjects()
@@ -5384,6 +5502,7 @@ function randomDiscard(ply)
 	end, 3)
 end
 
+-- Move the selected card into the player's graveyard.
 function discardCard(card, playerColor)
 	Player[playerColor].clearSelectedObjects()
 	local gravPos = data[playerColor]["graveyard"].getPosition()
@@ -5399,6 +5518,8 @@ function discardCard(card, playerColor)
 		checkMoveSuccess(card, target, playerColor)
 	end, 0.5)
 end
+
+-- Card ownership and battlefield highlighting, plus the remaining cascade and reveal workflows.
 
 --------------------------------- CARD OWNERSHIP -------------------------------
 -- Every card belongs to the player whose deck it came from. We record that owner
@@ -5551,6 +5672,7 @@ end
 --   UI.setAttribute('CMtext','text','enter amount\nto mill for')
 -- end
 
+-- Open the cascade value picker for the selected deck.
 function deckCascade(ply)
 	Player[ply].clearSelectedObjects()
 	local UIactive = UI.getAttribute("GetValuePanel", "active")
@@ -5588,14 +5710,17 @@ function deckCascade(ply)
 	UI.setAttribute("CMtext", "text", "Cascade")
 end
 
+-- Store the numeric value entered in the cascade picker.
 function CMgetVal(ply, txt)
 	CMVal = txt
 end
 
+-- Close the value picker without starting an action.
 function CMcancel(ply)
 	UI.setAttribute("GetValuePanel", "active", "False")
 end
 
+-- Dispatch the selected action from the value picker.
 function CMokay(player)
 	UI.setAttribute("GetValuePanel", "active", "False")
 	ply = player.color
@@ -5623,6 +5748,7 @@ function CMokay(player)
 	end
 end
 
+-- Start the requested number of scry actions.
 function enterScryVal(deck, ply, CMVal)
 	local val = tonumber(CMVal)
 	local maxVal = deck.getQuantity()
@@ -5643,6 +5769,7 @@ function enterScryVal(deck, ply, CMVal)
 	end
 end
 
+-- Start the requested number of mill actions.
 function enterMillVal(deck, ply, CMVal)
 	local val = tonumber(CMVal)
 	local maxVal = deck.getQuantity()
@@ -5663,6 +5790,7 @@ function enterMillVal(deck, ply, CMVal)
 	end
 end
 
+-- Start cascade using the requested mana-value threshold.
 function enterCascadeVal(deck, ply, CMVal)
 	local val = tonumber(CMVal)
 	local maxVal = deck.getQuantity()
@@ -5876,6 +6004,7 @@ function cascade(deck, playerColor, CMC)
 	end, nCards * drawDelay + 0.75)
 end
 
+-- Handle the player's decision to use the revealed cascade card.
 function acceptCascade(card, ply)
 	if ply ~= getCardNote(card, "castPrompt") then
 		return
@@ -5915,6 +6044,7 @@ function acceptCascade(card, ply)
 	end
 end
 
+-- Handle the player's decision not to use the revealed cascade card.
 function declineCascade(card, ply)
 	if ply ~= getCardNote(card, "castPrompt") then
 		return
@@ -5972,11 +6102,13 @@ function declineCascade(card, ply)
 	end
 end
 
+-- Store the repeat count from the cascade UI.
 function UIrepeatCascade(player, val, id)
 	repeatCascadeX = tonumber(val)
 	repeatN = 0
 end
 
+-- Return the cards set aside by cascade to the bottom of the library.
 function moveCDeckToBot(cDeck, ply)
 	if cDeck == nil then
 		cDeck = cDeckBackup
@@ -6127,10 +6259,12 @@ function deckSeachType(ply)
 	UI.setAttribute("SearchTypePanel", "active", "True")
 end
 
+-- Close the type picker without revealing cards.
 function STcancel(ply)
 	UI.setAttribute("SearchTypePanel", "active", "False")
 end
 
+-- Confirm the chosen types and start revealing cards.
 function STokay(player)
 	UI.setAttribute("SearchTypePanel", "active", "False")
 	ply = player.color
@@ -6155,19 +6289,23 @@ function STokay(player)
 	enterSearchTypes(deck, ply, searchTypes)
 end
 
+-- Record a built-in type toggle from the reveal picker.
 function UItypeToggle(player, val, id)
 	searchTypeVect[id] = (val == "True")
 end
 
+-- Record the custom card type entered by the player.
 function UItypeCustom(player, val, id)
 	seachTypeCustom = val
 end
 
+-- Store the repeat count for Reveal Until Type.
 function UIrepeatSearchType(player, val, id)
 	repeatSearchX = tonumber(val)
 	repeatN = 0
 end
 
+-- Start revealing with the selected type filters.
 function enterSearchTypes(deck, ply, searchTypes)
 	if #searchTypes > 0 then
 		local rot = deck.getRotation()
@@ -6179,6 +6317,7 @@ function enterSearchTypes(deck, ply, searchTypes)
 	end
 end
 
+-- Reveal library cards until one of the selected types is found.
 function revealUntilType(deck, playerColor, searchTypes)
 	if deck == nil then
 		return
@@ -6362,6 +6501,8 @@ function revealUntilType(deck, playerColor, searchTypes)
 	end, nCards * drawDelay + 0.75)
 end
 
+-- Chat command routing and integration with the existing importer.
+
 --------------------------------- CHAT COMMANDS --------------------------------
 
 -- rikrassen's importer is a deck builder: it POSTs a decklist to its backend
@@ -6472,6 +6613,8 @@ function onChat(message, pl)
 end
 
 --------------------------------------------------------------------------------
+-- Scryfall requests, card spawning and text deck-list imports.
+
 ---------------------- FUNCTIONS FOR SCRYFALL CARD SPAWNER ---------------------
 --------------------------------------------------------------------------------
 
@@ -6492,6 +6635,7 @@ local scryfallQueueRunning = false
 local scryfallBlockedUntil = 0
 local scryfallBlockWarningIssued = false
 
+-- Keep a reusable response in the Scryfall request cache.
 local function scryfallRememberResponse(url, result)
     if scryfallResponseCache[url] == nil then
         table.insert(scryfallResponseCacheOrder, url)
@@ -6503,6 +6647,7 @@ local function scryfallRememberResponse(url, result)
     end
 end
 
+-- Report a failed Scryfall request.
 local function scryfallReportError(req)
     local status = tonumber(req.response_code) or 0
     local message = ""
@@ -6517,6 +6662,7 @@ local function scryfallReportError(req)
     printToAll(summary, { 1, 0.35, 0.35 })
 end
 
+-- Advance the queued Scryfall requests.
 local function scryfallDispatchNext()
     if os.time() < scryfallBlockedUntil then
         scryfallQueueRunning = false
@@ -6623,6 +6769,7 @@ function scryfallGet(url, callback)
     end
 end
 
+-- Open the card-spawner interface.
 function show(obj, color, alt)
 	if obj.getName() == "MTG Importer" then
 		if alt then
@@ -6635,6 +6782,7 @@ function show(obj, color, alt)
 	end
 end
 
+-- Close the relevant spawner or importer UI.
 function close(player, value, id)
 	if id == "closeButton" then
 		visibleCloseRules(player, "SearchPanel")
@@ -6645,6 +6793,7 @@ function close(player, value, id)
 	end
 end
 
+-- Build and submit the current card-spawner query.
 function search(player)
 	--INPUTFIELD RELATED
 	local q = ""
@@ -6713,6 +6862,7 @@ function search(player)
 	end)
 end
 
+-- Route a response to the appropriate card or list processing path.
 function objectProccessor(webReturn, player, isPart)
 	if webReturn.is_error then
 		printToAll("Scryfall server error:")
@@ -6740,6 +6890,7 @@ function objectProccessor(webReturn, player, isPart)
 	end
 end
 
+-- Process a list of returned card records.
 function listJson(json, player)
 	local cardUri = string.match(json, '"uri":"[^"]*"')
 	local cardUri = string.sub(cardUri, 8, -2)
@@ -6748,6 +6899,7 @@ function listJson(json, player)
 	end)
 end
 
+-- Prepare Oracle text for the imported card representation.
 function setOracle(c)
 	local n = "\n[b]"
 	if c.power then
@@ -6760,6 +6912,7 @@ function setOracle(c)
 	return c.oracle_text:gsub('"', "'") .. n .. "[/b]"
 end
 
+-- Convert a Scryfall card record into the data needed by the spawner.
 function cardJson(json, type, player, isPart)
 	local back =
 		"https://steamusercontent-a.akamaihd.net/ugc/1647720103762682461/35EF6E87970E2A5D6581E7D96A99F8A575B7A15F/"
@@ -6823,6 +6976,7 @@ function cardJson(json, type, player, isPart)
 	end
 end
 
+-- Display an error returned by the card API.
 function errorJson(json, player)
 	local json = JSONdecode(json)
 	if json.status == 404 then
@@ -6835,6 +6989,7 @@ function errorJson(json, player)
 	end
 end
 
+-- Extract the Oracle text used for imported cards.
 function getOracle(json)
 	local str = ""
 	if json.card_faces then
@@ -6856,6 +7011,7 @@ function getOracle(json)
 	return str
 end
 
+-- Spawn a physical card from the prepared card information and images.
 function spawn(oracleID, name, oracle, face, back, player, isPart)
 	--SPAWN POSITION IN RELATION TO PLAYER COLOR
 	local spawn
@@ -6898,6 +7054,7 @@ function spawn(oracleID, name, oracle, face, back, player, isPart)
 	spawnObjectJSON(Object)
 end
 
+-- Read the text deck list from the UI and start importing it.
 function getDeckList(player)
 	local deckList = UI.getAttribute("vDeckList", "text")
 	if deckList ~= "" then
@@ -6922,6 +7079,7 @@ function getDeckList(player)
 	end
 end
 
+-- Process a deck import response and assemble the resulting cards.
 function getDeck(webReturn, cardCount, player)
 	if webReturn.is_error then
 		printToAll("Scryfall server error: " .. tostring(webReturn.error or "unknown error"))
@@ -6949,14 +7107,17 @@ function getDeck(webReturn, cardCount, player)
 	end
 end
 
+-- Store a text field change from the spawner or importer UI.
 function updateText(player, value, id)
 	UI.setAttribute(id, "text", value)
 end
 
+-- Update the selected search color filters.
 function updatevColor(player, value, id)
 	UI.setAttribute(id, "isOn", value)
 end
 
+-- Update the selected search card category.
 function updateType(player, value, id)
 	local ids = { "vToken", "vEmblem", "vOther" }
 	for _, i in pairs(ids) do
@@ -6968,6 +7129,7 @@ function updateType(player, value, id)
 	end
 end
 
+-- Show the requested rules UI for the player.
 function visibleOpenRules(color, id)
 	if color ~= "Grey" then
 		local active = UI.getAttribute(id, "active")
@@ -6986,6 +7148,7 @@ function visibleOpenRules(color, id)
 	end
 end
 
+-- Hide the requested rules UI.
 function visibleCloseRules(player, id)
 	local visibleColors = UI.getAttribute(id, "visibility")
 	if visibleColors == player.color then
@@ -7035,6 +7198,7 @@ function createButtons(obj)
 	end
 end
 
+-- Run the existing deck preparation action.
 function fixDeck(obj, color)
 	if obj.type == "Deck" then
 		local deck = obj
@@ -7064,12 +7228,15 @@ function encodeChar(chr)
 	return string.format("%%%X", string.byte(chr))
 end
 
+-- Encode a string for use in a URL.
 function encodeString(str)
 	local output, t = string.gsub(str, "[^%w]", encodeChar)
 	return output
 end
 
--------------------------------- PATCH NOTES -----------------------------------
+-- Release version display, update checks and patch-note viewing.
+
+-------------------------------- Patch notes -----------------------------------
 -- Version currently deployed. Bump this when cutting a new release.
 VERSION = "v1.9.5"
 
@@ -7222,6 +7389,7 @@ local function renderPatchNotes(color, combined)
     visibleOpenRules(color, "PatchNotesPanel")
 end
 
+-- Open the patch-notes viewer.
 function showPatchNotes(obj, color, alt)
     if color == "Grey" then return end
     renderPatchNotes(color, LOCAL_RELEASE_NOTES)
@@ -7244,6 +7412,7 @@ function showPatchNotes(obj, color, alt)
     end)
 end
 
+-- Close the patch-notes viewer.
 function closePatchNotes(player, value, id)
 	visibleCloseRules(player, "PatchNotesPanel")
 end
@@ -7273,13 +7442,15 @@ function cleanPatchNotes(body)
 	body = body:gsub("^%s+", ""):gsub("%s+$", "")
 	return body
 end
+-- Player and host preference defaults and effective setting lookup.
+
 --------------------------------- SETTINGS -------------------------------------
 -- Per-player settings. Each player opens a private settings panel from the gear
 -- button in their UI; the panel is shown only to them via the same visibility
 -- rules the Scryfall panels use (visibleOpenRules / visibleCloseRules). Values
 -- are stored per colour in playerSettings and persisted across save/load.
 --
--- NOTE: the panel is a single shared widget set. A toggle always writes to the
+-- Note: the panel is a single shared widget set. A toggle always writes to the
 -- *acting* player's settings (player.color), so storage stays correctly
 -- per-player; only the on-screen toggle states would be shared if two players
 -- happened to have the panel open at the same instant.
@@ -7363,6 +7534,7 @@ enforceableKeys = {
 -- key -> { enforced = bool, value = bool }
 enforcedSettings = enforcedSettings or {}
 
+-- Initialize the host's enforcement settings.
 function initEnforced()
 	enforcedSettings = enforcedSettings or {}
 	for _, key in ipairs(enforceableKeys) do
@@ -7414,6 +7586,8 @@ function getSetting(color, key)
 	return settingsDefaults[key]
 end
 
+-- Save and restore Global's settings state.
+
 ---------------------------------- PERSISTENCE ---------------------------------
 -- TTS serialises the Global script state via onSave; we stash playerSettings in
 -- it and read it back in onload(saved). Tolerant of a nil / malformed blob.
@@ -7423,6 +7597,7 @@ function saveSettings()
 	return JSON.encode({ playerSettings = playerSettings, enforcedSettings = enforcedSettings })
 end
 
+-- Restore the saved settings and fill in missing defaults.
 function restoreSettings(saved)
 	if saved ~= nil and saved ~= "" then
 		local ok, decoded = pcall(JSON.decode, saved)
@@ -7439,13 +7614,17 @@ function restoreSettings(saved)
 	initEnforced()
 end
 
+-- Return the state TTS should persist when saving Global.
 function onSave()
 	return saveSettings()
 end
 
+-- Keep the existing compatibility save entry point.
 function onsave()
 	return saveSettings()
 end
+
+-- Filter the player and host settings UI without changing the saved preferences.
 
 -------------------------------- SEARCH FILTER ---------------------------------
 -- The player panel scrolls; the search box at the top filters it. Each setting
@@ -7531,6 +7710,7 @@ hostSearchHeaders = {
 	"hosthdr_display", "hosthdr_commander", "hosthdr_game",
 }
 
+-- Reset the host settings search filter.
 function clearHostSettingsSearch()
 	for _, r in ipairs(hostSearchRows) do
 		UI.setAttribute(r.id, "active", "true")
@@ -7540,6 +7720,7 @@ function clearHostSettingsSearch()
 	end
 end
 
+-- Filter host settings rows by the entered search text.
 function hostSettingsSearch(player, value, id)
 	local q = (value or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
 	if q == "" then
@@ -7553,6 +7734,8 @@ function hostSettingsSearch(player, value, id)
 		UI.setAttribute(r.id, "active", r.text:find(q, 1, true) ~= nil and "true" or "false")
 	end
 end
+
+-- Player settings UI callbacks and related display updates.
 
 -------------------------------- PLAYER PANEL ----------------------------------
 -- set each per-player toggle's enabled state to match host enforcement: an
@@ -7589,6 +7772,7 @@ function openSettings(player)
 	visibleOpenRules(color, "SettingsPanel")
 end
 
+-- Close the Global player settings panel.
 function closeSettings(player)
 	visibleCloseRules(player, "SettingsPanel")
 end
@@ -7621,23 +7805,28 @@ function settingsToggle(player, value, id)
 	end
 end
 
+-- Host-only settings, enforcement and associated UI callbacks.
+
 --------------------------------- HOST PANEL -----------------------------------
 -- second, host-only menu: per setting an "enforced" toggle and a "value" toggle.
 -- Enforcing a setting forces it on every player (via getSetting) and greys out
 -- their own toggle; unenforcing hands control back to each player.
 
+-- Refresh the land displays after a settings change.
 function refreshAllLandTrackers()
 	for _, color in ipairs(settingsColors) do
 		refreshLandTrackerText(color)
 	end
 end
 
+-- Refresh the pregame controls after a settings change.
 function refreshAllKeepButtons()
 	for _, color in ipairs(settingsColors) do
 		refreshKeepButton(color)
 	end
 end
 
+-- Open the host-only settings panel.
 function openHostSettings(player)
 	if player == nil then
 		return
@@ -7659,10 +7848,12 @@ function openHostSettings(player)
 	visibleOpenRules(player.color, "HostSettingsPanel")
 end
 
+-- Close the host settings panel.
 function closeHostSettings(player)
 	visibleCloseRules(player, "HostSettingsPanel")
 end
 
+-- Change whether the host forces this preference on all players.
 function hostToggleEnforced(player, value, id)
 	if player == nil or not player.host then
 		return
@@ -7685,6 +7876,7 @@ function hostToggleEnforced(player, value, id)
 	end
 end
 
+-- Change the value of a host-controlled setting.
 function hostToggleValue(player, value, id)
 	if player == nil or not player.host then
 		return
@@ -7720,6 +7912,8 @@ function settingsRevealReset(player, value, id)
 	playerSettings[player.color].revealResetSecs = n
 	UI.setAttribute("setRevealResetSecs", "text", tostring(n))
 end
+-- Report form callbacks, submission, validation and response handling.
+
 -------------------------------- BUG REPORTS -----------------------------------
 -- Player-facing issue reporter. Any seated player opens the panel from the
 -- report button, fills in a title + description, picks a type (bug report /
@@ -7760,6 +7954,7 @@ function updateBugReportHint()
 	end
 end
 
+-- Open the report form for the requesting player.
 function openBugReport(player)
 	if player == nil or player.color == "Grey" then
 		return
@@ -7776,14 +7971,17 @@ function openBugReport(player)
 	visibleOpenRules(player.color, "BugReportPanel")
 end
 
+-- Close the report form.
 function closeBugReport(player)
 	visibleCloseRules(player, "BugReportPanel")
 end
 
+-- Record the title entered in the report UI.
 function bugReportTitle(player, value, id)
 	bugReportDraft.title = value or ""
 end
 
+-- Record the description entered in the report UI.
 function bugReportDesc(player, value, id)
 	bugReportDraft.description = value or ""
 end
@@ -7794,6 +7992,7 @@ function bugReportType(player, value, id)
 	updateBugReportHint()
 end
 
+-- Validate the form and submit through the configured reporting endpoint.
 function submitBugReport(player)
 	if player == nil or player.color == "Grey" then
 		return
@@ -7862,6 +8061,7 @@ function submitBugReport(player)
 	visibleCloseRules(player, "BugReportPanel")
 end
 
+-- Handle the response to the report submission.
 function bugReportDone(resp, color)
 	if resp.is_error then
 		broadcastToColor("Report failed to send (" .. tostring(resp.error) .. ").", color, { 1, 0.3, 0.3 })
@@ -7939,6 +8139,7 @@ card_face_keys = { -- "card_faces":[{"object":"card_face",
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+-- Decode JSON using this script's existing helper.
 function JSONdecode(txt)
 	local txtBeginning = txt:sub(1, 16)
 	local jsonType = txtBeginning:match('{"object":"(%w+)"')
@@ -8083,6 +8284,7 @@ function getNextCardDatFromList(txt, startHere)
 end
 
 --------------------------------------------------------------------------------
+-- Find the matching closing bracket in the supplied text.
 function findClosingBracket(txt, st) -- find paired {} or []
 	local ob, cb = "{", "}"
 	local pattern = "[{}]"
@@ -8107,6 +8309,7 @@ function findClosingBracket(txt, st) -- find paired {} or []
 end
 
 --------------------------------------------------------------------------------
+-- Extract the value associated with a key in the supplied text.
 function getKeyValue(txt, key, st)
 	local str = '"' .. key .. '":'
 	local st = string.find(txt, str, st)

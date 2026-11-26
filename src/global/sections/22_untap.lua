@@ -1,3 +1,5 @@
+-- Untap button and supported Seedborn Muse behavior.
+
 ------------------------------------- UNTAP ------------------------------------
 -- when each player last pressed their own untap-all button (os.time seconds).
 -- A draw within skipDrawWindow seconds of this is treated as the turn's draw

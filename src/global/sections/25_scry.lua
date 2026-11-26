@@ -1,3 +1,5 @@
+-- Scry button and secondary hand area.
+
 ------------------------------------- SCRY -------------------------------------
 function playerScry(button, playerColor, alt)
 	if button == data[playerColor]["scryButton"] then
@@ -16,6 +18,7 @@ function playerScry(button, playerColor, alt)
 	end
 end
 
+-- Move one library card to the player's scry area.
 function scry1(playerColor)
 	local card = getCardFromZone(data[playerColor]["libraryZone"])
 	if card ~= nil then

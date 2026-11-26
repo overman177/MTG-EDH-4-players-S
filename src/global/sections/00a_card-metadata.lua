@@ -1,3 +1,5 @@
+-- Shared read-only metadata for physical cards. Unknown values remain nil; this is not a full Magic rules engine.
+
 -- SHARED CARD METADATA | on-demand, read-only, bounded
 -- Public: Global.call("mtgCardMetadata", {guid = card.getGUID()})
 -- Optional: Global.call("mtgInvalidateCardMetadata", {guid = guid})
@@ -21,6 +23,7 @@ local mtgMetadataBasicLands = {
     ["snow-covered forest"] = true
 }
 
+-- Drop a cached metadata record so the next lookup reads the live card again.
 function mtgInvalidateCardMetadata(params)
     local guid = type(params) == "table" and params.guid or params
     if type(guid) ~= "string" then return end
@@ -30,6 +33,7 @@ function mtgInvalidateCardMetadata(params)
     end
 end
 
+-- Parse an explicit printed type line; reject ordinary rules text instead of guessing.
 local function mtgMetadataTypesFromLine(line)
     if type(line) ~= "string" then return nil end
     line = line:lower():gsub("^%s*card%s+type%s*:%s*", "")
@@ -67,6 +71,7 @@ local function mtgMetadataInlineTypes(name)
     return #types > 0 and types or nil
 end
 
+-- Check whether the parsed list contains a given card type.
 local function mtgMetadataHasType(types, wanted)
     if type(types) ~= "table" then return false end
     for _, word in ipairs(types) do if word == wanted then return true end end
@@ -93,6 +98,7 @@ local mtgPrintedKeywordIDs = {
     ["vigilance"] = "mtg_vigilancecounter"
 }
 
+-- Read intrinsic keywords at the start of printed rules text rather than abilities that grant keywords.
 local function mtgMetadataPrintedKeywords(rawDescription)
     if type(rawDescription) ~= "string" then return {} end
     local result, seen = {}, {}

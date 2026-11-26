@@ -1,3 +1,5 @@
+-- Commander-specific ping controls.
+
 -------------------------------------- PING --------------------------------------
 -- A handful of "ping" commanders get a per-owner "Ping" button. Like the Etali
 -- trigger it is NOT on the table by default: when a game starts (the opening-hand

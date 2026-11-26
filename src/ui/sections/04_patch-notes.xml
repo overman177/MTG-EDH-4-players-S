@@ -1,4 +1,6 @@
-<!-- PATCH NOTES -->
+<!-- Global release-note reader; Lua supplies the displayed text. -->
+<!-- Patch notes -->
+<!-- The release text and its layout are populated at runtime. -->
 <Panel id="PatchNotesPanel" width="620" height="520" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text id="PatchNotesTitle" rectAlignment="UpperCenter" offsetXY="0 -22" width="520" height="36" fontSize="28" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Patch Notes" />
     <Button id="PatchNotesCloseButton" rectAlignment="UpperRight" offsetXY="-10 -10" width="34" height="34" color="#990000" textColor="#FFFFFF" text="X" fontSize="20" onClick="closePatchNotes" />

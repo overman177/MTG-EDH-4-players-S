@@ -1,3 +1,5 @@
+-- Report form callbacks, submission, validation and response handling.
+
 -------------------------------- BUG REPORTS -----------------------------------
 -- Player-facing issue reporter. Any seated player opens the panel from the
 -- report button, fills in a title + description, picks a type (bug report /
@@ -38,6 +40,7 @@ function updateBugReportHint()
 	end
 end
 
+-- Open the report form for the requesting player.
 function openBugReport(player)
 	if player == nil or player.color == "Grey" then
 		return
@@ -54,14 +57,17 @@ function openBugReport(player)
 	visibleOpenRules(player.color, "BugReportPanel")
 end
 
+-- Close the report form.
 function closeBugReport(player)
 	visibleCloseRules(player, "BugReportPanel")
 end
 
+-- Record the title entered in the report UI.
 function bugReportTitle(player, value, id)
 	bugReportDraft.title = value or ""
 end
 
+-- Record the description entered in the report UI.
 function bugReportDesc(player, value, id)
 	bugReportDraft.description = value or ""
 end
@@ -72,6 +78,7 @@ function bugReportType(player, value, id)
 	updateBugReportHint()
 end
 
+-- Validate the form and submit through the configured reporting endpoint.
 function submitBugReport(player)
 	if player == nil or player.color == "Grey" then
 		return
@@ -140,6 +147,7 @@ function submitBugReport(player)
 	visibleCloseRules(player, "BugReportPanel")
 end
 
+-- Handle the response to the report submission.
 function bugReportDone(resp, color)
 	if resp.is_error then
 		broadcastToColor("Report failed to send (" .. tostring(resp.error) .. ").", color, { 1, 0.3, 0.3 })
@@ -217,6 +225,7 @@ card_face_keys = { -- "card_faces":[{"object":"card_face",
 
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
+-- Decode JSON using this script's existing helper.
 function JSONdecode(txt)
 	local txtBeginning = txt:sub(1, 16)
 	local jsonType = txtBeginning:match('{"object":"(%w+)"')
@@ -361,6 +370,7 @@ function getNextCardDatFromList(txt, startHere)
 end
 
 --------------------------------------------------------------------------------
+-- Find the matching closing bracket in the supplied text.
 function findClosingBracket(txt, st) -- find paired {} or []
 	local ob, cb = "{", "}"
 	local pattern = "[{}]"
@@ -385,6 +395,7 @@ function findClosingBracket(txt, st) -- find paired {} or []
 end
 
 --------------------------------------------------------------------------------
+-- Extract the value associated with a key in the supplied text.
 function getKeyValue(txt, key, st)
 	local str = '"' .. key .. '":'
 	local st = string.find(txt, str, st)

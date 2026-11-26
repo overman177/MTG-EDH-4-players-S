@@ -1,3 +1,5 @@
+-- Draw button and single-card draw logic.
+
 ------------------------------------- DRAW -------------------------------------
 -- a draw within this many seconds of pressing untap-all counts as the turn's
 -- draw step, so a "skip your draw step" card should stop it
@@ -21,6 +23,7 @@ function skipDrawStepCard(playerColor)
 	return nil
 end
 
+-- Handle the Draw button and alternate-click count.
 function playerDraw(button, playerColor, alt)
 	if button == data[playerColor]["drawButton"] then
 		if not alt then
@@ -58,6 +61,7 @@ function playerDraw(button, playerColor, alt)
 	end
 end
 
+-- Draw one card from the player's library.
 function draw1(playerColor)
 	local card = getCardFromZone(data[playerColor]["libraryZone"])
 	if card ~= nil then

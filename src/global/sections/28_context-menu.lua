@@ -1,9 +1,12 @@
+-- Context-menu registration, zone event routing and library or card actions.
+
 --------------------------------- CONTEXT MENU ---------------------------------
 
 -- Context menus are shared by all scripts on an object.
 -- Do NOT call clearContextMenu(): it also deletes Portable Helper entries.
 local mtgAddedMenus = {}
 
+-- Check whether an object is currently in a zone with the requested role.
 local function mtgObjectInRole(obj, roleKey)
     if obj == nil or data == nil then return false end
     for _, color in ipairs(mtgPlayerColors) do
@@ -15,6 +18,7 @@ local function mtgObjectInRole(obj, roleKey)
     return false
 end
 
+-- Check whether the object is currently in a hand.
 local function mtgObjectInHand(obj)
     if obj == nil then return false end
     for _, color in ipairs(mtgPlayerColors) do
@@ -25,6 +29,7 @@ local function mtgObjectInHand(obj)
     return false
 end
 
+-- Register a context action and retain its zone restrictions for later validation.
 function mtgAddMenu(obj, label, handler, roleKey)
     if obj == nil then return end
     local guid = obj.getGUID()
@@ -43,6 +48,7 @@ function mtgAddMenu(obj, label, handler, roleKey)
     mtgAddedMenus[guid][label] = true
 end
 
+-- Refresh context actions for the object's current location.
 function mtgRefreshContextMenus(obj)
     if obj == nil or (obj.type ~= "Card" and obj.type ~= "Deck") then return end
     if obj.getName():lower():find("planechase") then return end
@@ -64,6 +70,7 @@ function mtgRefreshContextMenus(obj)
     end
 end
 
+-- Initialize context actions for objects already present in the tracked zones.
 function addZoneContextMenus()
     if data == nil then return end
     for _, color in ipairs(mtgPlayerColors) do
@@ -105,10 +112,12 @@ function onObjectEnterZone(zone, obj)
     mtgDispatchZoneChange(zone, obj, true)
 end
 
+-- Forward a native TTS exit event into Global's deduplicated event path.
 function onObjectLeaveZone(zone, obj)
     mtgDispatchZoneChange(zone, obj, false)
 end
 
+-- Run gameplay handlers for a confirmed arrival.
 function mtgHandleZoneEnter(zone, obj)
     if obj == nil or (obj.type ~= "Card" and obj.type ~= "Deck") then return end
     if obj.getName():lower():find("planechase") then return end
@@ -122,6 +131,7 @@ function mtgHandleZoneEnter(zone, obj)
     mtgRefreshContextMenus(obj)
 end
 
+-- Run gameplay handlers for a confirmed departure.
 function mtgHandleZoneLeave(zone, obj)
     if obj == nil or (obj.type ~= "Card" and obj.type ~= "Deck") then return end
     if obj.getName():lower():find("planechase") then return end
@@ -132,6 +142,7 @@ function mtgHandleZoneLeave(zone, obj)
     mtgRefreshContextMenus(obj)
 end
 
+-- Add the supported library land-search actions.
 function addLandContextMenus(deck)
 	local plains, island, mountain, swamp, forest, wastes = false, false, false, false, false, false
 	for _, card in pairs(deck.getObjects()) do
@@ -308,6 +319,7 @@ function deckRampWa(ply)
 	end, 0.1, 5)
 end
 
+-- Toggle the Encoder menu for the relevant object.
 function toggleEncMenu(ply)
 	objs = Player[ply].getSelectedObjects()
 	for i, obj in pairs(objs) do
@@ -330,6 +342,7 @@ function toggleEncMenu(ply)
 	end
 end
 
+-- Handle the context action for card-related token creation.
 function cardToken(ply)
 	objs = Player[ply].getSelectedObjects()
 	card = objs[1]
@@ -364,6 +377,7 @@ function cardToken(ply)
 	end)
 end
 
+-- Open the cascade action for the relevant card.
 function cardCascade(ply)
 	objs = Player[ply].getSelectedObjects()
 	card = objs[1]
@@ -462,6 +476,7 @@ function sortHands(ply)
 	end
 end
 
+-- Select a random card from the player's hand to discard.
 function randomDiscard(ply)
 	local cards = Player[ply].getHandObjects(1)
 	Player[ply].clearSelectedObjects()
@@ -480,6 +495,7 @@ function randomDiscard(ply)
 	end, 3)
 end
 
+-- Move the selected card into the player's graveyard.
 function discardCard(card, playerColor)
 	Player[playerColor].clearSelectedObjects()
 	local gravPos = data[playerColor]["graveyard"].getPosition()

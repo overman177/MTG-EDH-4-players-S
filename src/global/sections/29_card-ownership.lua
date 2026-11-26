@@ -1,3 +1,5 @@
+-- Card ownership and battlefield highlighting, plus the remaining cascade and reveal workflows.
+
 --------------------------------- CARD OWNERSHIP -------------------------------
 -- Every card belongs to the player whose deck it came from. We record that owner
 -- in the card's GMNotes (a JSON "owner" key; see getCardNote / setCardNote in
@@ -149,6 +151,7 @@ end
 --   UI.setAttribute('CMtext','text','enter amount\nto mill for')
 -- end
 
+-- Open the cascade value picker for the selected deck.
 function deckCascade(ply)
 	Player[ply].clearSelectedObjects()
 	local UIactive = UI.getAttribute("GetValuePanel", "active")
@@ -186,14 +189,17 @@ function deckCascade(ply)
 	UI.setAttribute("CMtext", "text", "Cascade")
 end
 
+-- Store the numeric value entered in the cascade picker.
 function CMgetVal(ply, txt)
 	CMVal = txt
 end
 
+-- Close the value picker without starting an action.
 function CMcancel(ply)
 	UI.setAttribute("GetValuePanel", "active", "False")
 end
 
+-- Dispatch the selected action from the value picker.
 function CMokay(player)
 	UI.setAttribute("GetValuePanel", "active", "False")
 	ply = player.color
@@ -221,6 +227,7 @@ function CMokay(player)
 	end
 end
 
+-- Start the requested number of scry actions.
 function enterScryVal(deck, ply, CMVal)
 	local val = tonumber(CMVal)
 	local maxVal = deck.getQuantity()
@@ -241,6 +248,7 @@ function enterScryVal(deck, ply, CMVal)
 	end
 end
 
+-- Start the requested number of mill actions.
 function enterMillVal(deck, ply, CMVal)
 	local val = tonumber(CMVal)
 	local maxVal = deck.getQuantity()
@@ -261,6 +269,7 @@ function enterMillVal(deck, ply, CMVal)
 	end
 end
 
+-- Start cascade using the requested mana-value threshold.
 function enterCascadeVal(deck, ply, CMVal)
 	local val = tonumber(CMVal)
 	local maxVal = deck.getQuantity()
@@ -474,6 +483,7 @@ function cascade(deck, playerColor, CMC)
 	end, nCards * drawDelay + 0.75)
 end
 
+-- Handle the player's decision to use the revealed cascade card.
 function acceptCascade(card, ply)
 	if ply ~= getCardNote(card, "castPrompt") then
 		return
@@ -513,6 +523,7 @@ function acceptCascade(card, ply)
 	end
 end
 
+-- Handle the player's decision not to use the revealed cascade card.
 function declineCascade(card, ply)
 	if ply ~= getCardNote(card, "castPrompt") then
 		return
@@ -570,11 +581,13 @@ function declineCascade(card, ply)
 	end
 end
 
+-- Store the repeat count from the cascade UI.
 function UIrepeatCascade(player, val, id)
 	repeatCascadeX = tonumber(val)
 	repeatN = 0
 end
 
+-- Return the cards set aside by cascade to the bottom of the library.
 function moveCDeckToBot(cDeck, ply)
 	if cDeck == nil then
 		cDeck = cDeckBackup
@@ -725,10 +738,12 @@ function deckSeachType(ply)
 	UI.setAttribute("SearchTypePanel", "active", "True")
 end
 
+-- Close the type picker without revealing cards.
 function STcancel(ply)
 	UI.setAttribute("SearchTypePanel", "active", "False")
 end
 
+-- Confirm the chosen types and start revealing cards.
 function STokay(player)
 	UI.setAttribute("SearchTypePanel", "active", "False")
 	ply = player.color
@@ -753,19 +768,23 @@ function STokay(player)
 	enterSearchTypes(deck, ply, searchTypes)
 end
 
+-- Record a built-in type toggle from the reveal picker.
 function UItypeToggle(player, val, id)
 	searchTypeVect[id] = (val == "True")
 end
 
+-- Record the custom card type entered by the player.
 function UItypeCustom(player, val, id)
 	seachTypeCustom = val
 end
 
+-- Store the repeat count for Reveal Until Type.
 function UIrepeatSearchType(player, val, id)
 	repeatSearchX = tonumber(val)
 	repeatN = 0
 end
 
+-- Start revealing with the selected type filters.
 function enterSearchTypes(deck, ply, searchTypes)
 	if #searchTypes > 0 then
 		local rot = deck.getRotation()
@@ -777,6 +796,7 @@ function enterSearchTypes(deck, ply, searchTypes)
 	end
 end
 
+-- Reveal library cards until one of the selected types is found.
 function revealUntilType(deck, playerColor, searchTypes)
 	if deck == nil then
 		return

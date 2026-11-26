@@ -1,4 +1,6 @@
--------------------------------- SERUM POWDER ----------------------------------
+-- Serum Powder's separate hand replacement flow.
+
+-------------------------------- Serum Powder ----------------------------------
 -- Exile the current hand and draw a fresh one of the same size.
 -- Hand size = min(7, 7 + 2 - mulliganCount). mulliganCount is the displayed
 -- mulligan number + 1, so the opening hand and the first mulligan both draw 7,

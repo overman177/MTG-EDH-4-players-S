@@ -1,3 +1,5 @@
+-- Fan and stack reveal layouts, placement and running mana-value totals.
+
 ------------------------------------ REVEAL ------------------------------------
 -- world position of the n-th card (0-based) in the fanned-reveal layout above
 -- ply's library, and the matching face-up rotation. The library zone was rotated
@@ -14,12 +16,14 @@ function revealFanPos(ply, n)
 		+ righ:scale(-deckDirs[ply] * 2.25 * (nSide + revealRi))
 end
 
+-- Use the library's facing while turning the revealed card face up.
 function revealFanRot(ply)
 	local rot = data[ply]["libraryZone"].getRotation()
 	rot[3] = 0
 	return rot
 end
 
+-- Reveal one card into the fan layout, or switch modes on an alternate click.
 function revealFan(button, ply, alt)
 	if button ~= data[ply]["revealButton"] then
 		warnNotYours(button, ply)
@@ -58,6 +62,7 @@ function revealFan(button, ply, alt)
 	tallyRevealCMC(ply, hexPrefix, nRevealed, card)
 end
 
+-- Reveal one card into the stack layout, or switch back to fan mode.
 function revealStack(button, ply, alt)
 	if button ~= data[ply]["revealButton"] then
 		warnNotYours(button, ply)
@@ -125,6 +130,7 @@ function tallyRevealCMC(ply, hexPrefix, nRevealed, card)
 	)
 end
 
+-- Make room for a revealed card by moving cards out of the intended slot.
 function checkPosMove(pos, libZone)
 	local castPos = pos
 	castPos[2] = 1

@@ -1,3 +1,5 @@
+-- Gameplay work associated with object arrivals.
+
 ---------------------------------- ENTER LOGIC ----------------------------------
 
 -- which player's land zone is this, if any

@@ -1,10 +1,12 @@
+-- Player and host preference defaults and effective setting lookup.
+
 --------------------------------- SETTINGS -------------------------------------
 -- Per-player settings. Each player opens a private settings panel from the gear
 -- button in their UI; the panel is shown only to them via the same visibility
 -- rules the Scryfall panels use (visibleOpenRules / visibleCloseRules). Values
 -- are stored per colour in playerSettings and persisted across save/load.
 --
--- NOTE: the panel is a single shared widget set. A toggle always writes to the
+-- Note: the panel is a single shared widget set. A toggle always writes to the
 -- *acting* player's settings (player.color), so storage stays correctly
 -- per-player; only the on-screen toggle states would be shared if two players
 -- happened to have the panel open at the same instant.
@@ -88,6 +90,7 @@ enforceableKeys = {
 -- key -> { enforced = bool, value = bool }
 enforcedSettings = enforcedSettings or {}
 
+-- Initialize the host's enforcement settings.
 function initEnforced()
 	enforcedSettings = enforcedSettings or {}
 	for _, key in ipairs(enforceableKeys) do

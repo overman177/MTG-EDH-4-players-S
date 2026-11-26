@@ -1,3 +1,5 @@
+-- Ral's counters, grid and coin-flip actions.
+
 ------------------------------------- RAL --------------------------------------
 -- "Ral, Monsoon Mage" gets a small button cluster by the command zone, present
 -- only when a game starts with Ral in the command zone (see command_buttons.lua)
@@ -124,6 +126,7 @@ function ralAdjustCounter(obj, alt, def)
 	ralBump(owner, def, alt and -1 or 1)
 end
 
+-- Handle clicks on the storm counter.
 function ralStormCounter(obj, color, alt)
 	ralAdjustCounter(obj, alt, ralCounterDefs[1])
 end

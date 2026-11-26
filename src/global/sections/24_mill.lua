@@ -1,3 +1,5 @@
+-- Mill button and graveyard placement.
+
 ------------------------------------- MILL -------------------------------------
 function playerMill(button, playerColor, alt)
 	if button == data[playerColor]["millButton"] then
@@ -16,6 +18,7 @@ function playerMill(button, playerColor, alt)
 	end
 end
 
+-- Move one library card to the player's graveyard.
 function mill1(playerColor)
 	local card = getCardFromZone(data[playerColor]["libraryZone"])
 	if card ~= nil then

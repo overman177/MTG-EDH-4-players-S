@@ -1,10 +1,12 @@
+<!-- Per-player Global preferences and search filtering. IDs must match the Lua callback contracts. -->
 <!-- SETTINGS -->
-<!-- always-on gear button; each player opens their own private settings panel -->
+<!-- The gear opens a private settings panel for the player who clicks it. -->
 <Button id="settingsGear" onClick="openSettings" text="&#9881;" textAlignment="MiddleCenter" padding="0 0 0 0"
     rectAlignment="LowerRight" offsetXY="-73 6" width="46" height="46" fontSize="28"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#FFFFFF"
     tooltip="Player settings" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 
+<!-- Global fills these controls with the active player's preferences. -->
 <Panel id="SettingsPanel" width="440" height="560" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text rectAlignment="UpperCenter" offsetXY="0 -20" width="360" height="34" fontSize="26" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Player Settings" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="closeSettings" />

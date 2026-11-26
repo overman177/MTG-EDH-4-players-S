@@ -1,3 +1,5 @@
+-- Chat command routing and integration with the existing importer.
+
 --------------------------------- CHAT COMMANDS --------------------------------
 
 -- rikrassen's importer is a deck builder: it POSTs a decklist to its backend

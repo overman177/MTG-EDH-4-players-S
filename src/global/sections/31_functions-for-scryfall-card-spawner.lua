@@ -1,3 +1,5 @@
+-- Scryfall requests, card spawning and text deck-list imports.
+
 ---------------------- FUNCTIONS FOR SCRYFALL CARD SPAWNER ---------------------
 --------------------------------------------------------------------------------
 
@@ -18,6 +20,7 @@ local scryfallQueueRunning = false
 local scryfallBlockedUntil = 0
 local scryfallBlockWarningIssued = false
 
+-- Keep a reusable response in the Scryfall request cache.
 local function scryfallRememberResponse(url, result)
     if scryfallResponseCache[url] == nil then
         table.insert(scryfallResponseCacheOrder, url)
@@ -29,6 +32,7 @@ local function scryfallRememberResponse(url, result)
     end
 end
 
+-- Report a failed Scryfall request.
 local function scryfallReportError(req)
     local status = tonumber(req.response_code) or 0
     local message = ""
@@ -43,6 +47,7 @@ local function scryfallReportError(req)
     printToAll(summary, { 1, 0.35, 0.35 })
 end
 
+-- Advance the queued Scryfall requests.
 local function scryfallDispatchNext()
     if os.time() < scryfallBlockedUntil then
         scryfallQueueRunning = false
@@ -149,6 +154,7 @@ function scryfallGet(url, callback)
     end
 end
 
+-- Open the card-spawner interface.
 function show(obj, color, alt)
 	if obj.getName() == "MTG Importer" then
 		if alt then
@@ -161,6 +167,7 @@ function show(obj, color, alt)
 	end
 end
 
+-- Close the relevant spawner or importer UI.
 function close(player, value, id)
 	if id == "closeButton" then
 		visibleCloseRules(player, "SearchPanel")
@@ -171,6 +178,7 @@ function close(player, value, id)
 	end
 end
 
+-- Build and submit the current card-spawner query.
 function search(player)
 	--INPUTFIELD RELATED
 	local q = ""
@@ -239,6 +247,7 @@ function search(player)
 	end)
 end
 
+-- Route a response to the appropriate card or list processing path.
 function objectProccessor(webReturn, player, isPart)
 	if webReturn.is_error then
 		printToAll("Scryfall server error:")
@@ -266,6 +275,7 @@ function objectProccessor(webReturn, player, isPart)
 	end
 end
 
+-- Process a list of returned card records.
 function listJson(json, player)
 	local cardUri = string.match(json, '"uri":"[^"]*"')
 	local cardUri = string.sub(cardUri, 8, -2)
@@ -274,6 +284,7 @@ function listJson(json, player)
 	end)
 end
 
+-- Prepare Oracle text for the imported card representation.
 function setOracle(c)
 	local n = "\n[b]"
 	if c.power then
@@ -286,6 +297,7 @@ function setOracle(c)
 	return c.oracle_text:gsub('"', "'") .. n .. "[/b]"
 end
 
+-- Convert a Scryfall card record into the data needed by the spawner.
 function cardJson(json, type, player, isPart)
 	local back =
 		"https://steamusercontent-a.akamaihd.net/ugc/1647720103762682461/35EF6E87970E2A5D6581E7D96A99F8A575B7A15F/"
@@ -349,6 +361,7 @@ function cardJson(json, type, player, isPart)
 	end
 end
 
+-- Display an error returned by the card API.
 function errorJson(json, player)
 	local json = JSONdecode(json)
 	if json.status == 404 then
@@ -361,6 +374,7 @@ function errorJson(json, player)
 	end
 end
 
+-- Extract the Oracle text used for imported cards.
 function getOracle(json)
 	local str = ""
 	if json.card_faces then
@@ -382,6 +396,7 @@ function getOracle(json)
 	return str
 end
 
+-- Spawn a physical card from the prepared card information and images.
 function spawn(oracleID, name, oracle, face, back, player, isPart)
 	--SPAWN POSITION IN RELATION TO PLAYER COLOR
 	local spawn
@@ -424,6 +439,7 @@ function spawn(oracleID, name, oracle, face, back, player, isPart)
 	spawnObjectJSON(Object)
 end
 
+-- Read the text deck list from the UI and start importing it.
 function getDeckList(player)
 	local deckList = UI.getAttribute("vDeckList", "text")
 	if deckList ~= "" then
@@ -448,6 +464,7 @@ function getDeckList(player)
 	end
 end
 
+-- Process a deck import response and assemble the resulting cards.
 function getDeck(webReturn, cardCount, player)
 	if webReturn.is_error then
 		printToAll("Scryfall server error: " .. tostring(webReturn.error or "unknown error"))
@@ -475,14 +492,17 @@ function getDeck(webReturn, cardCount, player)
 	end
 end
 
+-- Store a text field change from the spawner or importer UI.
 function updateText(player, value, id)
 	UI.setAttribute(id, "text", value)
 end
 
+-- Update the selected search color filters.
 function updatevColor(player, value, id)
 	UI.setAttribute(id, "isOn", value)
 end
 
+-- Update the selected search card category.
 function updateType(player, value, id)
 	local ids = { "vToken", "vEmblem", "vOther" }
 	for _, i in pairs(ids) do
@@ -494,6 +514,7 @@ function updateType(player, value, id)
 	end
 end
 
+-- Show the requested rules UI for the player.
 function visibleOpenRules(color, id)
 	if color ~= "Grey" then
 		local active = UI.getAttribute(id, "active")
@@ -512,6 +533,7 @@ function visibleOpenRules(color, id)
 	end
 end
 
+-- Hide the requested rules UI.
 function visibleCloseRules(player, id)
 	local visibleColors = UI.getAttribute(id, "visibility")
 	if visibleColors == player.color then
@@ -561,6 +583,7 @@ function createButtons(obj)
 	end
 end
 
+-- Run the existing deck preparation action.
 function fixDeck(obj, color)
 	if obj.type == "Deck" then
 		local deck = obj
@@ -590,6 +613,7 @@ function encodeChar(chr)
 	return string.format("%%%X", string.byte(chr))
 end
 
+-- Encode a string for use in a URL.
 function encodeString(str)
 	local output, t = string.gsub(str, "[^%w]", encodeChar)
 	return output

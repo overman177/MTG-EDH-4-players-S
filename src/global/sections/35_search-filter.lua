@@ -1,3 +1,5 @@
+-- Filter the player and host settings UI without changing the saved preferences.
+
 -------------------------------- SEARCH FILTER ---------------------------------
 -- The player panel scrolls; the search box at the top filters it. Each setting
 -- row has a stable id (row_<key>) plus a bag of keywords. Typing hides every row
@@ -82,6 +84,7 @@ hostSearchHeaders = {
 	"hosthdr_display", "hosthdr_commander", "hosthdr_game",
 }
 
+-- Reset the host settings search filter.
 function clearHostSettingsSearch()
 	for _, r in ipairs(hostSearchRows) do
 		UI.setAttribute(r.id, "active", "true")
@@ -91,6 +94,7 @@ function clearHostSettingsSearch()
 	end
 end
 
+-- Filter host settings rows by the entered search text.
 function hostSettingsSearch(player, value, id)
 	local q = (value or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
 	if q == "" then

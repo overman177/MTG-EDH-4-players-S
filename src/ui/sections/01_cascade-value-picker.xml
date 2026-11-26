@@ -1,7 +1,9 @@
-<!-- CASCADE / VALUE PICKER -->
+<!-- Enter the mana-value limit and repeat count; CMokay routes the selected action. -->
+<!-- Cascade / value picker -->
 <!-- Deck context-menu number picker (cascade; scry/mill reserved). CMtext is
      rewritten at runtime and drives which action CMokay runs, so it keeps the
      action keyword. Styled to match Settings / Bug-report. -->
+<!-- Global uses CMtext to identify the selected action; keep the action keyword in that label. -->
 <Panel id="GetValuePanel" width="320" height="298" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text id="CMtext" rectAlignment="UpperCenter" offsetXY="0 -18" width="280" height="32" fontSize="24" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Cascade" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="CMcancel" />

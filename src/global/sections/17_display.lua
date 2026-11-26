@@ -1,3 +1,5 @@
+-- On-table display updates.
+
 ------------------------------------ DISPLAY ------------------------------------
 
 
@@ -18,6 +20,7 @@ function mtgSetLandTrackerText(mat, label)
     end
 end
 
+-- Recalculate the label from the tracker state and settings.
 function refreshLandTrackerText(color)
 	local mat = data[color]["playmat"]
 	if mat == nil then

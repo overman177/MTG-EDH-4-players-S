@@ -1,5 +1,7 @@
+<!-- Lotus settings tabs, counter options, previews and shortcuts. GUID-prefixed callbacks invoke the Lotus object instead of Global. -->
 <!-- Lotus Settings -->
-<!-- Menu   display -->
+<!-- Settings window and its tabs. -->
+<!-- This panel is controlled by the Lotus object; keep its callback GUID consistent with the matching table. -->
 <Panel id="CounterVisibilityPanel" width="560" height="465" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="false">
     <Text rectAlignment="UpperCenter" offsetXY="0 -18" width="410" height="34" fontSize="26" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Table Settings" />
     <Button id="CounterVisibilityClose" rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="777766/closeCounterSettings" />
@@ -9,6 +11,7 @@
         <Button id="MTG_Settings_Button_Counters" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#C9D1DF" colors="#29292E|#3D3D45|#222229|#222229" onClick="777766/settingsSelectTab" text="Counters" />
         <Button id="MTG_Settings_Button_Preview" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#C9D1DF" colors="#29292E|#3D3D45|#222229|#222229" onClick="777766/settingsSelectTab" text="Card Preview" />
     </HorizontalLayout>
+    <!-- General player preferences include shortcut and combat-arrow options. -->
     <Panel id="MTG_Settings_Tab_General" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="290" color="clear" active="false">
         <Text rectAlignment="UpperLeft" offsetXY="11 -3" width="470" height="24" fontSize="14" fontStyle="Bold" alignment="MiddleLeft" color="#6fa0d8" text="GENERAL" />
         <Panel id="MTG_Settings_GeneralContent_v150" rectAlignment="UpperCenter" offsetXY="0 -36" width="500" height="242" color="#28272B">
@@ -21,6 +24,7 @@
             <Text rectAlignment="UpperLeft" offsetXY="16 -207" width="465" height="24" fontSize="13" color="#9BA4B0" alignment="MiddleLeft" text="Arrow: first card to second card. Undo: tap / hold to clear." />
         </Panel>
     </Panel>
+    <!-- The read-only release notes are sourced by Lotus from the Notebook. -->
     <Panel id="MTG_Settings_Tab_Notes" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="460" color="clear" active="true">
         <Text rectAlignment="UpperLeft" offsetXY="11 -3" width="400" height="25" fontSize="14" fontStyle="Bold" alignment="MiddleLeft" color="#6fa0d8" text="PATCH NOTES" />
         <Panel id="MTG_Settings_PatchNotesBox" rectAlignment="UpperCenter" offsetXY="0 -36" width="500" height="394" color="#28272B">
@@ -35,6 +39,7 @@
         </Panel>
         <Text id="MTG_Settings_PatchNotesHint" rectAlignment="LowerCenter" offsetXY="0 5" width="495" height="22" fontSize="12" alignment="MiddleLeft" color="#9BA4B0" text="Read-only | Creator edits LOTUS_PATCH_NOTES in the Black Notebook" />
     </Panel>
+    <!-- Counter preferences are applied by the Lotus Settings module. -->
     <Panel id="MTG_Settings_Tab_Counters" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="325" color="clear" active="false">
         <VerticalLayout rectAlignment="UpperCenter" offsetXY="0 -5" width="500" height="300" spacing="5" childForceExpandHeight="false" childForceExpandWidth="true">
             <HorizontalLayout preferredHeight="28" minHeight="28" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
@@ -74,6 +79,7 @@
             </HorizontalLayout>
         </VerticalLayout>
     </Panel>
+    <!-- These switches affect the individual viewer's preview, not other players' screens. -->
     <Panel id="MTG_Settings_Tab_Preview" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="320" color="clear" active="false">
         <HorizontalLayout id="MTG_Settings_PreviewGrid_v120_compact" rectAlignment="UpperCenter" offsetXY="0 -8" width="500" height="28" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
             <Text preferredWidth="220" minWidth="220" fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="PREVIEW OPTION" />

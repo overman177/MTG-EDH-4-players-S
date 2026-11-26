@@ -1,3 +1,5 @@
+-- Apply supported keyword markers to cards and detect intrinsic printed keywords.
+
 ------------------------------- KEYWORD TOKENS ---------------------------------
 -- Keyword-status tokens (Frozen, Flying, Deathtouch, Trample, ...) live in
 -- infinite bags on the table. Each bag's nickname matches a keyword in the
@@ -50,6 +52,7 @@ function onObjectLeaveContainer(container, object)
 	end
 end
 
+-- Run the Global drop-related logic for a physical object.
 function onObjectDropped(playerColor, object)
 	if object == nil or not object.hasTag("keywordToken") then
 		return
@@ -146,6 +149,7 @@ end
 -- cards back and forth cannot add another keyword counter.
 local mtgPrintedKeywordPending = {}
 
+-- Schedule intrinsic keyword markers to be applied after the card settles.
 function mtgQueuePrintedKeywordEquip(zone, obj)
     if obj == nil or obj.type ~= "Card" or obj.is_face_down then return end
     if zone == nil or zone.type ~= "Scripting" then return end

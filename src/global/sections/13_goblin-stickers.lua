@@ -1,3 +1,5 @@
+-- Sticker bag actions and Goblin-specific starting setup.
+
 ------------------------------- GOBLIN STICKERS --------------------------------
 -- When a game starts (the same hook as Etali/Ral -- see bumpMulliganCount) with a
 -- "_____ Goblin" card in the player's library (deck), deal that player 3 random

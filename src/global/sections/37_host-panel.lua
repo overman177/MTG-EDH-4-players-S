@@ -1,20 +1,25 @@
+-- Host-only settings, enforcement and associated UI callbacks.
+
 --------------------------------- HOST PANEL -----------------------------------
 -- second, host-only menu: per setting an "enforced" toggle and a "value" toggle.
 -- Enforcing a setting forces it on every player (via getSetting) and greys out
 -- their own toggle; unenforcing hands control back to each player.
 
+-- Refresh the land displays after a settings change.
 function refreshAllLandTrackers()
 	for _, color in ipairs(settingsColors) do
 		refreshLandTrackerText(color)
 	end
 end
 
+-- Refresh the pregame controls after a settings change.
 function refreshAllKeepButtons()
 	for _, color in ipairs(settingsColors) do
 		refreshKeepButton(color)
 	end
 end
 
+-- Open the host-only settings panel.
 function openHostSettings(player)
 	if player == nil then
 		return
@@ -36,10 +41,12 @@ function openHostSettings(player)
 	visibleOpenRules(player.color, "HostSettingsPanel")
 end
 
+-- Close the host settings panel.
 function closeHostSettings(player)
 	visibleCloseRules(player, "HostSettingsPanel")
 end
 
+-- Change whether the host forces this preference on all players.
 function hostToggleEnforced(player, value, id)
 	if player == nil or not player.host then
 		return
@@ -62,6 +69,7 @@ function hostToggleEnforced(player, value, id)
 	end
 end
 
+-- Change the value of a host-controlled setting.
 function hostToggleValue(player, value, id)
 	if player == nil or not player.host then
 		return

@@ -1,4 +1,6 @@
-<!--DECK IMPORTER-->
+<!-- Text deck-list input and import action, handled by Global Lua. -->
+<!--Deck importer-->
+<!-- The Import button passes the text list to Global; the UI does not spawn cards directly. -->
 <Panel id="ListPanel" class="WindowBorder" width="385" height="490" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="#666666" visibility="" active="False">
     <Row id="ListMenuBar" class="MenuBar" width="385">
         <Text id="ListWindowTitle" class="UIText" text="MTG Deck Importer" color="#FFFFFF" rectAlignment="UpperCenter" alignment="LowerCenter" width="230" height="80" offsetXY="0 55" />

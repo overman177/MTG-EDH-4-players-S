@@ -1,3 +1,5 @@
+-- Shared command-zone button helpers used by the card-specific sections.
+
 -------------------------- COMMAND-ZONE COMMANDER BUTTONS -----------------------
 -- Shared machinery for per-player buttons that appear on a command-zone scripting
 -- zone when a specific commander is detected there at game start (see

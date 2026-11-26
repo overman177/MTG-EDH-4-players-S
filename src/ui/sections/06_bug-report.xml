@@ -1,11 +1,13 @@
-<!-- BUG REPORT -->
-<!-- always-on report button; any seated player files a bug/feature request -->
+<!-- Bug and feature request form. Global handles validation and submission. -->
+<!-- Bug report -->
+<!-- Any seated player can use this button to report a bug or request a feature. -->
 <!-- Uses an ASCII exclamation icon to avoid the missing-glyph blank tile. -->
 <Button id="bugReportButton" onClick="openBugReport" text="!" fontStyle="Bold" textAlignment="MiddleCenter" padding="0 0 0 0"
     rectAlignment="LowerRight" offsetXY="-177 6" width="46" height="46" fontSize="32"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#FF7070"
     tooltip="Report a bug / request a feature" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 
+<!-- The submission handler validates the report and manages the request. -->
 <Panel id="BugReportPanel" width="470" height="490" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text rectAlignment="UpperCenter" offsetXY="0 -18" width="380" height="32" fontSize="24" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Report an Issue" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="closeBugReport" />

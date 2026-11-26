@@ -1,7 +1,9 @@
+-- Opening hands, mulligan counts and new-game safeguards.
+
 ----------------------------------- MULLIGAN -----------------------------------
 mulliganResetDelay = 300 -- auto-reset the count after this many seconds idle
 
--- bump a player's mulligan counter and refresh the on-table label
+-- Increase the mulligan count and refresh the displayed label.
 function bumpMulliganCount(color)
 	-- a bump while the count sits at 0 is a fresh opening hand (the very first one,
 	-- or the first after a right-click / inactivity reset): (re)snapshot the board
@@ -41,6 +43,7 @@ function resetMulliganCount(color)
 	resetKeepState(color)
 end
 
+-- Check whether the first hand zone contains any cards.
 function handIsEmpty(color)
 	for _, obj in pairs(Player[color].getHandObjects(1)) do
 		if obj.tag == "Card" then
@@ -50,6 +53,7 @@ function handIsEmpty(color)
 	return true
 end
 
+-- Handle opening hands, mulligans and manual count reset from the physical button.
 function playerMulligan(button, playerColor, alt)
 	-- identify which player's mulligan button was clicked (not necessarily the clicker)
 	local ownerColor = nil

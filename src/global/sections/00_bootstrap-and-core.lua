@@ -1,9 +1,12 @@
+-- Start here for table startup, per-seat object references, role/color tags and zone-event reconciliation.
+
 -- MTG EDH Global — tag-aware compatibility patch
 -- Compatible with Portable Helper: zone role/color tags are metadata, not
 -- requirements for cards/decks. Never remove or automatically retag cards.
 
 local mtgStartupFailureCount = 0
 
+-- Run one startup task safely so an error does not stop the remaining initialization.
 local function mtgSafeInit(name, callback)
     local ok, err = pcall(callback)
     if not ok then
@@ -67,7 +70,7 @@ function onLoad(saved)
     mtgSafeInit("fetchlands", initFetchlands)
     mtgSafeInit("sticker bag", initStickerBagMenu)
 
-    -- Native zone events exclude tagged-incompatible cards. A low-frequency
+    -- TTS can skip zone events for cards whose tags do not match the zone. A low-frequency
     -- occupancy reconciliation restores those callbacks without tagging cards.
     Wait.frames(function()
         mtgSeedZoneSnapshots()
@@ -83,7 +86,7 @@ function onLoad(saved)
     end, 120)
 end
 
--- Ensure data structure exists
+-- Create the per-player state records.
 function buildDataStructure()
 	data = {
 		White = { deck = nil, tokenZones = {} },
@@ -93,7 +96,7 @@ function buildDataStructure()
 	}
 end
 
--- Get pointers to in-game objects so we can script them
+-- Find the in-game objects and keep their references for later use.
 function registerObjectGUIDs()
 	data["White"]["libraryZone"] = getObjectFromGUID("166036")
 	data["Red"]["libraryZone"] = getObjectFromGUID("2365d0")
@@ -241,7 +244,7 @@ end
 
 
 -------------------------------------------------------------------------------
--- TAG-AWARE ZONE LAYER
+-- Zone lookup and tag compatibility
 -- Roles: Library, Graveyard, Exile, Battlefield, CommanderZone
 -- Colors: White, Red, Yellow, Blue. Both role and color must be on ONE zone.
 -- Other tags (FetchPreview, MTG_Preview_InHand, controller tags, counters, etc.)
@@ -256,7 +259,7 @@ local mtgZoneRoles = {
 }
 local mtgPlayerColors = { "White", "Red", "Yellow", "Blue" }
 
--- IMPORTANT: `true` means ignore tags, ONLY on Scripting Zones.
+-- Only scripting zones accept true to ignore tag filtering.
 -- Deck/Bag getObjects() must retain the original container semantics.
 function mtgZoneObjects(zone)
     if zone == nil then return {} end
@@ -304,6 +307,7 @@ local mtgZoneSnapshots = {}
 local mtgZonesReady = false
 local mtgTrackedZoneCache = nil
 
+-- Collect the scripting zones that need occupancy reconciliation.
 local function mtgGetTrackedZones()
     if mtgTrackedZoneCache ~= nil then return mtgTrackedZoneCache end
     local zones = {}
@@ -323,10 +327,12 @@ local function mtgGetTrackedZones()
     return zones
 end
 
+-- Check whether this zone participates in occupancy tracking.
 local function mtgIsTrackedZone(zone)
     return zone ~= nil and mtgGetTrackedZones()[zone.getGUID()] ~= nil
 end
 
+-- Index the cards and decks currently inside the zone by GUID.
 local function mtgSnapshotObjects(zone)
     local found = {}
     for _, obj in ipairs(mtgZoneObjects(zone)) do
@@ -337,6 +343,7 @@ local function mtgSnapshotObjects(zone)
     return found
 end
 
+-- Record initial occupancy without treating cards already present as new entries.
 function mtgSeedZoneSnapshots()
     -- Rebuild cached zone references when tags / mappings are refreshed.
     mtgTrackedZoneCache = nil
@@ -351,6 +358,7 @@ function mtgSeedZoneSnapshots()
     mtgZonesReady = true
 end
 
+-- Deduplicate native and polled events before forwarding them to the gameplay handlers.
 local function mtgDispatchZoneChange(zone, obj, entering)
     if zone == nil or obj == nil then return end
     if obj.type ~= "Card" and obj.type ~= "Deck" then return end
@@ -376,6 +384,7 @@ local function mtgDispatchZoneChange(zone, obj, entering)
     end
 end
 
+-- Recover zone changes that TTS can miss when cards do not match the zone's tags.
 function mtgPollZoneSnapshots()
     if not mtgZonesReady then return end
     for guid, zone in pairs(mtgGetTrackedZones()) do
@@ -404,7 +413,7 @@ function mtgPollZoneSnapshots()
     end
 end
 
--- Optional manual refresh after editing zone tags (TTS console):
+-- After editing zone tags, you can rescan them from the TTS console:
 -- Global.call("mtgRefreshZoneTags")
 function mtgRefreshZoneTags()
     mtgResolveTaggedZones()

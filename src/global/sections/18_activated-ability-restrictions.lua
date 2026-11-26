@@ -1,3 +1,5 @@
+-- Detect supported ability restrictions and remind players; this does not enforce every Magic rule.
+
 ------------------------- ACTIVATED-ABILITY RESTRICTIONS -------------------------
 -- Some static cards read "Activated abilities of <type> can't be activated"
 -- (Linvala -> creatures, Karn the Great Creator -> artifacts, Collector Ouphe ->

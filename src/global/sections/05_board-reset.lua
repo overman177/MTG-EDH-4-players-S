@@ -1,4 +1,6 @@
------------------------------------ BOARD RESET ----------------------------------
+-- Capture the starting library and commanders, restore the snapshot and reset life and damage.
+
+----------------------------------- Board reset ----------------------------------
 -- A per-player "Reset" button (under the mulligan count) restores that player's
 -- board to its game-start state. At the opening hand (the first mulligan bump,
 -- detected the same way mulligans are) we snapshot the full library deck and the

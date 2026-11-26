@@ -1,4 +1,6 @@
--------------------------------- PATCH NOTES -----------------------------------
+-- Release version display, update checks and patch-note viewing.
+
+-------------------------------- Patch notes -----------------------------------
 -- Version currently deployed. Bump this when cutting a new release.
 VERSION = "v1.9.5"
 
@@ -151,6 +153,7 @@ local function renderPatchNotes(color, combined)
     visibleOpenRules(color, "PatchNotesPanel")
 end
 
+-- Open the patch-notes viewer.
 function showPatchNotes(obj, color, alt)
     if color == "Grey" then return end
     renderPatchNotes(color, LOCAL_RELEASE_NOTES)
@@ -173,6 +176,7 @@ function showPatchNotes(obj, color, alt)
     end)
 end
 
+-- Close the patch-notes viewer.
 function closePatchNotes(player, value, id)
 	visibleCloseRules(player, "PatchNotesPanel")
 end

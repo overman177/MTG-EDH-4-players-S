@@ -1,7 +1,9 @@
-<!-- REVEAL UNTIL TYPE -->
+<!-- Choose built-in or custom card types and a repeat count. STokay starts the Global reveal logic. -->
+<!-- Reveal until type -->
 <!-- Deck context-menu picker: reveal cards until one of the chosen types is hit.
      Styled to match the Settings / Bug-report panels: outlined dark panel, bold
      title, red X close (STcancel), blue section headers, green action button. -->
+<!-- The chosen types are passed to Global's reveal logic; this panel does not move cards itself. -->
 <Panel id="SearchTypePanel" width="384" height="452" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text id="STtext" rectAlignment="UpperCenter" offsetXY="0 -18" width="340" height="32" fontSize="24" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Reveal Until Type" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="STcancel" />
@@ -32,10 +34,12 @@
     </VerticalLayout>
 </Panel>
 
-<!-- CASCADE / VALUE PICKER -->
+<!-- Enter the mana-value limit and repeat count; CMokay routes the selected action. -->
+<!-- Cascade / value picker -->
 <!-- Deck context-menu number picker (cascade; scry/mill reserved). CMtext is
      rewritten at runtime and drives which action CMokay runs, so it keeps the
      action keyword. Styled to match Settings / Bug-report. -->
+<!-- Global uses CMtext to identify the selected action; keep the action keyword in that label. -->
 <Panel id="GetValuePanel" width="320" height="298" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text id="CMtext" rectAlignment="UpperCenter" offsetXY="0 -18" width="280" height="32" fontSize="24" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Cascade" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="CMcancel" />
@@ -54,6 +58,7 @@
     </VerticalLayout>
 </Panel>
 
+<!-- Card spawner form and shared XML styles. Input callbacks update Global's search filters. -->
 <!-- Scryfall search bar -->
 <Defaults>
     <Panel class="WindowBorder" color="#8F8478" outline="#635351" outlineSize="2 -2" />
@@ -66,6 +71,7 @@
     <Button class="FAB" color="#4286f4" />
     <ToggleButton class="UIToggleButton" iconAlignment="Right" padding="5" transition="None" isOn="True" />
 </Defaults>
+<!-- The spawner filters are collected by the Lua callbacks before the search is sent. -->
 <Panel id="SearchPanel" class="WindowBorder" width="385" height="310" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="#666666" visibility="" active="False">
     <Row id="MenuBar" class="MenuBar" width="385">
         <Text id="WindowTitle" class="UIText" text="MTG Card Spawner" color="#FFFFFF" rectAlignment="UpperCenter" alignment="LowerCenter" width="230" height="80" offsetXY="0 55" />
@@ -144,7 +150,9 @@
 </Panel>
 
 
-<!--DECK IMPORTER-->
+<!-- Text deck-list input and import action, handled by Global Lua. -->
+<!--Deck importer-->
+<!-- The Import button passes the text list to Global; the UI does not spawn cards directly. -->
 <Panel id="ListPanel" class="WindowBorder" width="385" height="490" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="#666666" visibility="" active="False">
     <Row id="ListMenuBar" class="MenuBar" width="385">
         <Text id="ListWindowTitle" class="UIText" text="MTG Deck Importer" color="#FFFFFF" rectAlignment="UpperCenter" alignment="LowerCenter" width="230" height="80" offsetXY="0 55" />
@@ -171,7 +179,9 @@
     </TableLayout>
 </Panel>
 
-<!-- PATCH NOTES -->
+<!-- Global release-note reader; Lua supplies the displayed text. -->
+<!-- Patch notes -->
+<!-- The release text and its layout are populated at runtime. -->
 <Panel id="PatchNotesPanel" width="620" height="520" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text id="PatchNotesTitle" rectAlignment="UpperCenter" offsetXY="0 -22" width="520" height="36" fontSize="28" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Patch Notes" />
     <Button id="PatchNotesCloseButton" rectAlignment="UpperRight" offsetXY="-10 -10" width="34" height="34" color="#990000" textColor="#FFFFFF" text="X" fontSize="20" onClick="closePatchNotes" />
@@ -209,13 +219,15 @@
         alignment="MiddleCenter" color="#7DD7F0" raycastTarget="false"
         text="READY TO PLAY" active="false" showAnimation="FadeIn" animationDuration="0.6" />
 </Panel>
+<!-- Per-player Global preferences and search filtering. IDs must match the Lua callback contracts. -->
 <!-- SETTINGS -->
-<!-- always-on gear button; each player opens their own private settings panel -->
+<!-- The gear opens a private settings panel for the player who clicks it. -->
 <Button id="settingsGear" onClick="openSettings" text="&#9881;" textAlignment="MiddleCenter" padding="0 0 0 0"
     rectAlignment="LowerRight" offsetXY="-73 6" width="46" height="46" fontSize="28"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#FFFFFF"
     tooltip="Player settings" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 
+<!-- Global fills these controls with the active player's preferences. -->
 <Panel id="SettingsPanel" width="440" height="560" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text rectAlignment="UpperCenter" offsetXY="0 -20" width="360" height="34" fontSize="26" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Player Settings" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="closeSettings" />
@@ -285,14 +297,16 @@
     </VerticalScrollView>
 </Panel>
 
-<!-- BUG REPORT -->
-<!-- always-on report button; any seated player files a bug/feature request -->
+<!-- Bug and feature request form. Global handles validation and submission. -->
+<!-- Bug report -->
+<!-- Any seated player can use this button to report a bug or request a feature. -->
 <!-- Uses an ASCII exclamation icon to avoid the missing-glyph blank tile. -->
 <Button id="bugReportButton" onClick="openBugReport" text="!" fontStyle="Bold" textAlignment="MiddleCenter" padding="0 0 0 0"
     rectAlignment="LowerRight" offsetXY="-177 6" width="46" height="46" fontSize="32"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#FF7070"
     tooltip="Report a bug / request a feature" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 
+<!-- The submission handler validates the report and manages the request. -->
 <Panel id="BugReportPanel" width="470" height="490" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text rectAlignment="UpperCenter" offsetXY="0 -18" width="380" height="32" fontSize="24" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Report an Issue" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="closeBugReport" />
@@ -315,13 +329,15 @@
     </VerticalLayout>
 </Panel>
 
-<!-- HOST SETTINGS -->
-<!-- host-only gear (gold), sits left of the per-player gear -->
+<!-- Host settings and enforcement controls. Lua handles host authorization. -->
+<!-- Host settings -->
+<!-- The gold gear opens host settings, next to the player settings gear. -->
 <Button id="hostGear" onClick="openHostSettings" text="&#9881;" textAlignment="MiddleCenter" padding="0 0 0 0"
     rectAlignment="LowerRight" offsetXY="-125 6" width="46" height="46" fontSize="28"
     color="rgba(0.1,0.1,0.1,0.85)" textColor="#e0a030"
     tooltip="Host settings (host only)" tooltipPosition="Left" tooltipBorderColor="rgba(0,0,0,0)" />
 
+<!-- The enforcement switches and value switches use separate callbacks. -->
 <Panel id="HostSettingsPanel" width="440" height="560" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.32,0.20,0.03,0.98)" outline="#e0a030" outlineSize="2 -2" visibility="" active="False">
     <Text rectAlignment="UpperCenter" offsetXY="0 -20" width="360" height="34" fontSize="26" fontStyle="Bold" color="#ffd873" alignment="MiddleCenter" text="Host Settings" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="closeHostSettings" />
@@ -436,8 +452,10 @@
     </VerticalScrollView>
 </Panel>
 
+<!-- Lotus settings tabs, counter options, previews and shortcuts. GUID-prefixed callbacks invoke the Lotus object instead of Global. -->
 <!-- Lotus Settings -->
-<!-- Menu   display -->
+<!-- Settings window and its tabs. -->
+<!-- This panel is controlled by the Lotus object; keep its callback GUID consistent with the matching table. -->
 <Panel id="CounterVisibilityPanel" width="560" height="465" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="false">
     <Text rectAlignment="UpperCenter" offsetXY="0 -18" width="410" height="34" fontSize="26" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Table Settings" />
     <Button id="CounterVisibilityClose" rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="777766/closeCounterSettings" />
@@ -447,6 +465,7 @@
         <Button id="MTG_Settings_Button_Counters" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#C9D1DF" colors="#29292E|#3D3D45|#222229|#222229" onClick="777766/settingsSelectTab" text="Counters" />
         <Button id="MTG_Settings_Button_Preview" preferredWidth="124" minWidth="124" preferredHeight="38" minHeight="38" fontSize="15" fontStyle="Bold" textColor="#C9D1DF" colors="#29292E|#3D3D45|#222229|#222229" onClick="777766/settingsSelectTab" text="Card Preview" />
     </HorizontalLayout>
+    <!-- General player preferences include shortcut and combat-arrow options. -->
     <Panel id="MTG_Settings_Tab_General" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="290" color="clear" active="false">
         <Text rectAlignment="UpperLeft" offsetXY="11 -3" width="470" height="24" fontSize="14" fontStyle="Bold" alignment="MiddleLeft" color="#6fa0d8" text="GENERAL" />
         <Panel id="MTG_Settings_GeneralContent_v150" rectAlignment="UpperCenter" offsetXY="0 -36" width="500" height="242" color="#28272B">
@@ -459,6 +478,7 @@
             <Text rectAlignment="UpperLeft" offsetXY="16 -207" width="465" height="24" fontSize="13" color="#9BA4B0" alignment="MiddleLeft" text="Arrow: first card to second card. Undo: tap / hold to clear." />
         </Panel>
     </Panel>
+    <!-- The read-only release notes are sourced by Lotus from the Notebook. -->
     <Panel id="MTG_Settings_Tab_Notes" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="460" color="clear" active="true">
         <Text rectAlignment="UpperLeft" offsetXY="11 -3" width="400" height="25" fontSize="14" fontStyle="Bold" alignment="MiddleLeft" color="#6fa0d8" text="PATCH NOTES" />
         <Panel id="MTG_Settings_PatchNotesBox" rectAlignment="UpperCenter" offsetXY="0 -36" width="500" height="394" color="#28272B">
@@ -473,6 +493,7 @@
         </Panel>
         <Text id="MTG_Settings_PatchNotesHint" rectAlignment="LowerCenter" offsetXY="0 5" width="495" height="22" fontSize="12" alignment="MiddleLeft" color="#9BA4B0" text="Read-only | Creator edits LOTUS_PATCH_NOTES in the Black Notebook" />
     </Panel>
+    <!-- Counter preferences are applied by the Lotus Settings module. -->
     <Panel id="MTG_Settings_Tab_Counters" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="325" color="clear" active="false">
         <VerticalLayout rectAlignment="UpperCenter" offsetXY="0 -5" width="500" height="300" spacing="5" childForceExpandHeight="false" childForceExpandWidth="true">
             <HorizontalLayout preferredHeight="28" minHeight="28" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
@@ -512,6 +533,7 @@
             </HorizontalLayout>
         </VerticalLayout>
     </Panel>
+    <!-- These switches affect the individual viewer's preview, not other players' screens. -->
     <Panel id="MTG_Settings_Tab_Preview" rectAlignment="UpperCenter" offsetXY="0 -124" width="516" height="320" color="clear" active="false">
         <HorizontalLayout id="MTG_Settings_PreviewGrid_v120_compact" rectAlignment="UpperCenter" offsetXY="0 -8" width="500" height="28" spacing="8" childForceExpandWidth="false" childForceExpandHeight="false">
             <Text preferredWidth="220" minWidth="220" fontSize="14" fontStyle="Bold" color="#6fa0d8" alignment="MiddleLeft" text="PREVIEW OPTION" />

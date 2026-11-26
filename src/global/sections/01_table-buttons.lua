@@ -1,4 +1,6 @@
---------------------------------- TABLE BUTTONS --------------------------------
+-- Physical buttons, numbered shortcuts and moving selected cards between game zones.
+
+--------------------------------- Table buttons --------------------------------
 function buildTableButtons()
 	-- support variables
 	nAlt = 3
@@ -53,6 +55,7 @@ function mtgGetZonePlacement(playerColor, key, height, faceDown)
     return pos, rot
 end
 
+-- Treat a typed number on an action button as a request to repeat that action.
 function onObjectNumberTyped(obj, ply, int)
 	local txt = " card"
 	if int > 1 then
@@ -133,7 +136,7 @@ function onObjectNumberTyped(obj, ply, int)
 	end
 end
 
--- Creates a button with given funcionality on the object
+-- Attach a physical button and its click handler to the object.
 function createTableButton(object, name, clickFunction, ttip)
 	object.tooltip = false
 	object.interactable = true
@@ -181,7 +184,7 @@ function createTableButtonM(object, name, clickFunction, ttip)
 		press_color = { 1, 0, 0, 0.2 },
 	})
 	-- mulligan counter label below the button (noop click = display only)
-	-- NOTE: kept at index 1 so playerMulligan's editButton({ index = 1 }) updates it
+	-- Note: kept at index 1 so playerMulligan's editButton({ index = 1 }) updates it
 	object.createButton({
 		click_function = "noop",
 		label = "Mulligans: 0",
@@ -232,8 +235,10 @@ function createTableButtonM(object, name, clickFunction, ttip)
 	-- centre of each player's playmat by spawnKeepButtons (see pregame.lua).
 end
 
+-- Intentionally do nothing; display-only buttons still need a callback.
 function noop() end
 
+-- Create the two reveal modes on opposite faces of one physical button.
 function createTableButtonR(object)
 	object.tooltip = false
 	object.interactable = true
@@ -266,7 +271,7 @@ function createTableButtonR(object)
 		})
 end
 
--- Scripting hotkeys
+-- Numbered TTS scripting shortcuts.
 function onScriptingButtonDown(index, playerColor)
 	if index == 10 then
 		if Turns.enable then
@@ -311,6 +316,7 @@ function onScriptingButtonDown(index, playerColor)
 	end
 end
 
+-- Collect selected or hovered cards and place them under the player's library.
 function move2botLib(ply)
 	local objs = Player[ply].getSelectedObjects()
 	local cards = {}
@@ -377,10 +383,12 @@ function move2botLib(ply)
 end
 
 hoveredObjs = {}
+-- Remember the last object hovered by each player for shortcuts without a selection.
 function onObjectHover(ply, obj)
 	hoveredObjs[ply] = obj
 end
 
+-- Move selected or hovered cards to the player's graveyard.
 function move2grav(ply)
 	local objs = Player[ply].getSelectedObjects()
 	local cards = {}
@@ -414,6 +422,7 @@ function move2grav(ply)
 	end, 1)
 end
 
+-- Move selected or hovered cards to the player's exile zone.
 function move2exile(ply)
 	local objs = Player[ply].getSelectedObjects()
 	local cards = {}

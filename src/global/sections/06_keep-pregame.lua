@@ -1,3 +1,5 @@
+-- Optional starting-hand confirmation and pregame announcements.
+
 -------------------------------- KEEP / PREGAME --------------------------------
 -- A big "Keep" button sits in the centre of each player's playmat. Left-clicking
 -- it locks in that player's opening hand; right-clicking privately declares that

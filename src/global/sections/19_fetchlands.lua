@@ -1,3 +1,5 @@
+-- Fetchland targets, temporary choices, library searches and optional land-entry automation.
+
 --------------------------------- FETCHLANDS ----------------------------------
 -- When a fetch-style land ("Search your library for a <type> [or <type>] card
 -- ... put it onto the battlefield") sits in a player's land zone, show small
@@ -613,6 +615,7 @@ function fetchlandEnter(zone, obj)
 	end)
 end
 
+-- Remove fetch previews when the source card leaves.
 function fetchlandLeave(zone, obj)
 	if obj == nil then
 		return

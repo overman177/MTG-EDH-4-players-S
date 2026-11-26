@@ -1,7 +1,9 @@
-<!-- REVEAL UNTIL TYPE -->
+<!-- Choose built-in or custom card types and a repeat count. STokay starts the Global reveal logic. -->
+<!-- Reveal until type -->
 <!-- Deck context-menu picker: reveal cards until one of the chosen types is hit.
      Styled to match the Settings / Bug-report panels: outlined dark panel, bold
      title, red X close (STcancel), blue section headers, green action button. -->
+<!-- The chosen types are passed to Global's reveal logic; this panel does not move cards itself. -->
 <Panel id="SearchTypePanel" width="384" height="452" rectAlignment="MiddleCenter" showAnimation="FadeIn" hideAnimation="FadeOut" returnToOriginalPositionWhenReleased="false" allowDragging="true" color="rgba(0.1,0.1,0.1,0.97)" outline="#635351" outlineSize="2 -2" visibility="" active="False">
     <Text id="STtext" rectAlignment="UpperCenter" offsetXY="0 -18" width="340" height="32" fontSize="24" fontStyle="Bold" color="rgb(1,1,1)" alignment="MiddleCenter" text="Reveal Until Type" />
     <Button rectAlignment="UpperRight" offsetXY="-8 -8" width="30" height="30" color="#990000" textColor="#FFFFFF" text="X" fontSize="18" onClick="STcancel" />

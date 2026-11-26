@@ -1,3 +1,5 @@
+-- Card handling for Ral's ultimate.
+
 -------------------------------- RAL ULTIMATE ----------------------------------
 -- Exile the top 8 cards of the owner's library: instants & sorceries go into a
 -- row on top of their board, everything else into their exile zone.

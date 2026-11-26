@@ -1,3 +1,5 @@
+-- Etali's assisted library reveal and card placement.
+
 ------------------------------------ ETALI -------------------------------------
 -- "Etali, Primal Conqueror" gets a per-owner "Etali Trigger" button. It is NOT on
 -- the table by default: when a game starts (the opening-hand snapshot -- see

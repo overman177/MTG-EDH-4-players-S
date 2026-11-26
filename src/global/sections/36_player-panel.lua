@@ -1,3 +1,5 @@
+-- Player settings UI callbacks and related display updates.
+
 -------------------------------- PLAYER PANEL ----------------------------------
 -- set each per-player toggle's enabled state to match host enforcement: an
 -- enforced setting is locked (non-interactable) and shows the enforced value; an
@@ -33,6 +35,7 @@ function openSettings(player)
 	visibleOpenRules(color, "SettingsPanel")
 end
 
+-- Close the Global player settings panel.
 function closeSettings(player)
 	visibleCloseRules(player, "SettingsPanel")
 end

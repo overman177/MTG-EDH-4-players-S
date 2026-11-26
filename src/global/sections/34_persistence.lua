@@ -1,3 +1,5 @@
+-- Save and restore Global's settings state.
+
 ---------------------------------- PERSISTENCE ---------------------------------
 -- TTS serialises the Global script state via onSave; we stash playerSettings in
 -- it and read it back in onload(saved). Tolerant of a nil / malformed blob.
@@ -7,6 +9,7 @@ function saveSettings()
 	return JSON.encode({ playerSettings = playerSettings, enforcedSettings = enforcedSettings })
 end
 
+-- Restore the saved settings and fill in missing defaults.
 function restoreSettings(saved)
 	if saved ~= nil and saved ~= "" then
 		local ok, decoded = pcall(JSON.decode, saved)
@@ -23,10 +26,12 @@ function restoreSettings(saved)
 	initEnforced()
 end
 
+-- Return the state TTS should persist when saving Global.
 function onSave()
 	return saveSettings()
 end
 
+-- Keep the existing compatibility save entry point.
 function onsave()
 	return saveSettings()
 end

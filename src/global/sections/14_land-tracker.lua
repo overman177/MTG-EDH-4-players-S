@@ -1,3 +1,5 @@
+-- Detect land entries, keep the turn's land count and update the physical display.
+
 --------------------------------- LAND TRACKER ---------------------------------
 -- Per-player land / mana display. This will eventually replace the standalone
 -- Land_Zone_Manager object. For now it renders text anchored to each player's
@@ -35,6 +37,7 @@ function spawnLandTrackerText()
 	end
 end
 
+-- Create the land display and its controls for one player.
 function createLandTrackerButtons(color)
 	local mat = data[color]["playmat"]
 	if mat == nil then

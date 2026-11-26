@@ -1,5 +1,7 @@
+-- Combat arrows are visual links from one card to another, not automatic combat resolution. Players own the arrows they create.
+
 -- =============================================================
--- MODULE 7: COMBAT TARGETING (TWO HOTKEYS: DRAW / TAP-UNDO, HOLD-CLEAR)
+-- Module 7: Combat targeting (draw, tap to undo, hold to clear)
 --
 -- TTS does not let Lua assign C (or any default key) programmatically.
 -- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
@@ -37,11 +39,13 @@ local function combatCard(obj)
         and not obj.isDestroyed() and type(obj.getGUID) == "function"
 end
 
+-- Read the player's combat arrow preference.
 function Combat.enabled(color)
     return Combat.OWNERS[color] == true
         and Settings.combatEnabledByColor[color] ~= false
 end
 
+-- Convert world positions into Lotus-local coordinates for vector lines.
 local function combatLocal(world)
     local v = self.positionToLocal(world)
     return {v.x, v.y, v.z}
@@ -59,6 +63,7 @@ function Combat.countDefenders(link)
     return n, n == 1 and only or nil
 end
 
+-- Return the only destination if this start card has exactly one arrow.
 function Combat.singleDefender(attackerGUID)
     local link = Combat.links[attackerGUID]
     local count, guid = Combat.countDefenders(link)
@@ -66,8 +71,8 @@ function Combat.singleDefender(attackerGUID)
     return nil
 end
 
--- Declaring a pairing is idempotent. Repeating it MUST NOT delete an
--- earlier arrow, including when an input event is received more than once.
+-- Adding the same arrow twice must leave the
+-- original arrow intact, even if TTS sends the input twice.
 -- Each destination stores the color of the player who added the arrow.
 -- Legacy attacker/defender fields now simply mean start/destination.
 function Combat.addDefender(attackerGUID, defenderGUID, color)
@@ -85,6 +90,7 @@ function Combat.addDefender(attackerGUID, defenderGUID, color)
     return true
 end
 
+-- Rebuild arrow lines from current card positions while preserving the base lines.
 function Combat.render()
     local lines = {}
     for _, existing in ipairs(Combat.baseLines) do
@@ -133,6 +139,7 @@ function Combat.render()
     self.setVectorLines(lines)
 end
 
+-- Keep arrows aligned while links exist; reject timers from an older loop.
 function Combat.loop(generation)
     if generation ~= Combat.loopGeneration then return end
     Combat.render()
@@ -143,6 +150,7 @@ function Combat.loop(generation)
     end
 end
 
+-- Render changes immediately and manage the refresh loop.
 function Combat.updated()
     Combat.render()
     if next(Combat.links) and not Combat.loopActive then
@@ -156,6 +164,7 @@ function Combat.updated()
     end
 end
 
+-- Clear only the specified player's links, pending gestures and undo history.
 function Combat.clear(color)
     if not Combat.OWNERS[color] then return end
     Combat.pending[color] = nil
@@ -176,6 +185,7 @@ function Combat.clear(color)
     if changed then Combat.updated() end
 end
 
+-- Remove arrows connected to a destroyed card.
 function Combat.onDestroy(obj)
     if obj == nil then return end
     local guid = obj.getGUID()
@@ -193,7 +203,7 @@ function Combat.onDestroy(obj)
     if dirty then Combat.updated() end
 end
 
--- The drawing key never performs a removal. Same-card release simply cancels.
+-- The draw key only adds arrows. Releasing over the same card cancels.
 function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     if not Combat.OWNERS[color] then return end
     if not isKeyUp then
@@ -224,6 +234,7 @@ function Combat.removePair(attacker, defender, color)
     return true
 end
 
+-- Remove the most recent still-existing arrow created by this player.
 function Combat.undo(color)
     if not Combat.enabled(color) then return false end
     local history = Combat.history[color] or {}
@@ -236,7 +247,7 @@ end
 
 -- A short press triggers on release. A continuous configurable hold clears
 -- only the holding player's arrows, and suppresses the short-press undo.
--- Each hold has a unique table token so stale timers cannot clear later.
+-- Each key hold has its own token, so an old timer cannot clear newer arrows.
 function Combat.undoHotkey(color, hovered, pointerPosition, isKeyUp)
     if not Combat.OWNERS[color] then return end
 
@@ -308,6 +319,7 @@ function Combat.cleanupLegacyFight()
     end
 end
 
+-- Reset session arrow state, register the two hotkeys and remove obsolete fight controls.
 function Combat.load()
     Combat.pending = {}
     Combat.undoHeld = {}

@@ -1,3 +1,5 @@
+-- Random draw works on real decks in eligible zones. A deck merge can invalidate TTS references, so recheck them around asynchronous moves.
+
 -- =============================================================
 -- MODULE 3/4: DRAW RANDOM
 --
@@ -34,6 +36,7 @@ function DrawRandom.isAlive(obj, expectedType)
     return ok and alive == true
 end
 
+-- Read a GUID without assuming the TTS object still exists.
 function DrawRandom.safeGuid(obj)
     if not DrawRandom.isAlive(obj) then return nil end
     local ok, guid = pcall(function() return obj.getGUID() end)
@@ -102,6 +105,7 @@ function DrawRandom.isEligible(deck)
     return false
 end
 
+-- Choose one entry from the real deck and deal it to the requesting player.
 function DrawRandom.draw(playerColor, position, deck)
     if not DrawRandom.isEligible(deck) then
         broadcastToColor(
@@ -287,6 +291,7 @@ function DrawRandom.onEnterZone(zone, obj)
     -- An immediate onEnterZone would bypass the two-scan safety buffer.
 end
 
+-- Forget the registration for a destroyed deck.
 function DrawRandom.onDestroy(obj)
     -- onObjectDestroy may deliver a reference already invalidated by Unity.
     if obj == nil then return end
@@ -299,6 +304,7 @@ function DrawRandom.onDestroy(obj)
     end
 end
 
+-- Start the initial scan and periodic context-menu refresh.
 function DrawRandom.load()
     DrawRandom.registered = {}
     DrawRandom.candidates = {}

@@ -1,3 +1,5 @@
+-- Lotus settings: per-player preferences, counter visibility, preview controls, Notebook release notes and the settings UI.
+
 -- =============================================================
 -- MODULE 4/4: EDH SETTINGS
 -- =============================================================
@@ -43,21 +45,25 @@ function Settings.normalizeUndoHold(value)
     return math.max(1, math.min(10, math.floor(n + 0.5)))
 end
 
+-- Return the player's effective hold duration.
 function Settings.getUndoHold(color)
     if type(Settings.combatUndoHoldSecondsByColor) ~= "table" then return 5 end
     return Settings.normalizeUndoHold(Settings.combatUndoHoldSecondsByColor[color])
 end
 
+-- Normalize the requested preview size.
 function Settings.normalizePreviewSize(value)
     local n = tonumber(value)
     if not n or n ~= n then return 100 end
     return math.max(50, math.min(150, math.floor(n / 5 + 0.5) * 5))
 end
 
+-- Return the size preferred by this viewer.
 function Settings.getPreviewSize(color)
     return Settings.normalizePreviewSize(Settings.previewSizeByColor[color])
 end
 
+-- Supply defaults for fields absent from an older save.
 function Settings.normalize()
     for _, kind in ipairs(Settings.TYPES) do
         if type(Settings.state[kind]) ~= "table" then
@@ -123,6 +129,7 @@ local function copyPreviewColors(saved)
     return result
 end
 
+-- Read saved preferences and migrate supported legacy fields.
 function Settings.import(data)
     if type(data) ~= "table" then return false end
     if type(data.state) ~= "table"
@@ -186,6 +193,7 @@ function Settings.import(data)
     return true
 end
 
+-- Restore preferences and prepare settings state.
 function Settings.load(savedData)
     Settings.state = {}
     Settings.previewOwnEnabled = {}
@@ -235,6 +243,7 @@ function Settings.load(savedData)
     if Settings.hasSavedState then Playmats.persist() end
 end
 
+-- Return the preference data that must survive a reload.
 function Settings.export()
     return {
         state = Settings.state,
@@ -255,6 +264,7 @@ function Settings.persist()
     Playmats.persist()  -- saves playmats AND settings together
 end
 
+-- Convert saved preferences to the format used by Preview.
 function Settings.getPreviewPreferences()
     local own, opponents, hideOwn, hideOpponents = {}, {}, {}, {}
     local commanderOwn, commanderOpponents = {}, {}
@@ -281,7 +291,7 @@ function Settings.getPreviewPreferences()
 end
 
 function Settings.applyPreview()
-    -- Both modules live in the same object: no cross-object call required.
+    -- Settings and Preview are in the same Lua script, so a direct call works.
     Preview.setPreferences(Settings.getPreviewPreferences())
 end
 
@@ -303,6 +313,7 @@ function Settings.allOwnersVisible(kind)
     return true
 end
 
+-- Determine whether this counter should be visible.
 function Settings.visibility(kind, obj)
     local state = Settings.state[kind]
     if not state then return true end
@@ -313,6 +324,7 @@ function Settings.visibility(kind, obj)
     return state.owners[owner] ~= false
 end
 
+-- Refresh objects of one counter type without unnecessary repeat updates.
 function Settings.applyType(kind, force)
     local tag = Settings.TAGS[kind]
     if tag == nil then return end
@@ -356,6 +368,7 @@ function Settings.setToggle(id, value)
     UI.setAttribute(id, "isOn", value and "true" or "false")
 end
 
+-- Populate the menu owner's controls without handling the sync as a user edit.
 function Settings.syncUI()
     if not Settings.menuOwner then return end
     Settings.uiSyncing = true
@@ -405,6 +418,7 @@ Settings.TAB_IDS = {
     preview = { panel = "MTG_Settings_Tab_Preview", button = "MTG_Settings_Button_Preview" }
 }
 
+-- Switch the active panel and its button styling.
 function Settings.applyTab()
     local height = "465"
     if Settings.activeTab == "notes" then height = "605"
@@ -545,6 +559,7 @@ function Settings.parsePatchNotes(raw)
     return pages
 end
 
+-- Render the selected release page.
 function Settings.displayPatchNotes()
     local pages = Settings.notesPages
     if #pages == 0 then
@@ -563,6 +578,7 @@ function Settings.displayPatchNotes()
     UI.setAttribute("MTG_Settings_PatchNotesHint", "text", Settings.PATCH_NOTES_HINT)
 end
 
+-- Refresh the release reader from the Notebook.
 function Settings.syncPatchNotes(resetToLatest)
     -- Re-read the Notebook whenever the menu or tab opens. Do not mutate it.
     local tab, available = Settings.getNotebookTab()
@@ -589,6 +605,7 @@ function Settings.syncPatchNotes(resetToLatest)
     Settings.displayPatchNotes()
 end
 
+-- Handle navigation between release pages.
 function Settings.navigateNotes(player, value, id)
     if Settings.playerColor(player) ~= Settings.menuOwner
         or Settings.activeTab ~= "notes" then return end
@@ -615,6 +632,7 @@ function Settings.open(obj, color)
     Settings.syncPatchNotes(true)
 end
 
+-- Close the current settings window.
 function Settings.close(player)
     local color = Settings.playerColor(player)
     if color ~= Settings.menuOwner then return end
@@ -671,6 +689,7 @@ function Settings.toggleAllEveryone(player, value)
     Settings.syncUI()
 end
 
+-- Update the viewer's own-card or opponent-card preference.
 function Settings.togglePreview(player, value, id)
     if Settings.uiSyncing then return end
     local color = Settings.playerColor(player)
@@ -717,6 +736,7 @@ Settings.HUD_VIEWERS = {
     "Teal", "Blue", "Purple", "Pink", "Grey", "Black"
 }
 
+-- Update which viewers can see the shortcut overlay.
 function Settings.applyShortcutsVisibility()
     local viewers = {}
     for _, color in ipairs(Settings.HUD_VIEWERS) do
@@ -1012,6 +1032,7 @@ function Settings.shortcutsOverlay()
     }}
 end
 
+-- Build the General tab and combat shortcut controls.
 function Settings.generalTab()
     local cb = self.getGUID() .. "/"
     return {tag = "Panel", attributes = {
@@ -1241,6 +1262,7 @@ function Settings.manaCounterRow()
     }
 end
 
+-- Add the mana row to an older settings panel if needed.
 function Settings.ensureManaCounterRow(tab)
     local layout = nil
     for _, child in ipairs(tab.children or {}) do
@@ -1741,6 +1763,7 @@ function Settings.isCurrentPatchReader(node)
     return hasMarker(node)
 end
 
+-- Install or migrate Lotus controls while keeping unrelated Global UI intact.
 function Settings.installUI()
     local xml = UI.getXmlTable() or {}
     local found, changed = false, false
@@ -1876,6 +1899,7 @@ function Settings.installUI()
     end, 4)
 end
 
+-- Finish settings setup once the other scripts have loaded.
 function Settings.ready()
     Settings.createButton()
     Settings.ensureNotebookTab()

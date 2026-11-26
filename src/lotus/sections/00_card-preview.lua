@@ -1,3 +1,5 @@
+-- Card previews are personal to the viewer. This section tracks hand plays, first commander entries, card metadata, image assets and the display timer.
+
 --[[==========================================================================
     MTG LOTUS HELPER  |  v1.9.5  |  Tabletop Simulator Object Script
 
@@ -28,6 +30,7 @@ local NAME_RAINBOW = {
     "DB75C7", "EE80A4"
 }
 
+-- Build the colored name shown on the Lotus object.
 local function makeRainbowName(name)
     local parts = {}
     local colorIndex = 1
@@ -90,6 +93,7 @@ local Preview = {
 }
 
 
+-- Require the battlefield role tag and a supported player color.
 function Preview.isBattlefieldMarker(marker)
     if marker == nil or not marker.hasTag(Preview.BATTLEFIELD_TAG) then
         return false
@@ -103,6 +107,7 @@ function Preview.isBattlefieldMarker(marker)
 end
 
 
+-- Check the card's actual battlefield location, even if zone tags filter it out.
 function Preview.isOnBattlefield(card)
     if card == nil then return false end
     local cardPosition = card.getPosition()
@@ -133,6 +138,7 @@ function Preview.panelID(color)
     return "MTG_CastDisplay_" .. color
 end
 
+-- Build the XML image ID for this viewer.
 function Preview.imageID(color)
     return "MTG_CastImage_" .. color
 end
@@ -150,6 +156,7 @@ function Preview.makeDisplay(id, imageID, visibility)
     }}}}
 end
 
+-- Create viewer-specific preview panels without duplicating existing ones.
 function Preview.createDisplay()
     local xml = UI.getXmlTable() or {}
     local existing = {}
@@ -174,6 +181,7 @@ function Preview.createDisplay()
     if changed then UI.setXmlTable(xml) end
 end
 
+-- Hide every viewer's preview panel.
 function Preview.hideAll()
     UI.setAttribute("MTG_CastDisplay", "active", "false")
     for _, color in ipairs(Preview.EDH_COLORS) do
@@ -181,6 +189,7 @@ function Preview.hideAll()
     end
 end
 
+-- Set the displayed card image on the preview panels.
 function Preview.setImage(assetName)
     UI.setAttribute("MTG_CastImage", "image", assetName)
     for _, color in ipairs(Preview.EDH_COLORS) do
@@ -275,7 +284,7 @@ function Preview.setPreferences(params)
     Preview.updateVisibility()
 end
 
--- Only trust explicit card-type information: avoid searching Oracle text
+-- Read the actual type line rather than searching Oracle text
 -- for the word "land" (which would misclassify cards such as Cultivate).
 local function typeLineIsLand(line)
     return type(line) == "string"
@@ -669,6 +678,7 @@ function Preview.debugLog(message)
     if Preview.DEBUG then print("MTG Preview: " .. tostring(message)) end
 end
 
+-- Start a new preview and ignore late callbacks belonging to an older card.
 function Preview.showCard(card, playerColor, kind)
     if card == nil or card.isDestroyed() then return end
 
@@ -799,6 +809,7 @@ function Preview.onDrop(playerColor, card)
     Wait.frames(checkBattlefield, Preview.DROP_RETRY_FRAMES)
 end
 
+-- Restore first-commander history and prepare the preview UI.
 function Preview.load(savedData)
     Preview.commanderPending = {}
     Preview.dropSerialByGUID = {}

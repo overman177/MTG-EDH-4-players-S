@@ -1,3 +1,5 @@
+-- Always Reveal Top uses a temporary, non-interactive visual next to the library. The real deck remains the source of truth; never draw or search the visual.
+
 -- =============================================================
 -- MODULE 6: ALWAYS REVEAL TOP (NON-COLLIDING VISUAL CLONE)
 --
@@ -47,6 +49,7 @@ local function rtAlive(obj)
     return ok and destroyed == false
 end
 
+-- Recognize the temporary reveal clone so it is not treated as a real card.
 local function rtIsVisual(obj)
     if obj == nil then return false end
     local ok, visual = pcall(function()
@@ -55,6 +58,7 @@ local function rtIsVisual(obj)
     return ok and visual == true
 end
 
+-- Find the library zone tagged for this seat.
 function RevealTop.findZone(color)
     local original = getObjectFromGUID(RevealTop.LIBRARY_GUIDS[color])
     if original and original.type == "Scripting"
@@ -66,6 +70,7 @@ function RevealTop.findZone(color)
     return nil
 end
 
+-- Find the real library object, excluding the reveal visual.
 function RevealTop.findLibrary(color)
     local zone = RevealTop.findZone(color)
     if not zone then return nil end
@@ -195,6 +200,7 @@ function RevealTop.inspect(color, includeData)
     return nil, "Top GUID missing from deck data (" .. tostring(top.guid) .. ")"
 end
 
+-- Resolve the currently tracked visual clone for this seat.
 function RevealTop.visualFor(color)
     local obj = RevealTop.visuals[color]
     if rtAlive(obj) and rtIsVisual(obj) then return obj end
@@ -211,6 +217,7 @@ function RevealTop.visualFor(color)
     return nil
 end
 
+-- Destroy the temporary clone and clear its reference.
 function RevealTop.removeVisual(color)
     local obj = RevealTop.visualFor(color)
     RevealTop.visuals[color] = nil
@@ -298,6 +305,7 @@ local function rtLocalWidth(obj, nx, nz, fallback)
     return fallback
 end
 
+-- Calculate a position beside the library, outside its scripting zone.
 function RevealTop.topPosition(library, color)
     local pos = library.getPosition()
     local topY = pos.y + 0.25
@@ -357,12 +365,14 @@ function RevealTop.topPosition(library, color)
     }
 end
 
+-- Turn the visual face up in the library's orientation.
 function RevealTop.faceUpRotation(library)
     local rot = library.getRotation()
     -- Same convention as Global.revealFanRot: z=0 means card face up.
     return {x=0, y=rot.y, z=0}
 end
 
+-- Align the visual to the real deck without moving that deck.
 function RevealTop.follow(color, library)
     local obj = RevealTop.visualFor(color)
     if not rtAlive(obj) or not rtAlive(library) then return end
@@ -460,6 +470,7 @@ function RevealTop.disableVisualColliders(obj)
     return disabled
 end
 
+-- Spawn the visual and reject stale callbacks if the top card has changed.
 function RevealTop.spawnVisual(color, info)
     local version = RevealTop.versions[color] or 0
     local card, err = RevealTop.prepareClone(info, color)
@@ -614,6 +625,7 @@ function RevealTop.pollOne(color)
         end
 end
 
+-- Refresh the enabled top-card previews.
 function RevealTop.poll()
     for _, color in ipairs(RevealTop.COLORS) do
         local ok, err = pcall(RevealTop.pollOne, color)
@@ -624,6 +636,7 @@ function RevealTop.poll()
     end
 end
 
+-- Identify the seat associated with this library.
 function RevealTop.ownerOf(obj)
     for _, color in ipairs(RevealTop.COLORS) do
         if RevealTop.findLibrary(color) == obj then return color end
@@ -698,6 +711,7 @@ function RevealTop.onChat(message, player)
     return false
 end
 
+-- Restore enabled seats and initialize preview polling.
 function RevealTop.load(saved)
     RevealTop.enabled, RevealTop.registered, RevealTop.signatures = {}, {}, {}
     RevealTop.versions, RevealTop.visuals, RevealTop.visualGuids = {}, {}, {}
@@ -732,6 +746,7 @@ function RevealTop.onSpawn(obj)
     end, 3)
 end
 
+-- Clear references to destroyed decks or visuals.
 function RevealTop.onDestroy(obj)
     if obj == nil then return end
     -- onObjectDestroy can deliver an already-invalid Unity proxy.

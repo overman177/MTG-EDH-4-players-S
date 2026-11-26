@@ -1,3 +1,5 @@
+-- Equipment integration with Encoder. Only show Equip and Unequip while hovering over an eligible stack or equipped card.
+
 -- =============================================================
 -- MODULE 5/5: ORIGINAL MOON-MTG EQUIPMENT (ENCODER-BASED)
 -- Source: moon-mtg-equip v1.0.4 from the supplied standalone script.
@@ -6,6 +8,7 @@
 -- =============================================================
 
 local Equipment = {}
+-- Check that the object reference is still safe to use.
 local function equipmentAlive(obj)
     if obj == nil then return false end
     local ok, valid = pcall(function() return obj.isDestroyed() == false end)
@@ -116,6 +119,7 @@ local function near_protected_snap_point(deck)
     return false
 end
 
+-- Reject decks that should not be treated as equipment stacks.
 local function deck_is_excluded(deck)
     if deck == nil or deck.tag ~= "Deck" then return false end
     if has_protected_tag(deck) or near_protected_snap_point(deck) then return true end
@@ -160,6 +164,7 @@ do
     end
 end
 
+-- Register the equipment feature with Encoder.
 local function register_module()
     local enc = encoder()
     if enc == nil then return end
@@ -209,6 +214,7 @@ local function init_card(card)
     end
 end
 
+-- Calculate the placement offset for an attached card.
 local function equipped_offset(i)
     local col = math.floor(i / 3)
     local row = i % 3
@@ -216,6 +222,7 @@ local function equipped_offset(i)
                   -0.75 + row * (2.2 / 3))
 end
 
+-- Attach the equipment deck's cards to the target card.
 local function equip_to(deck, to)
     local enc = encoder()
     if enc == nil then return end
@@ -289,6 +296,7 @@ local function is_hovered(guid)
     return false
 end
 
+-- Refresh the deck's Equip control according to its hover and eligibility state.
 local function refresh_deck(deck)
     if deck == nil or deck.tag ~= "Deck" then return end
 
@@ -316,6 +324,7 @@ local function refresh_deck(deck)
     }
 end
 
+-- Recheck the deck after a delayed object-state change.
 local function refresh_deck_later(deck)
     if not equipmentAlive(deck) then return end
     local ok, guid = pcall(function()
@@ -345,6 +354,7 @@ local function remove_unequip_button(card)
     if index ~= nil then card.removeButton(index) end
 end
 
+-- Refresh the Unequip control for the current equipment state.
 local function refresh_equipped_card(card)
     if card == nil or card.tag ~= "Card" then return end
     if not is_hovered(card.getGUID()) then
@@ -412,6 +422,7 @@ local function refresh_hovered_decks()
     Wait.time(refresh_hovered_decks, 0.5)
 end
 
+-- Detach all recorded equipment from the chosen card.
 function unequip_all(obj, ply)
     local enc = encoder()
     if enc == nil then return end
@@ -462,6 +473,7 @@ function Equipment.load()
     end, 10)
 end
 
+-- Update the hover-only equipment controls as the pointer moves.
 function Equipment.onHover(player_color, obj)
     local old_guid = hovered[player_color]
     local new_guid = nil

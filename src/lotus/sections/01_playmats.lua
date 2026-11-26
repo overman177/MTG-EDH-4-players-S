@@ -1,3 +1,5 @@
+-- Personal playmat artwork. Locate the player's tagged battlefield, fit the model to it and persist the resulting GUID.
+
 -- =============================================================
 -- MODULE 2/4: PLAYMATS
 --
@@ -41,6 +43,7 @@ function Playmats.getBattlefieldZone(color)
     return matches[1]
 end
 
+-- Size and orient the art from the actual battlefield transform.
 function Playmats.fitToBattlefield(mat, color)
     local zone = Playmats.getBattlefieldZone(color)
     if zone == nil or mat == nil or mat.isDestroyed() then return false end
@@ -70,6 +73,7 @@ function Playmats.fitToBattlefield(mat, color)
     return true
 end
 
+-- Refit saved artwork after the table has loaded.
 function Playmats.alignExisting()
     for _, color in ipairs(Playmats.PLAYER_COLORS) do
         local mat = Playmats.getOwnedMat(color)
@@ -80,6 +84,7 @@ function Playmats.alignExisting()
 end
 
 
+-- Restore the saved GUIDs for the player artwork.
 function Playmats.load(savedData)
     Playmats.guids = {}
     Playmats.generations = {}
@@ -105,6 +110,7 @@ function Playmats.load(savedData)
     end
 end
 
+-- Serialize the shared Lotus state, including settings and reveal-top preferences.
 function Playmats.save()
     return JSON.encode({
         version = HELPER_VERSION,
@@ -116,10 +122,12 @@ function Playmats.save()
 end
 
 
+-- Store the current combined state on the Lotus object.
 function Playmats.persist()
     self.script_state = Playmats.save()
 end
 
+-- Resolve the saved GUID and verify it still points to an art playmat.
 function Playmats.getOwnedMat(color)
     local guid = Playmats.guids[color]
     if type(guid) ~= "string" then return nil end
@@ -176,6 +184,7 @@ function Playmats.makeJSON(imageURL)
     })
 end
 
+-- Replace the artwork only after the new object has successfully spawned.
 function Playmats.create(color, imageURL)
     local player = Player[color]
     if player == nil then return end
@@ -194,7 +203,7 @@ function Playmats.create(color, imageURL)
     local matRot = {0, zoneRot.y + c.rotationY, 0}
     local json = Playmats.makeJSON(imageURL)
 
-    -- Don't delete the current mat until a replacement was spawned.
+    -- Keep the old mat until its replacement has spawned.
     Playmats.generations[color] = (Playmats.generations[color] or 0) + 1
     local generation = Playmats.generations[color]
 

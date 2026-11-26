@@ -1,3 +1,5 @@
+-- Card previews are personal to the viewer. This section tracks hand plays, first commander entries, card metadata, image assets and the display timer.
+
 --[[==========================================================================
     MTG LOTUS HELPER  |  v1.9.5  |  Tabletop Simulator Object Script
 
@@ -28,6 +30,7 @@ local NAME_RAINBOW = {
     "DB75C7", "EE80A4"
 }
 
+-- Build the colored name shown on the Lotus object.
 local function makeRainbowName(name)
     local parts = {}
     local colorIndex = 1
@@ -90,6 +93,7 @@ local Preview = {
 }
 
 
+-- Require the battlefield role tag and a supported player color.
 function Preview.isBattlefieldMarker(marker)
     if marker == nil or not marker.hasTag(Preview.BATTLEFIELD_TAG) then
         return false
@@ -103,6 +107,7 @@ function Preview.isBattlefieldMarker(marker)
 end
 
 
+-- Check the card's actual battlefield location, even if zone tags filter it out.
 function Preview.isOnBattlefield(card)
     if card == nil then return false end
     local cardPosition = card.getPosition()
@@ -133,6 +138,7 @@ function Preview.panelID(color)
     return "MTG_CastDisplay_" .. color
 end
 
+-- Build the XML image ID for this viewer.
 function Preview.imageID(color)
     return "MTG_CastImage_" .. color
 end
@@ -150,6 +156,7 @@ function Preview.makeDisplay(id, imageID, visibility)
     }}}}
 end
 
+-- Create viewer-specific preview panels without duplicating existing ones.
 function Preview.createDisplay()
     local xml = UI.getXmlTable() or {}
     local existing = {}
@@ -174,6 +181,7 @@ function Preview.createDisplay()
     if changed then UI.setXmlTable(xml) end
 end
 
+-- Hide every viewer's preview panel.
 function Preview.hideAll()
     UI.setAttribute("MTG_CastDisplay", "active", "false")
     for _, color in ipairs(Preview.EDH_COLORS) do
@@ -181,6 +189,7 @@ function Preview.hideAll()
     end
 end
 
+-- Set the displayed card image on the preview panels.
 function Preview.setImage(assetName)
     UI.setAttribute("MTG_CastImage", "image", assetName)
     for _, color in ipairs(Preview.EDH_COLORS) do
@@ -275,7 +284,7 @@ function Preview.setPreferences(params)
     Preview.updateVisibility()
 end
 
--- Only trust explicit card-type information: avoid searching Oracle text
+-- Read the actual type line rather than searching Oracle text
 -- for the word "land" (which would misclassify cards such as Cultivate).
 local function typeLineIsLand(line)
     return type(line) == "string"
@@ -669,6 +678,7 @@ function Preview.debugLog(message)
     if Preview.DEBUG then print("MTG Preview: " .. tostring(message)) end
 end
 
+-- Start a new preview and ignore late callbacks belonging to an older card.
 function Preview.showCard(card, playerColor, kind)
     if card == nil or card.isDestroyed() then return end
 
@@ -799,6 +809,7 @@ function Preview.onDrop(playerColor, card)
     Wait.frames(checkBattlefield, Preview.DROP_RETRY_FRAMES)
 end
 
+-- Restore first-commander history and prepare the preview UI.
 function Preview.load(savedData)
     Preview.commanderPending = {}
     Preview.dropSerialByGUID = {}
@@ -825,6 +836,8 @@ function Preview.load(savedData)
 
     log(HELPER_NAME .. " " .. HELPER_VERSION .. " loaded (Card Preview).")
 end
+
+-- Personal playmat artwork. Locate the player's tagged battlefield, fit the model to it and persist the resulting GUID.
 
 -- =============================================================
 -- MODULE 2/4: PLAYMATS
@@ -869,6 +882,7 @@ function Playmats.getBattlefieldZone(color)
     return matches[1]
 end
 
+-- Size and orient the art from the actual battlefield transform.
 function Playmats.fitToBattlefield(mat, color)
     local zone = Playmats.getBattlefieldZone(color)
     if zone == nil or mat == nil or mat.isDestroyed() then return false end
@@ -898,6 +912,7 @@ function Playmats.fitToBattlefield(mat, color)
     return true
 end
 
+-- Refit saved artwork after the table has loaded.
 function Playmats.alignExisting()
     for _, color in ipairs(Playmats.PLAYER_COLORS) do
         local mat = Playmats.getOwnedMat(color)
@@ -908,6 +923,7 @@ function Playmats.alignExisting()
 end
 
 
+-- Restore the saved GUIDs for the player artwork.
 function Playmats.load(savedData)
     Playmats.guids = {}
     Playmats.generations = {}
@@ -933,6 +949,7 @@ function Playmats.load(savedData)
     end
 end
 
+-- Serialize the shared Lotus state, including settings and reveal-top preferences.
 function Playmats.save()
     return JSON.encode({
         version = HELPER_VERSION,
@@ -944,10 +961,12 @@ function Playmats.save()
 end
 
 
+-- Store the current combined state on the Lotus object.
 function Playmats.persist()
     self.script_state = Playmats.save()
 end
 
+-- Resolve the saved GUID and verify it still points to an art playmat.
 function Playmats.getOwnedMat(color)
     local guid = Playmats.guids[color]
     if type(guid) ~= "string" then return nil end
@@ -1004,6 +1023,7 @@ function Playmats.makeJSON(imageURL)
     })
 end
 
+-- Replace the artwork only after the new object has successfully spawned.
 function Playmats.create(color, imageURL)
     local player = Player[color]
     if player == nil then return end
@@ -1022,7 +1042,7 @@ function Playmats.create(color, imageURL)
     local matRot = {0, zoneRot.y + c.rotationY, 0}
     local json = Playmats.makeJSON(imageURL)
 
-    -- Don't delete the current mat until a replacement was spawned.
+    -- Keep the old mat until its replacement has spawned.
     Playmats.generations[color] = (Playmats.generations[color] or 0) + 1
     local generation = Playmats.generations[color]
 
@@ -1098,6 +1118,8 @@ function Playmats.onChat(message, player)
     return false
 end
 
+-- Random draw works on real decks in eligible zones. A deck merge can invalidate TTS references, so recheck them around asynchronous moves.
+
 -- =============================================================
 -- MODULE 3/4: DRAW RANDOM
 --
@@ -1134,6 +1156,7 @@ function DrawRandom.isAlive(obj, expectedType)
     return ok and alive == true
 end
 
+-- Read a GUID without assuming the TTS object still exists.
 function DrawRandom.safeGuid(obj)
     if not DrawRandom.isAlive(obj) then return nil end
     local ok, guid = pcall(function() return obj.getGUID() end)
@@ -1202,6 +1225,7 @@ function DrawRandom.isEligible(deck)
     return false
 end
 
+-- Choose one entry from the real deck and deal it to the requesting player.
 function DrawRandom.draw(playerColor, position, deck)
     if not DrawRandom.isEligible(deck) then
         broadcastToColor(
@@ -1387,6 +1411,7 @@ function DrawRandom.onEnterZone(zone, obj)
     -- An immediate onEnterZone would bypass the two-scan safety buffer.
 end
 
+-- Forget the registration for a destroyed deck.
 function DrawRandom.onDestroy(obj)
     -- onObjectDestroy may deliver a reference already invalidated by Unity.
     if obj == nil then return end
@@ -1399,6 +1424,7 @@ function DrawRandom.onDestroy(obj)
     end
 end
 
+-- Start the initial scan and periodic context-menu refresh.
 function DrawRandom.load()
     DrawRandom.registered = {}
     DrawRandom.candidates = {}
@@ -1407,6 +1433,8 @@ function DrawRandom.load()
     Wait.time(DrawRandom.scan, DrawRandom.SCAN_INTERVAL, -1)
     log("MTG Portable Helper: Draw Random module ready.")
 end
+
+-- Lotus settings: per-player preferences, counter visibility, preview controls, Notebook release notes and the settings UI.
 
 -- =============================================================
 -- MODULE 4/4: EDH SETTINGS
@@ -1453,21 +1481,25 @@ function Settings.normalizeUndoHold(value)
     return math.max(1, math.min(10, math.floor(n + 0.5)))
 end
 
+-- Return the player's effective hold duration.
 function Settings.getUndoHold(color)
     if type(Settings.combatUndoHoldSecondsByColor) ~= "table" then return 5 end
     return Settings.normalizeUndoHold(Settings.combatUndoHoldSecondsByColor[color])
 end
 
+-- Normalize the requested preview size.
 function Settings.normalizePreviewSize(value)
     local n = tonumber(value)
     if not n or n ~= n then return 100 end
     return math.max(50, math.min(150, math.floor(n / 5 + 0.5) * 5))
 end
 
+-- Return the size preferred by this viewer.
 function Settings.getPreviewSize(color)
     return Settings.normalizePreviewSize(Settings.previewSizeByColor[color])
 end
 
+-- Supply defaults for fields absent from an older save.
 function Settings.normalize()
     for _, kind in ipairs(Settings.TYPES) do
         if type(Settings.state[kind]) ~= "table" then
@@ -1533,6 +1565,7 @@ local function copyPreviewColors(saved)
     return result
 end
 
+-- Read saved preferences and migrate supported legacy fields.
 function Settings.import(data)
     if type(data) ~= "table" then return false end
     if type(data.state) ~= "table"
@@ -1596,6 +1629,7 @@ function Settings.import(data)
     return true
 end
 
+-- Restore preferences and prepare settings state.
 function Settings.load(savedData)
     Settings.state = {}
     Settings.previewOwnEnabled = {}
@@ -1645,6 +1679,7 @@ function Settings.load(savedData)
     if Settings.hasSavedState then Playmats.persist() end
 end
 
+-- Return the preference data that must survive a reload.
 function Settings.export()
     return {
         state = Settings.state,
@@ -1665,6 +1700,7 @@ function Settings.persist()
     Playmats.persist()  -- saves playmats AND settings together
 end
 
+-- Convert saved preferences to the format used by Preview.
 function Settings.getPreviewPreferences()
     local own, opponents, hideOwn, hideOpponents = {}, {}, {}, {}
     local commanderOwn, commanderOpponents = {}, {}
@@ -1691,7 +1727,7 @@ function Settings.getPreviewPreferences()
 end
 
 function Settings.applyPreview()
-    -- Both modules live in the same object: no cross-object call required.
+    -- Settings and Preview are in the same Lua script, so a direct call works.
     Preview.setPreferences(Settings.getPreviewPreferences())
 end
 
@@ -1713,6 +1749,7 @@ function Settings.allOwnersVisible(kind)
     return true
 end
 
+-- Determine whether this counter should be visible.
 function Settings.visibility(kind, obj)
     local state = Settings.state[kind]
     if not state then return true end
@@ -1723,6 +1760,7 @@ function Settings.visibility(kind, obj)
     return state.owners[owner] ~= false
 end
 
+-- Refresh objects of one counter type without unnecessary repeat updates.
 function Settings.applyType(kind, force)
     local tag = Settings.TAGS[kind]
     if tag == nil then return end
@@ -1766,6 +1804,7 @@ function Settings.setToggle(id, value)
     UI.setAttribute(id, "isOn", value and "true" or "false")
 end
 
+-- Populate the menu owner's controls without handling the sync as a user edit.
 function Settings.syncUI()
     if not Settings.menuOwner then return end
     Settings.uiSyncing = true
@@ -1815,6 +1854,7 @@ Settings.TAB_IDS = {
     preview = { panel = "MTG_Settings_Tab_Preview", button = "MTG_Settings_Button_Preview" }
 }
 
+-- Switch the active panel and its button styling.
 function Settings.applyTab()
     local height = "465"
     if Settings.activeTab == "notes" then height = "605"
@@ -1955,6 +1995,7 @@ function Settings.parsePatchNotes(raw)
     return pages
 end
 
+-- Render the selected release page.
 function Settings.displayPatchNotes()
     local pages = Settings.notesPages
     if #pages == 0 then
@@ -1973,6 +2014,7 @@ function Settings.displayPatchNotes()
     UI.setAttribute("MTG_Settings_PatchNotesHint", "text", Settings.PATCH_NOTES_HINT)
 end
 
+-- Refresh the release reader from the Notebook.
 function Settings.syncPatchNotes(resetToLatest)
     -- Re-read the Notebook whenever the menu or tab opens. Do not mutate it.
     local tab, available = Settings.getNotebookTab()
@@ -1999,6 +2041,7 @@ function Settings.syncPatchNotes(resetToLatest)
     Settings.displayPatchNotes()
 end
 
+-- Handle navigation between release pages.
 function Settings.navigateNotes(player, value, id)
     if Settings.playerColor(player) ~= Settings.menuOwner
         or Settings.activeTab ~= "notes" then return end
@@ -2025,6 +2068,7 @@ function Settings.open(obj, color)
     Settings.syncPatchNotes(true)
 end
 
+-- Close the current settings window.
 function Settings.close(player)
     local color = Settings.playerColor(player)
     if color ~= Settings.menuOwner then return end
@@ -2081,6 +2125,7 @@ function Settings.toggleAllEveryone(player, value)
     Settings.syncUI()
 end
 
+-- Update the viewer's own-card or opponent-card preference.
 function Settings.togglePreview(player, value, id)
     if Settings.uiSyncing then return end
     local color = Settings.playerColor(player)
@@ -2127,6 +2172,7 @@ Settings.HUD_VIEWERS = {
     "Teal", "Blue", "Purple", "Pink", "Grey", "Black"
 }
 
+-- Update which viewers can see the shortcut overlay.
 function Settings.applyShortcutsVisibility()
     local viewers = {}
     for _, color in ipairs(Settings.HUD_VIEWERS) do
@@ -2422,6 +2468,7 @@ function Settings.shortcutsOverlay()
     }}
 end
 
+-- Build the General tab and combat shortcut controls.
 function Settings.generalTab()
     local cb = self.getGUID() .. "/"
     return {tag = "Panel", attributes = {
@@ -2651,6 +2698,7 @@ function Settings.manaCounterRow()
     }
 end
 
+-- Add the mana row to an older settings panel if needed.
 function Settings.ensureManaCounterRow(tab)
     local layout = nil
     for _, child in ipairs(tab.children or {}) do
@@ -3151,6 +3199,7 @@ function Settings.isCurrentPatchReader(node)
     return hasMarker(node)
 end
 
+-- Install or migrate Lotus controls while keeping unrelated Global UI intact.
 function Settings.installUI()
     local xml = UI.getXmlTable() or {}
     local found, changed = false, false
@@ -3286,6 +3335,7 @@ function Settings.installUI()
     end, 4)
 end
 
+-- Finish settings setup once the other scripts have loaded.
 function Settings.ready()
     Settings.createButton()
     Settings.ensureNotebookTab()
@@ -3296,6 +3346,8 @@ function Settings.ready()
     log("MTG Portable Helper: EDH Settings module ready.")
 end
 
+-- Equipment integration with Encoder. Only show Equip and Unequip while hovering over an eligible stack or equipped card.
+
 -- =============================================================
 -- MODULE 5/5: ORIGINAL MOON-MTG EQUIPMENT (ENCODER-BASED)
 -- Source: moon-mtg-equip v1.0.4 from the supplied standalone script.
@@ -3304,6 +3356,7 @@ end
 -- =============================================================
 
 local Equipment = {}
+-- Check that the object reference is still safe to use.
 local function equipmentAlive(obj)
     if obj == nil then return false end
     local ok, valid = pcall(function() return obj.isDestroyed() == false end)
@@ -3414,6 +3467,7 @@ local function near_protected_snap_point(deck)
     return false
 end
 
+-- Reject decks that should not be treated as equipment stacks.
 local function deck_is_excluded(deck)
     if deck == nil or deck.tag ~= "Deck" then return false end
     if has_protected_tag(deck) or near_protected_snap_point(deck) then return true end
@@ -3458,6 +3512,7 @@ do
     end
 end
 
+-- Register the equipment feature with Encoder.
 local function register_module()
     local enc = encoder()
     if enc == nil then return end
@@ -3507,6 +3562,7 @@ local function init_card(card)
     end
 end
 
+-- Calculate the placement offset for an attached card.
 local function equipped_offset(i)
     local col = math.floor(i / 3)
     local row = i % 3
@@ -3514,6 +3570,7 @@ local function equipped_offset(i)
                   -0.75 + row * (2.2 / 3))
 end
 
+-- Attach the equipment deck's cards to the target card.
 local function equip_to(deck, to)
     local enc = encoder()
     if enc == nil then return end
@@ -3587,6 +3644,7 @@ local function is_hovered(guid)
     return false
 end
 
+-- Refresh the deck's Equip control according to its hover and eligibility state.
 local function refresh_deck(deck)
     if deck == nil or deck.tag ~= "Deck" then return end
 
@@ -3614,6 +3672,7 @@ local function refresh_deck(deck)
     }
 end
 
+-- Recheck the deck after a delayed object-state change.
 local function refresh_deck_later(deck)
     if not equipmentAlive(deck) then return end
     local ok, guid = pcall(function()
@@ -3643,6 +3702,7 @@ local function remove_unequip_button(card)
     if index ~= nil then card.removeButton(index) end
 end
 
+-- Refresh the Unequip control for the current equipment state.
 local function refresh_equipped_card(card)
     if card == nil or card.tag ~= "Card" then return end
     if not is_hovered(card.getGUID()) then
@@ -3710,6 +3770,7 @@ local function refresh_hovered_decks()
     Wait.time(refresh_hovered_decks, 0.5)
 end
 
+-- Detach all recorded equipment from the chosen card.
 function unequip_all(obj, ply)
     local enc = encoder()
     if enc == nil then return end
@@ -3760,6 +3821,7 @@ function Equipment.load()
     end, 10)
 end
 
+-- Update the hover-only equipment controls as the pointer moves.
 function Equipment.onHover(player_color, obj)
     local old_guid = hovered[player_color]
     local new_guid = nil
@@ -3826,6 +3888,8 @@ function Equipment.onSpawn(obj)
 end
 
 
+-- Always Reveal Top uses a temporary, non-interactive visual next to the library. The real deck remains the source of truth; never draw or search the visual.
+
 -- =============================================================
 -- MODULE 6: ALWAYS REVEAL TOP (NON-COLLIDING VISUAL CLONE)
 --
@@ -3875,6 +3939,7 @@ local function rtAlive(obj)
     return ok and destroyed == false
 end
 
+-- Recognize the temporary reveal clone so it is not treated as a real card.
 local function rtIsVisual(obj)
     if obj == nil then return false end
     local ok, visual = pcall(function()
@@ -3883,6 +3948,7 @@ local function rtIsVisual(obj)
     return ok and visual == true
 end
 
+-- Find the library zone tagged for this seat.
 function RevealTop.findZone(color)
     local original = getObjectFromGUID(RevealTop.LIBRARY_GUIDS[color])
     if original and original.type == "Scripting"
@@ -3894,6 +3960,7 @@ function RevealTop.findZone(color)
     return nil
 end
 
+-- Find the real library object, excluding the reveal visual.
 function RevealTop.findLibrary(color)
     local zone = RevealTop.findZone(color)
     if not zone then return nil end
@@ -4023,6 +4090,7 @@ function RevealTop.inspect(color, includeData)
     return nil, "Top GUID missing from deck data (" .. tostring(top.guid) .. ")"
 end
 
+-- Resolve the currently tracked visual clone for this seat.
 function RevealTop.visualFor(color)
     local obj = RevealTop.visuals[color]
     if rtAlive(obj) and rtIsVisual(obj) then return obj end
@@ -4039,6 +4107,7 @@ function RevealTop.visualFor(color)
     return nil
 end
 
+-- Destroy the temporary clone and clear its reference.
 function RevealTop.removeVisual(color)
     local obj = RevealTop.visualFor(color)
     RevealTop.visuals[color] = nil
@@ -4126,6 +4195,7 @@ local function rtLocalWidth(obj, nx, nz, fallback)
     return fallback
 end
 
+-- Calculate a position beside the library, outside its scripting zone.
 function RevealTop.topPosition(library, color)
     local pos = library.getPosition()
     local topY = pos.y + 0.25
@@ -4185,12 +4255,14 @@ function RevealTop.topPosition(library, color)
     }
 end
 
+-- Turn the visual face up in the library's orientation.
 function RevealTop.faceUpRotation(library)
     local rot = library.getRotation()
     -- Same convention as Global.revealFanRot: z=0 means card face up.
     return {x=0, y=rot.y, z=0}
 end
 
+-- Align the visual to the real deck without moving that deck.
 function RevealTop.follow(color, library)
     local obj = RevealTop.visualFor(color)
     if not rtAlive(obj) or not rtAlive(library) then return end
@@ -4288,6 +4360,7 @@ function RevealTop.disableVisualColliders(obj)
     return disabled
 end
 
+-- Spawn the visual and reject stale callbacks if the top card has changed.
 function RevealTop.spawnVisual(color, info)
     local version = RevealTop.versions[color] or 0
     local card, err = RevealTop.prepareClone(info, color)
@@ -4442,6 +4515,7 @@ function RevealTop.pollOne(color)
         end
 end
 
+-- Refresh the enabled top-card previews.
 function RevealTop.poll()
     for _, color in ipairs(RevealTop.COLORS) do
         local ok, err = pcall(RevealTop.pollOne, color)
@@ -4452,6 +4526,7 @@ function RevealTop.poll()
     end
 end
 
+-- Identify the seat associated with this library.
 function RevealTop.ownerOf(obj)
     for _, color in ipairs(RevealTop.COLORS) do
         if RevealTop.findLibrary(color) == obj then return color end
@@ -4526,6 +4601,7 @@ function RevealTop.onChat(message, player)
     return false
 end
 
+-- Restore enabled seats and initialize preview polling.
 function RevealTop.load(saved)
     RevealTop.enabled, RevealTop.registered, RevealTop.signatures = {}, {}, {}
     RevealTop.versions, RevealTop.visuals, RevealTop.visualGuids = {}, {}, {}
@@ -4560,6 +4636,7 @@ function RevealTop.onSpawn(obj)
     end, 3)
 end
 
+-- Clear references to destroyed decks or visuals.
 function RevealTop.onDestroy(obj)
     if obj == nil then return end
     -- onObjectDestroy can deliver an already-invalid Unity proxy.
@@ -4581,8 +4658,10 @@ function RevealTop.onDestroy(obj)
     end
 end
 
+-- Combat arrows are visual links from one card to another, not automatic combat resolution. Players own the arrows they create.
+
 -- =============================================================
--- MODULE 7: COMBAT TARGETING (TWO HOTKEYS: DRAW / TAP-UNDO, HOLD-CLEAR)
+-- Module 7: Combat targeting (draw, tap to undo, hold to clear)
 --
 -- TTS does not let Lua assign C (or any default key) programmatically.
 -- Players bind "MTG: Declare Combat Target" to C in Options > Game Keys.
@@ -4620,11 +4699,13 @@ local function combatCard(obj)
         and not obj.isDestroyed() and type(obj.getGUID) == "function"
 end
 
+-- Read the player's combat arrow preference.
 function Combat.enabled(color)
     return Combat.OWNERS[color] == true
         and Settings.combatEnabledByColor[color] ~= false
 end
 
+-- Convert world positions into Lotus-local coordinates for vector lines.
 local function combatLocal(world)
     local v = self.positionToLocal(world)
     return {v.x, v.y, v.z}
@@ -4642,6 +4723,7 @@ function Combat.countDefenders(link)
     return n, n == 1 and only or nil
 end
 
+-- Return the only destination if this start card has exactly one arrow.
 function Combat.singleDefender(attackerGUID)
     local link = Combat.links[attackerGUID]
     local count, guid = Combat.countDefenders(link)
@@ -4649,8 +4731,8 @@ function Combat.singleDefender(attackerGUID)
     return nil
 end
 
--- Declaring a pairing is idempotent. Repeating it MUST NOT delete an
--- earlier arrow, including when an input event is received more than once.
+-- Adding the same arrow twice must leave the
+-- original arrow intact, even if TTS sends the input twice.
 -- Each destination stores the color of the player who added the arrow.
 -- Legacy attacker/defender fields now simply mean start/destination.
 function Combat.addDefender(attackerGUID, defenderGUID, color)
@@ -4668,6 +4750,7 @@ function Combat.addDefender(attackerGUID, defenderGUID, color)
     return true
 end
 
+-- Rebuild arrow lines from current card positions while preserving the base lines.
 function Combat.render()
     local lines = {}
     for _, existing in ipairs(Combat.baseLines) do
@@ -4716,6 +4799,7 @@ function Combat.render()
     self.setVectorLines(lines)
 end
 
+-- Keep arrows aligned while links exist; reject timers from an older loop.
 function Combat.loop(generation)
     if generation ~= Combat.loopGeneration then return end
     Combat.render()
@@ -4726,6 +4810,7 @@ function Combat.loop(generation)
     end
 end
 
+-- Render changes immediately and manage the refresh loop.
 function Combat.updated()
     Combat.render()
     if next(Combat.links) and not Combat.loopActive then
@@ -4739,6 +4824,7 @@ function Combat.updated()
     end
 end
 
+-- Clear only the specified player's links, pending gestures and undo history.
 function Combat.clear(color)
     if not Combat.OWNERS[color] then return end
     Combat.pending[color] = nil
@@ -4759,6 +4845,7 @@ function Combat.clear(color)
     if changed then Combat.updated() end
 end
 
+-- Remove arrows connected to a destroyed card.
 function Combat.onDestroy(obj)
     if obj == nil then return end
     local guid = obj.getGUID()
@@ -4776,7 +4863,7 @@ function Combat.onDestroy(obj)
     if dirty then Combat.updated() end
 end
 
--- The drawing key never performs a removal. Same-card release simply cancels.
+-- The draw key only adds arrows. Releasing over the same card cancels.
 function Combat.hotkey(color, hovered, pointerPosition, isKeyUp)
     if not Combat.OWNERS[color] then return end
     if not isKeyUp then
@@ -4807,6 +4894,7 @@ function Combat.removePair(attacker, defender, color)
     return true
 end
 
+-- Remove the most recent still-existing arrow created by this player.
 function Combat.undo(color)
     if not Combat.enabled(color) then return false end
     local history = Combat.history[color] or {}
@@ -4819,7 +4907,7 @@ end
 
 -- A short press triggers on release. A continuous configurable hold clears
 -- only the holding player's arrows, and suppresses the short-press undo.
--- Each hold has a unique table token so stale timers cannot clear later.
+-- Each key hold has its own token, so an old timer cannot clear newer arrows.
 function Combat.undoHotkey(color, hovered, pointerPosition, isKeyUp)
     if not Combat.OWNERS[color] then return end
 
@@ -4891,6 +4979,7 @@ function Combat.cleanupLegacyFight()
     end
 end
 
+-- Reset session arrow state, register the two hotkeys and remove obsolete fight controls.
 function Combat.load()
     Combat.pending = {}
     Combat.undoHeld = {}
@@ -4910,11 +4999,13 @@ function Combat.load()
     -- Clean them after all objects have spawned.
     Wait.frames(Combat.cleanupLegacyFight, 30)
 end
+-- Global XML callbacks and TTS events enter here, then get forwarded to the appropriate Lotus module.
+
 -- =============================================================
--- SHARED EVENT DISPATCHER (6 MODULES)
+-- Shared event dispatcher
 -- =============================================================
 
--- Isolate TTS callback failures when Card/Deck Unity proxies expire on merges.
+-- A deck merge can invalidate a TTS reference. Catch callback errors separately so the other modules can still run.
 local lotusCallbackErrors = {}
 local function lotusSafeCall(label, callback, ...)
     if type(callback) ~= "function" then return end
@@ -4928,6 +5019,7 @@ local function lotusSafeCall(label, callback, ...)
     end
 end
 
+-- Initialize all Lotus modules, then finish UI setup after Global loads.
 function onLoad(savedData)
     Playmats.load(savedData)
     Wait.frames(Playmats.alignExisting, 30)
@@ -4942,46 +5034,55 @@ function onLoad(savedData)
     log("MTG Portable Helper: Playmat module ready.")
 end
 
+-- Return the combined Lotus state for TTS persistence.
 function onSave()
     return Playmats.save()
 end
 
+-- Let Reveal Top handle its commands first, then pass the rest to Playmats.
 function onChat(message, player)
     local rtResult = RevealTop.onChat(message, player)
     if rtResult ~= nil then return rtResult end
     return Playmats.onChat(message, player)
 end
 
+-- Forward the entry event to Preview, Draw Random and Equipment.
 function onObjectEnterZone(zone, obj)
     lotusSafeCall("Preview.onEnterZone", Preview.onEnterZone, zone, obj)
     lotusSafeCall("DrawRandom.onEnterZone", DrawRandom.onEnterZone, zone, obj)
     lotusSafeCall("Equipment.onEnterZone", Equipment.onEnterZone, zone, obj)
 end
 
+-- Let Preview remember a card's origin before it is moved.
 function onObjectPickUp(playerColor, obj)
     lotusSafeCall("Preview.onPickUp", Preview.onPickUp, playerColor, obj)
 end
 
+-- Forward drop events to Preview and Equipment.
 function onObjectDrop(playerColor, obj)
     lotusSafeCall("Preview.onDrop", Preview.onDrop, playerColor, obj)
     lotusSafeCall("Equipment.onDrop", Equipment.onDrop, playerColor, obj)
 end
 
+-- Let the modules forget destroyed decks, visuals and arrow endpoints.
 function onObjectDestroy(obj)
     lotusSafeCall("DrawRandom.onDestroy", DrawRandom.onDestroy, obj)
     lotusSafeCall("RevealTop.onDestroy", RevealTop.onDestroy, obj)
     lotusSafeCall("Combat.onDestroy", Combat.onDestroy, obj)
 end
 
+-- Forward pointer changes to Equipment.
 function onObjectHover(playerColor, obj)
     lotusSafeCall("Equipment.onHover", Equipment.onHover, playerColor, obj)
 end
 
+-- Notify the relevant modules that the object left a zone.
 function onObjectLeaveZone(zone, obj)
     lotusSafeCall("Preview.onLeaveZone", Preview.onLeaveZone, zone, obj)
     lotusSafeCall("Equipment.onLeaveZone", Equipment.onLeaveZone, zone, obj)
 end
 
+-- Forward spawn events to Equipment and Reveal Top.
 function onObjectSpawn(obj)
     lotusSafeCall("Equipment.onSpawn", Equipment.onSpawn, obj)
     lotusSafeCall("RevealTop.onSpawn", RevealTop.onSpawn, obj)
@@ -5022,18 +5123,22 @@ function closeCounterSettings(player, value, id)
     Settings.close(player)
 end
 
+-- Forward the XML counter toggle to Settings.
 function counterToggle(player, value, id)
     Settings.toggle(player, value, id)
 end
 
+-- Forward the current-player counter toggle to Settings.
 function allMeToggle(player, value, id)
     Settings.toggleAllMe(player, value)
 end
 
+-- Forward the all-player counter toggle to Settings.
 function allEveryoneToggle(player, value, id)
     Settings.toggleAllEveryone(player, value)
 end
 
+-- Forward the viewer's preview toggle to Settings.
 function previewToggle(player, value, id)
     Settings.togglePreview(player, value, id)
 end

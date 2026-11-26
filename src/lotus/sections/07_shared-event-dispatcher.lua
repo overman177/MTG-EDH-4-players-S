@@ -1,8 +1,10 @@
+-- Global XML callbacks and TTS events enter here, then get forwarded to the appropriate Lotus module.
+
 -- =============================================================
--- SHARED EVENT DISPATCHER (6 MODULES)
+-- Shared event dispatcher
 -- =============================================================
 
--- Isolate TTS callback failures when Card/Deck Unity proxies expire on merges.
+-- A deck merge can invalidate a TTS reference. Catch callback errors separately so the other modules can still run.
 local lotusCallbackErrors = {}
 local function lotusSafeCall(label, callback, ...)
     if type(callback) ~= "function" then return end
@@ -16,6 +18,7 @@ local function lotusSafeCall(label, callback, ...)
     end
 end
 
+-- Initialize all Lotus modules, then finish UI setup after Global loads.
 function onLoad(savedData)
     Playmats.load(savedData)
     Wait.frames(Playmats.alignExisting, 30)
@@ -30,46 +33,55 @@ function onLoad(savedData)
     log("MTG Portable Helper: Playmat module ready.")
 end
 
+-- Return the combined Lotus state for TTS persistence.
 function onSave()
     return Playmats.save()
 end
 
+-- Let Reveal Top handle its commands first, then pass the rest to Playmats.
 function onChat(message, player)
     local rtResult = RevealTop.onChat(message, player)
     if rtResult ~= nil then return rtResult end
     return Playmats.onChat(message, player)
 end
 
+-- Forward the entry event to Preview, Draw Random and Equipment.
 function onObjectEnterZone(zone, obj)
     lotusSafeCall("Preview.onEnterZone", Preview.onEnterZone, zone, obj)
     lotusSafeCall("DrawRandom.onEnterZone", DrawRandom.onEnterZone, zone, obj)
     lotusSafeCall("Equipment.onEnterZone", Equipment.onEnterZone, zone, obj)
 end
 
+-- Let Preview remember a card's origin before it is moved.
 function onObjectPickUp(playerColor, obj)
     lotusSafeCall("Preview.onPickUp", Preview.onPickUp, playerColor, obj)
 end
 
+-- Forward drop events to Preview and Equipment.
 function onObjectDrop(playerColor, obj)
     lotusSafeCall("Preview.onDrop", Preview.onDrop, playerColor, obj)
     lotusSafeCall("Equipment.onDrop", Equipment.onDrop, playerColor, obj)
 end
 
+-- Let the modules forget destroyed decks, visuals and arrow endpoints.
 function onObjectDestroy(obj)
     lotusSafeCall("DrawRandom.onDestroy", DrawRandom.onDestroy, obj)
     lotusSafeCall("RevealTop.onDestroy", RevealTop.onDestroy, obj)
     lotusSafeCall("Combat.onDestroy", Combat.onDestroy, obj)
 end
 
+-- Forward pointer changes to Equipment.
 function onObjectHover(playerColor, obj)
     lotusSafeCall("Equipment.onHover", Equipment.onHover, playerColor, obj)
 end
 
+-- Notify the relevant modules that the object left a zone.
 function onObjectLeaveZone(zone, obj)
     lotusSafeCall("Preview.onLeaveZone", Preview.onLeaveZone, zone, obj)
     lotusSafeCall("Equipment.onLeaveZone", Equipment.onLeaveZone, zone, obj)
 end
 
+-- Forward spawn events to Equipment and Reveal Top.
 function onObjectSpawn(obj)
     lotusSafeCall("Equipment.onSpawn", Equipment.onSpawn, obj)
     lotusSafeCall("RevealTop.onSpawn", RevealTop.onSpawn, obj)
@@ -110,18 +122,22 @@ function closeCounterSettings(player, value, id)
     Settings.close(player)
 end
 
+-- Forward the XML counter toggle to Settings.
 function counterToggle(player, value, id)
     Settings.toggle(player, value, id)
 end
 
+-- Forward the current-player counter toggle to Settings.
 function allMeToggle(player, value, id)
     Settings.toggleAllMe(player, value)
 end
 
+-- Forward the all-player counter toggle to Settings.
 function allEveryoneToggle(player, value, id)
     Settings.toggleAllEveryone(player, value)
 end
 
+-- Forward the viewer's preview toggle to Settings.
 function previewToggle(player, value, id)
     Settings.togglePreview(player, value, id)
 end
